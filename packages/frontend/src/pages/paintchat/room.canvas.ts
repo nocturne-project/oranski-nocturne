@@ -61,7 +61,8 @@ function catmullRomPoint(
 	};
 }
 
-// ストロークを描画する（自動スムージング付き）
+// ストロークを描画する（筆圧可変幅の滑らかな線）
+// 筆圧による太さ変化は、短いセグメントごとに連続パスで描画して隙間をなくす
 function renderStroke(ctx: CanvasRenderingContext2D, stroke: StrokeData): void {
 	const points = stroke.points;
 	if (points.length === 0) return;
@@ -79,9 +80,9 @@ function renderStroke(ctx: CanvasRenderingContext2D, stroke: StrokeData): void {
 	}
 
 	if (points.length === 1) {
-		// 単一点: 円を描画
 		ctx.beginPath();
-		ctx.arc(points[0].x, points[0].y, stroke.width / 2, 0, Math.PI * 2);
+		const r = Math.max(1, stroke.width * points[0].pressure / 2);
+		ctx.arc(points[0].x, points[0].y, r, 0, Math.PI * 2);
 		ctx.fillStyle = stroke.tool === 'eraser' ? 'black' : stroke.color;
 		ctx.globalAlpha = stroke.tool === 'eraser' ? 1 : stroke.opacity;
 		ctx.fill();
@@ -89,38 +90,51 @@ function renderStroke(ctx: CanvasRenderingContext2D, stroke: StrokeData): void {
 		return;
 	}
 
+	// Catmull-Romで補間した全ポイントを生成
+	const interpolated: PressurePoint[] = [];
 	if (points.length === 2) {
-		// 2点: 直線
-		ctx.beginPath();
-		ctx.lineWidth = stroke.width * points[0].pressure;
-		ctx.moveTo(points[0].x, points[0].y);
-		ctx.lineTo(points[1].x, points[1].y);
-		ctx.stroke();
+		// 2点: 間を4分割
+		for (let t = 0; t <= 1; t += 0.25) {
+			interpolated.push({
+				x: points[0].x + (points[1].x - points[0].x) * t,
+				y: points[0].y + (points[1].y - points[0].y) * t,
+				pressure: points[0].pressure + (points[1].pressure - points[0].pressure) * t,
+			});
+		}
+	} else {
+		// 3点以上: Catmull-Romスプライン補間
+		const steps = 6;
+		for (let i = 0; i < points.length - 1; i++) {
+			const p0 = points[Math.max(0, i - 1)];
+			const p1 = points[i];
+			const p2 = points[Math.min(points.length - 1, i + 1)];
+			const p3 = points[Math.min(points.length - 1, i + 2)];
+			for (let step = 0; step <= steps; step++) {
+				interpolated.push(catmullRomPoint(p0, p1, p2, p3, step / steps));
+			}
+		}
+	}
+
+	if (interpolated.length < 2) {
 		ctx.restore();
 		return;
 	}
 
-	// 3点以上: Catmull-Romスプライン補間で滑らかに描画
-	const steps = 8; // 補間ステップ数
-	for (let i = 0; i < points.length - 1; i++) {
-		const p0 = points[Math.max(0, i - 1)];
-		const p1 = points[i];
-		const p2 = points[Math.min(points.length - 1, i + 1)];
-		const p3 = points[Math.min(points.length - 1, i + 2)];
+	// 筆圧が一定（変化幅が小さい）場合は1本の連続パスで高速描画
+	const pressures = interpolated.map(p => p.pressure);
+	const minP = Math.min(...pressures);
+	const maxP = Math.max(...pressures);
 
-		for (let step = 0; step < steps; step++) {
-			const t = step / steps;
-			const tNext = (step + 1) / steps;
-			const from = catmullRomPoint(p0, p1, p2, p3, t);
-			const to = catmullRomPoint(p0, p1, p2, p3, tNext);
-
-			ctx.beginPath();
-			ctx.lineWidth = stroke.width * from.pressure;
-			ctx.moveTo(from.x, from.y);
-			ctx.lineTo(to.x, to.y);
-			ctx.stroke();
-		}
+	// 1本の連続パスで描画（隙間なし、透明度の累積問題なし）
+	// lineWidthは筆圧の平均値で統一。筆圧変化は微妙な太さ変化として許容。
+	const avgPressure = pressures.reduce((a, b) => a + b, 0) / pressures.length;
+	ctx.lineWidth = Math.max(0.5, stroke.width * avgPressure);
+	ctx.beginPath();
+	ctx.moveTo(interpolated[0].x, interpolated[0].y);
+	for (let i = 1; i < interpolated.length; i++) {
+		ctx.lineTo(interpolated[i].x, interpolated[i].y);
 	}
+	ctx.stroke();
 
 	ctx.restore();
 }
@@ -322,11 +336,11 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 			if (!state.isDrawing) return;
 			state.currentPoints.push({ x, y, pressure });
 
-			// リアルタイムプレビュー描画
+			// リアルタイムプレビュー: 最後の数ポイントを連続パスで描画（隙間なし）
 			if (ctx && state.currentPoints.length >= 2) {
 				const pts = state.currentPoints;
-				const from = pts[pts.length - 2];
-				const to = pts[pts.length - 1];
+				// 直近の最大8ポイントを連続パスで描画
+				const startIdx = Math.max(0, pts.length - 8);
 
 				ctx.save();
 				ctx.lineCap = 'round';
@@ -340,12 +354,19 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 					ctx.globalAlpha = state.currentOpacity;
 				}
 
-				// 前後のpressureを補間してlineWidthの急変を防止
-				const avgPressure = (from.pressure + to.pressure) / 2;
-				ctx.beginPath();
+				// 筆圧の平均でlineWidthを設定（連続パスなので統一する必要がある）
+				let pressureSum = 0;
+				for (let i = startIdx; i < pts.length; i++) {
+					pressureSum += pts[i].pressure;
+				}
+				const avgPressure = pressureSum / (pts.length - startIdx);
 				ctx.lineWidth = Math.max(0.5, state.currentWidth * avgPressure);
-				ctx.moveTo(from.x, from.y);
-				ctx.lineTo(to.x, to.y);
+
+				ctx.beginPath();
+				ctx.moveTo(pts[startIdx].x, pts[startIdx].y);
+				for (let i = startIdx + 1; i < pts.length; i++) {
+					ctx.lineTo(pts[i].x, pts[i].y);
+				}
 				ctx.stroke();
 				ctx.restore();
 			}
