@@ -85,6 +85,13 @@ let pendingStrokeStart: { x: number; y: number } | null = null;
 let strokeStarted = false;
 const STROKE_START_THRESHOLD = 3; // ピクセル: この距離以上動いたらストローク開始
 
+// 手ブレ補正: 適応的スムージング（既存お絵かきチャットの方式に近い）
+const SMOOTHING_FACTOR = 0.4; // 大きいほど追従が遅い（0.2=弱い, 0.5=強い）
+const MIN_MOVE_DISTANCE = 1.5; // この距離未満の移動はスキップ（ノイズ除去）
+let smoothedX = 0;
+let smoothedY = 0;
+let isSmoothingInitialized = false;
+
 // カーソル移動のスロットル（50ms）
 let lastCursorEmit = 0;
 
@@ -255,6 +262,9 @@ function onTouchMove(e: TouchEvent) {
 		const startCoords = getCanvasCoords(pendingStrokeStart.x, pendingStrokeStart.y);
 		const startPressure = simulatePressure(startCoords.x, startCoords.y);
 		props.engine.beginStroke(startCoords.x, startCoords.y, startPressure);
+		smoothedX = startCoords.x;
+		smoothedY = startCoords.y;
+		isSmoothingInitialized = true;
 		strokeStarted = true;
 		pendingStrokeStart = null;
 	}
@@ -262,8 +272,21 @@ function onTouchMove(e: TouchEvent) {
 	if (!strokeStarted) return;
 
 	const { x, y } = getCanvasCoords(touch.clientX, touch.clientY);
-	const pressure = simulatePressure(x, y);
-	props.engine.moveStroke(x, y, pressure);
+
+	// 手ブレ補正: 適応的スムージング
+	if (isSmoothingInitialized) {
+		smoothedX = smoothedX + (x - smoothedX) * (1 - SMOOTHING_FACTOR);
+		smoothedY = smoothedY + (y - smoothedY) * (1 - SMOOTHING_FACTOR);
+	} else {
+		smoothedX = x;
+		smoothedY = y;
+		isSmoothingInitialized = true;
+	}
+
+	// 最小移動距離フィルタ（ノイズ除去）
+	const moveDist = Math.sqrt((smoothedX - x) * (smoothedX - x) + (smoothedY - y) * (smoothedY - y));
+	const pressure = simulatePressure(smoothedX, smoothedY);
+	props.engine.moveStroke(smoothedX, smoothedY, pressure);
 
 	const now = Date.now();
 	if (now - lastCursorEmit > 50) {
@@ -285,6 +308,7 @@ function onTouchEnd() {
 		}
 	}
 	strokeStarted = false;
+	isSmoothingInitialized = false;
 	lastTime = 0;
 	strokePointCount = 0;
 }
@@ -342,8 +366,17 @@ function onPointerMove(e: PointerEvent) {
 	const { x, y } = getCanvasCoords(e.clientX, e.clientY);
 
 	if (isPointerDown) {
-		const pressure = getEffectivePressure(e, x, y);;
-		props.engine.moveStroke(x, y, pressure);
+		// 手ブレ補正
+		if (isSmoothingInitialized) {
+			smoothedX = smoothedX + (x - smoothedX) * (1 - SMOOTHING_FACTOR);
+			smoothedY = smoothedY + (y - smoothedY) * (1 - SMOOTHING_FACTOR);
+		} else {
+			smoothedX = x;
+			smoothedY = y;
+			isSmoothingInitialized = true;
+		}
+		const pressure = getEffectivePressure(e, smoothedX, smoothedY);
+		props.engine.moveStroke(smoothedX, smoothedY, pressure);
 
 		const now = Date.now();
 		if (now - lastCursorEmit > 50) {
@@ -365,6 +398,7 @@ function onPointerUp(e: PointerEvent) {
 	lastTime = 0;
 	strokePointCount = 0;
 	hasHardwarePressure = false;
+	isSmoothingInitialized = false;
 }
 
 // --- マウスホイールズーム（カーソル位置基準） ---
