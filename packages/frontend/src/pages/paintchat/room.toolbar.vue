@@ -30,6 +30,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<!-- アンドゥ -->
 		<button :class="$style.toolBtn" @click="$emit('undo')">戻す</button>
 
+		<!-- ズーム -->
+		<button :class="$style.toolBtn" @click="$emit('zoomOut')">-</button>
+		<button :class="$style.toolBtn" @click="$emit('zoomReset')">等倍</button>
+		<button :class="$style.toolBtn" @click="$emit('zoomIn')">+</button>
+
 		<!-- ダウンロード -->
 		<button :class="$style.toolBtn" @click="togglePanel('download')">保存</button>
 	</div>
@@ -94,6 +99,9 @@ const emit = defineEmits<{
 	(e: 'widthChange', width: number): void;
 	(e: 'opacityChange', opacity: number): void;
 	(e: 'undo'): void;
+	(e: 'zoomIn'): void;
+	(e: 'zoomOut'): void;
+	(e: 'zoomReset'): void;
 	(e: 'downloadAll'): void;
 	(e: 'downloadMine'): void;
 }>();

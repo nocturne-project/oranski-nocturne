@@ -8,19 +8,21 @@ SPDX-License-Identifier: AGPL-3.0-only
 <div
 	ref="containerRef"
 	:class="$style.canvasContainer"
-	@touchstart.prevent="onTouchStart"
-	@touchmove.prevent="onTouchMove"
-	@touchend.prevent="onTouchEnd"
+	@touchstart="onTouchStart"
+	@touchmove="onTouchMove"
+	@touchend="onTouchEnd"
 	@mousedown="onMouseDown"
 	@mousemove="onMouseMove"
 	@mouseup="onMouseUp"
 	@mouseleave="onMouseUp"
+	@wheel.prevent="onWheel"
 >
 	<canvas
 		ref="canvasRef"
 		:class="$style.canvas"
 		:width="canvasWidth"
 		:height="canvasHeight"
+		:style="{ transform: `scale(${zoomLevel})`, transformOrigin: 'center center' }"
 	></canvas>
 </div>
 </template>
@@ -46,6 +48,11 @@ const canvasRef = ref<HTMLCanvasElement | null>(null);
 const canvasWidth = 800;
 const canvasHeight = 600;
 
+// ズームレベル（0.5〜3倍）
+const zoomLevel = ref(1);
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 3;
+
 // カーソル移動のスロットル（50ms）
 let lastCursorEmit = 0;
 
@@ -55,7 +62,7 @@ onMounted(() => {
 	}
 });
 
-// タッチ座標をキャンバス座標に変換する
+// タッチ座標をキャンバス座標に変換する（ズームレベルを考慮）
 function getCanvasCoords(clientX: number, clientY: number): { x: number; y: number } {
 	if (!canvasRef.value) return { x: 0, y: 0 };
 	const rect = canvasRef.value.getBoundingClientRect();
@@ -92,8 +99,11 @@ function simulatePressure(x: number, y: number): number {
 }
 
 // --- タッチイベント ---
+// 1本指: 描画（preventDefaultでスクロール防止）
+// 2本指以上: ブラウザのピンチズームに委ねる（preventDefaultしない）
 function onTouchStart(e: TouchEvent) {
 	if (e.touches.length !== 1) return;
+	e.preventDefault();
 	const touch = e.touches[0];
 	const { x, y } = getCanvasCoords(touch.clientX, touch.clientY);
 	const pressure = simulatePressure(x, y);
@@ -101,13 +111,19 @@ function onTouchStart(e: TouchEvent) {
 }
 
 function onTouchMove(e: TouchEvent) {
-	if (e.touches.length !== 1) return;
+	if (e.touches.length !== 1) {
+		// 2本指以上: 描画中なら中断してブラウザにピンチズームを委ねる
+		if (props.engine.getState().isDrawing) {
+			props.engine.endStroke();
+		}
+		return;
+	}
+	e.preventDefault();
 	const touch = e.touches[0];
 	const { x, y } = getCanvasCoords(touch.clientX, touch.clientY);
 	const pressure = simulatePressure(x, y);
 	props.engine.moveStroke(x, y, pressure);
 
-	// カーソル位置を50msスロットルで送信
 	const now = Date.now();
 	if (now - lastCursorEmit > 50) {
 		lastCursorEmit = now;
@@ -161,6 +177,27 @@ function onMouseUp() {
 	lastTime = 0;
 }
 
+// --- マウスホイールズーム ---
+function onWheel(e: WheelEvent) {
+	const delta = e.deltaY > 0 ? -0.1 : 0.1;
+	zoomLevel.value = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoomLevel.value + delta));
+}
+
+// 外部からズーム操作するためのメソッド
+function zoomIn() {
+	zoomLevel.value = Math.min(MAX_ZOOM, zoomLevel.value + 0.25);
+}
+
+function zoomOut() {
+	zoomLevel.value = Math.max(MIN_ZOOM, zoomLevel.value - 0.25);
+}
+
+function zoomReset() {
+	zoomLevel.value = 1;
+}
+
+defineExpose({ zoomIn, zoomOut, zoomReset, zoomLevel });
+
 onUnmounted(() => {
 	props.engine.dispose();
 });
@@ -174,7 +211,7 @@ onUnmounted(() => {
 	align-items: center;
 	justify-content: center;
 	background: #f0f0f0;
-	touch-action: none; // スクロール/ズーム完全無効化
+	touch-action: pinch-zoom; // 1本指描画、2本指ピンチズーム許可
 	user-select: none;
 	-webkit-user-select: none;
 	overflow: hidden;

@@ -30,6 +30,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div :class="$style.canvasArea">
 			<XCanvas
 				v-if="canvasEngine"
+				ref="canvasCompRef"
 				:engine="canvasEngine"
 				@strokeEnd="onStrokeEnd"
 				@progress="onProgress"
@@ -45,6 +46,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 			@widthChange="onWidthChange"
 			@opacityChange="onOpacityChange"
 			@undo="onUndo"
+			@zoomIn="canvasCompRef?.zoomIn()"
+			@zoomOut="canvasCompRef?.zoomOut()"
+			@zoomReset="canvasCompRef?.zoomReset()"
 			@downloadAll="onDownloadAll"
 			@downloadMine="onDownloadMine"
 		/>
@@ -105,6 +109,7 @@ const router = useRouter();
 const roomInfo = ref<RoomInfo | null>(null);
 // マッチング直後は相手も入室しているはずなのでデフォルトはonline
 const partnerPresence = ref<PresenceStatus>('online');
+const canvasCompRef = ref<InstanceType<typeof XCanvas> | null>(null);
 const chatRef = ref<InstanceType<typeof XChat> | null>(null);
 const publishRef = ref<InstanceType<typeof XPublish> | null>(null);
 const strokeCount = ref(0);

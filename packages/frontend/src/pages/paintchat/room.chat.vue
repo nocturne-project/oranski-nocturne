@@ -236,13 +236,13 @@ defineExpose({ addMessage });
 	background: #ff4444;
 }
 
-// チャットパネル（全画面、確実に不透過）
+// チャットパネル（Misskeyヘッダーの下から全画面表示、確実に不透過）
 .chatPanel {
 	position: fixed;
 	bottom: 0;
 	left: 0;
 	right: 0;
-	top: 0;
+	top: var(--MI-globalHeaderHeight, 50px);
 	background: var(--bg, #1a1a2e);
 	z-index: 10000;
 	display: flex;
