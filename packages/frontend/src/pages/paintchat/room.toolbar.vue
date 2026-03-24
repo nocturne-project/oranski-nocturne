@@ -210,11 +210,17 @@ const activePanel = ref<'color' | 'width' | 'download' | null>(null);
 // カラーヒストリー（最近使った色、最大10件、重複なし）
 const colorHistory = ref<string[]>([]);
 
+// プロ向けカラーパレット: 基本色 + 肌色・自然色・パステル・ダーク系をバランスよく配置
 const colors = [
-	'#000000', '#ffffff', '#ff0000', '#ff6600', '#ffcc00',
-	'#33cc33', '#0099ff', '#6633ff', '#ff33cc', '#996633',
-	'#666666', '#cccccc', '#ff6666', '#ffcc99', '#ffff66',
-	'#99ff99', '#66ccff', '#cc99ff', '#ffccee', '#cc9966',
+	// Row 1: モノクロ + 基本色
+	'#000000', '#3b3b3b', '#808080', '#c8c8c8', '#ffffff',
+	'#c0392b', '#e74c3c', '#e67e22', '#f39c12', '#f1c40f',
+	// Row 2: 自然色 + 寒色 + 紫
+	'#27ae60', '#2ecc71', '#16a085', '#2980b9', '#3498db',
+	'#8e44ad', '#9b59b6', '#e91e8f', '#fd79a8', '#fdcb6e',
+	// Row 3: パステル + 肌色 + アース系
+	'#fab1a0', '#ffeaa7', '#dfe6e9', '#a29bfe', '#74b9ff',
+	'#55efc4', '#81ecec', '#d4a574', '#8d6e63', '#4a3728',
 ];
 
 const widths = [1, 2, 3, 5, 8, 12, 20, 40, 80, 120, 200];
@@ -474,8 +480,8 @@ defineExpose({ setColorFromEyedropper });
 }
 
 .colorCell {
-	width: 32px;
-	height: 32px;
+	width: 28px;
+	height: 28px;
 	border-radius: 6px;
 	border: 2px solid transparent;
 	cursor: pointer;
