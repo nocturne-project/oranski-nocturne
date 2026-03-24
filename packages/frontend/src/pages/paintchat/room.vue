@@ -357,10 +357,11 @@ definePage(() => ({
 </script>
 
 <style lang="scss" module>
+// Misskeyヘッダー + モバイルナビバーを考慮した高さ。overflow: hiddenで内部スクロール防止。
 .container {
 	display: flex;
 	flex-direction: column;
-	height: calc(100vh - 60px);
+	height: calc(100dvh - var(--MI-globalHeaderHeight, 50px) - env(safe-area-inset-bottom, 0px));
 	overflow: hidden;
 }
 

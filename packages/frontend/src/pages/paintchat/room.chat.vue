@@ -204,20 +204,22 @@ defineExpose({ addMessage });
 	position: relative;
 }
 
-// チャットトグルボタン（テキスト付き）
+// チャットトグルFABボタン（不透過、グラスモーフィズム風）
 .chatToggle {
 	position: fixed;
 	bottom: 80px;
 	right: 16px;
-	padding: 8px 16px;
-	border-radius: 20px;
-	background: var(--accent);
+	padding: 10px 20px;
+	border-radius: 24px;
+	background: color-mix(in srgb, var(--accent) 85%, black);
 	color: white;
-	border: none;
+	border: 1px solid rgba(255, 255, 255, 0.2);
 	cursor: pointer;
 	font-size: 14px;
 	font-weight: bold;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+	backdrop-filter: blur(8px);
+	-webkit-backdrop-filter: blur(8px);
 	z-index: 9000;
 	display: flex;
 	align-items: center;
