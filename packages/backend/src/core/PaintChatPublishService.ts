@@ -99,7 +99,7 @@ export class PaintChatPublishService {
 			text,
 			files: [driveFile],
 			localOnly: true,
-			visibility: 'public',
+			visibility: 'home',
 		});
 
 		// publishレコードを更新

@@ -70,7 +70,7 @@ export class PaintChatMatchingService {
 		await this.noteCreateService.create(botUser, {
 			text: 'ランダム絵チャットで一緒にお絵かきしませんか？\n[ここから参加できます](/paintchat)',
 			localOnly: true,
-			visibility: 'public',
+			visibility: 'home',
 		});
 
 		await this.markRecruitmentPosted(userId);
