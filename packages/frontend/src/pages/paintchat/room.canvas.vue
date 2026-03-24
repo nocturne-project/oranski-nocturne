@@ -15,9 +15,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 	@pointermove="onPointerMove"
 	@pointerup="onPointerUp"
 	@pointerleave="onPointerUp"
-	@touchstart="onTouchStart"
-	@touchmove="onTouchMove"
-	@touchend="onTouchEnd"
 	@wheel.prevent="onWheel"
 >
 	<canvas
