@@ -219,9 +219,23 @@ function togglePanel(panel: 'color' | 'width' | 'download') {
 	}
 }
 
+// アクティブツールの強調表示（高コントラスト + 左インジケーター + グロー効果）
 .active {
-	background: var(--accent) !important;
-	color: white;
+	background: #5b86e5 !important;
+	color: #ffffff !important;
+	box-shadow: 0 0 8px rgba(91, 134, 229, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+	position: relative;
+
+	&::before {
+		content: '';
+		position: absolute;
+		left: 0;
+		top: 4px;
+		bottom: 4px;
+		width: 3px;
+		background: #ffffff;
+		border-radius: 0 2px 2px 0;
+	}
 }
 
 // テキスト付きボタン（サイドバー幅に収まるようフォントサイズ調整）
