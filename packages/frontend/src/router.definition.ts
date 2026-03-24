@@ -53,6 +53,14 @@ export const ROUTE_DEF = [{
 	path: '/clips/:clipId',
 	component: page(() => import('@/pages/clip.vue')),
 }, {
+	path: '/paintchat',
+	component: page(() => import('@/pages/paintchat/index.vue')),
+	loginRequired: true,
+}, {
+	path: '/paintchat/:roomId',
+	component: page(() => import('@/pages/paintchat/room.vue')),
+	loginRequired: true,
+}, {
 	path: '/chat',
 	component: chatPage(() => import('@/pages/chat/home.vue')),
 	loginRequired: true,

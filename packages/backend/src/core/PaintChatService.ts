@@ -1,0 +1,227 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { Inject, Injectable } from '@nestjs/common';
+import { DI } from '@/di-symbols.js';
+import type {
+	PaintChatRoomsRepository,
+	PaintChatParticipantsRepository,
+	PaintChatBlocksRepository,
+	PaintChatReportsRepository,
+	PaintChatSettingsRepository,
+} from '@/models/_.js';
+import type { MiUser } from '@/models/User.js';
+import type { PaintChatRoom } from '@/models/PaintChatRoom.js';
+import type { PaintChatParticipant } from '@/models/PaintChatParticipant.js';
+import { IdService } from '@/core/IdService.js';
+import { bindThis } from '@/decorators.js';
+
+// 匿名名に使う色（10種）
+const COLORS = [
+	'あかい', 'あおい', 'きいろい', 'みどりの', 'むらさきの',
+	'オレンジの', 'ピンクの', 'しろい', 'くろい', 'みずいろの',
+];
+
+// 匿名名に使う動物名（30種）
+const ANIMALS = [
+	'ペンギン', 'ねこ', 'いぬ', 'うさぎ', 'くま',
+	'パンダ', 'きつね', 'たぬき', 'ハムスター', 'リス',
+	'コアラ', 'ひよこ', 'あひる', 'フクロウ', 'インコ',
+	'イルカ', 'クジラ', 'カメ', 'カエル', 'ヤモリ',
+	'ハリネズミ', 'アルパカ', 'ヒツジ', 'ウシ', 'ブタ',
+	'ゾウ', 'キリン', 'ライオン', 'トラ', 'オオカミ',
+];
+
+// ランダム絵チャットのルーム管理、匿名名生成、ラッパーユーザーID管理を担当するサービス
+@Injectable()
+export class PaintChatService {
+	constructor(
+		@Inject(DI.paintChatRoomsRepository)
+		private paintChatRoomsRepository: PaintChatRoomsRepository,
+
+		@Inject(DI.paintChatParticipantsRepository)
+		private paintChatParticipantsRepository: PaintChatParticipantsRepository,
+
+		@Inject(DI.paintChatBlocksRepository)
+		private paintChatBlocksRepository: PaintChatBlocksRepository,
+
+		@Inject(DI.paintChatReportsRepository)
+		private paintChatReportsRepository: PaintChatReportsRepository,
+
+		@Inject(DI.paintChatSettingsRepository)
+		private paintChatSettingsRepository: PaintChatSettingsRepository,
+
+		private idService: IdService,
+	) {
+	}
+
+	// ランダムな匿名名を生成する。existingNameと被らないようにする。
+	@bindThis
+	public generateAnonymousName(existingName?: string): string {
+		let name: string;
+		do {
+			const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+			const animal = ANIMALS[Math.floor(Math.random() * ANIMALS.length)];
+			name = `${color}${animal}`;
+		} while (existingName != null && name === existingName);
+		return name;
+	}
+
+	// ルームを作成し、二人の参加者を登録する
+	@bindThis
+	public async createRoom(userIdA: MiUser['id'], userIdB: MiUser['id']): Promise<{
+		room: PaintChatRoom;
+		participantA: PaintChatParticipant;
+		participantB: PaintChatParticipant;
+	}> {
+		const roomId = this.idService.gen();
+
+		// ルーム作成
+		await this.paintChatRoomsRepository.insert({
+			id: roomId,
+			status: 'active',
+		});
+
+		// 匿名名生成（重複しないように）
+		const nameA = this.generateAnonymousName();
+		const nameB = this.generateAnonymousName(nameA);
+
+		// 参加者登録（ラッパーユーザーID = PaintChatParticipant.id）
+		const participantAId = this.idService.gen();
+		const participantBId = this.idService.gen();
+
+		await this.paintChatParticipantsRepository.insert({
+			id: participantAId,
+			roomId,
+			userId: userIdA,
+			anonymousName: nameA,
+		});
+
+		await this.paintChatParticipantsRepository.insert({
+			id: participantBId,
+			roomId,
+			userId: userIdB,
+			anonymousName: nameB,
+		});
+
+		const room = await this.paintChatRoomsRepository.findOneByOrFail({ id: roomId });
+		const participantA = await this.paintChatParticipantsRepository.findOneByOrFail({ id: participantAId });
+		const participantB = await this.paintChatParticipantsRepository.findOneByOrFail({ id: participantBId });
+
+		return { room, participantA, participantB };
+	}
+
+	// ユーザーIDからルーム内のラッパーユーザーIDを解決する
+	@bindThis
+	public async resolveParticipant(roomId: string, userId: MiUser['id']): Promise<PaintChatParticipant | null> {
+		return await this.paintChatParticipantsRepository.findOneBy({
+			roomId,
+			userId,
+		});
+	}
+
+	// ラッパーユーザーIDからルーム内の参加者を取得する
+	@bindThis
+	public async getParticipantById(participantId: string): Promise<PaintChatParticipant | null> {
+		return await this.paintChatParticipantsRepository.findOneBy({
+			id: participantId,
+		});
+	}
+
+	// ルームIDから全参加者を取得する
+	@bindThis
+	public async getRoomParticipants(roomId: string): Promise<PaintChatParticipant[]> {
+		return await this.paintChatParticipantsRepository.findBy({ roomId });
+	}
+
+	// ルームにアクセスできるか確認する（ペアリングされた二人のみ）
+	@bindThis
+	public async canAccessRoom(roomId: string, userId: MiUser['id']): Promise<boolean> {
+		const participant = await this.paintChatParticipantsRepository.findOneBy({
+			roomId,
+			userId,
+		});
+		return participant != null;
+	}
+
+	// 二人が再マッチング除外リストに含まれるかチェックする
+	@bindThis
+	public async isBlocked(userIdA: MiUser['id'], userIdB: MiUser['id']): Promise<boolean> {
+		const block = await this.paintChatBlocksRepository.findOneBy([
+			{ reporterUserId: userIdA, targetUserId: userIdB },
+			{ reporterUserId: userIdB, targetUserId: userIdA },
+		]);
+		return block != null;
+	}
+
+	// ルームを終了する
+	@bindThis
+	public async endRoom(roomId: string): Promise<void> {
+		await this.paintChatRoomsRepository.update(roomId, {
+			status: 'ended',
+			endedAt: new Date(),
+		});
+	}
+
+	// 通報処理
+	@bindThis
+	public async reportRoom(
+		roomId: string,
+		reporterParticipantId: string,
+		reporterUserId: MiUser['id'],
+		targetUserId: MiUser['id'],
+		reason?: string,
+	): Promise<void> {
+		// 通報レコード作成
+		await this.paintChatReportsRepository.insert({
+			id: this.idService.gen(),
+			roomId,
+			reporterParticipantId,
+			reporterUserId,
+			targetUserId,
+			reason: reason ?? null,
+			status: 'pending',
+		});
+
+		// 再マッチング除外リストに追加
+		await this.paintChatBlocksRepository.insert({
+			id: this.idService.gen(),
+			reporterUserId,
+			targetUserId,
+		}).catch(() => {
+			// UNIQUE制約違反（既に登録済み）の場合は無視
+		});
+
+		// ルームに通報フラグを立てる
+		await this.paintChatRoomsRepository.update(roomId, {
+			isReported: true,
+		});
+	}
+
+	// admin設定を取得する（なければデフォルト値で作成）
+	@bindThis
+	public async getSettings(): Promise<{
+		botAccountId: string | null;
+		topicList: string;
+		noticeText: string;
+	}> {
+		let setting = await this.paintChatSettingsRepository.findOne({ where: {} });
+		if (setting == null) {
+			const id = this.idService.gen();
+			await this.paintChatSettingsRepository.insert({
+				id,
+				botAccountId: null,
+				topicList: '',
+				noticeText: '',
+			});
+			setting = await this.paintChatSettingsRepository.findOneByOrFail({ id });
+		}
+		return {
+			botAccountId: setting.botAccountId,
+			topicList: setting.topicList,
+			noticeText: setting.noticeText,
+		};
+	}
+}

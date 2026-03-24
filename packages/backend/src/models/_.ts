@@ -132,6 +132,13 @@ import { NoqUserSetting } from '@/models/NoqUserSetting.js';
 import { NoqQuestion } from '@/models/NoqQuestion.js';
 import { NoqMutedUser } from '@/models/NoqMutedUser.js';
 import { NoqReportedQuestion } from '@/models/NoqReportedQuestion.js';
+import { PaintChatRoom } from '@/models/PaintChatRoom.js';
+import { PaintChatParticipant } from '@/models/PaintChatParticipant.js';
+import { PaintChatMessage } from '@/models/PaintChatMessage.js';
+import { PaintChatReport } from '@/models/PaintChatReport.js';
+import { PaintChatBlock } from '@/models/PaintChatBlock.js';
+import { PaintChatPublish } from '@/models/PaintChatPublish.js';
+import { PaintChatSetting } from '@/models/PaintChatSetting.js';
 import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity.js';
 
 export interface MiRepository<T extends ObjectLiteral> {
@@ -269,6 +276,13 @@ export {
 	NoqQuestion,
 	NoqMutedUser,
 	NoqReportedQuestion,
+	PaintChatRoom,
+	PaintChatParticipant,
+	PaintChatMessage,
+	PaintChatReport,
+	PaintChatBlock,
+	PaintChatPublish,
+	PaintChatSetting,
 };
 
 export type AbuseUserReportsRepository = Repository<MiAbuseUserReport> & MiRepository<MiAbuseUserReport>;
@@ -397,3 +411,10 @@ export type NoqUserSettingsRepository = Repository<NoqUserSetting> & MiRepositor
 export type NoqQuestionsRepository = Repository<NoqQuestion> & MiRepository<NoqQuestion>;
 export type NoqMutedUsersRepository = Repository<NoqMutedUser> & MiRepository<NoqMutedUser>;
 export type NoqReportedQuestionsRepository = Repository<NoqReportedQuestion> & MiRepository<NoqReportedQuestion>;
+export type PaintChatRoomsRepository = Repository<PaintChatRoom> & MiRepository<PaintChatRoom>;
+export type PaintChatParticipantsRepository = Repository<PaintChatParticipant> & MiRepository<PaintChatParticipant>;
+export type PaintChatMessagesRepository = Repository<PaintChatMessage> & MiRepository<PaintChatMessage>;
+export type PaintChatReportsRepository = Repository<PaintChatReport> & MiRepository<PaintChatReport>;
+export type PaintChatBlocksRepository = Repository<PaintChatBlock> & MiRepository<PaintChatBlock>;
+export type PaintChatPublishesRepository = Repository<PaintChatPublish> & MiRepository<PaintChatPublish>;
+export type PaintChatSettingsRepository = Repository<PaintChatSetting> & MiRepository<PaintChatSetting>;

@@ -14102,4 +14102,186 @@ export interface Locale extends ILocale {
             "senderHasNoKey": string;
         };
     };
+    "_paintChat": {
+        /**
+         * ランダム絵チャット
+         */
+        "title": string;
+        /**
+         * 注意事項
+         */
+        "notice": string;
+        /**
+         * 同意してマッチング開始
+         */
+        "agreeAndStart": string;
+        /**
+         * マッチング待機中...
+         */
+        "waitingForMatch": string;
+        /**
+         * 相手が見つかるまでお待ちください
+         */
+        "waitingSubText": string;
+        /**
+         * キャンセル
+         */
+        "cancel": string;
+        /**
+         * 入室中
+         */
+        "inRoom": string;
+        /**
+         * 退室中
+         */
+        "leftRoom": string;
+        /**
+         * データは7日間保持後に自動削除されます
+         */
+        "dataNotice": string;
+        /**
+         * 退出
+         */
+        "leave": string;
+        /**
+         * 退出しますか？
+         */
+        "leaveConfirm": string;
+        /**
+         * 相手が退出しました。
+         */
+        "partnerLeft": string;
+        /**
+         * セッションが終了しました。
+         */
+        "sessionEnded": string;
+        /**
+         * このルームにアクセスできません。
+         */
+        "accessDenied": string;
+        /**
+         * チャット
+         */
+        "chat": string;
+        /**
+         * メッセージを入力...
+         */
+        "messagePlaceholder": string;
+        /**
+         * お題
+         */
+        "topic": string;
+        /**
+         * サイコロ
+         */
+        "dice": string;
+        /**
+         * お題が設定されていません
+         */
+        "noTopics": string;
+        /**
+         * 通報
+         */
+        "report": string;
+        /**
+         * 相手を通報しますか？通報した相手とは今後マッチングされなくなります。
+         */
+        "reportConfirm": string;
+        /**
+         * 通報しました。
+         */
+        "reported": string;
+        /**
+         * 通報に失敗しました。
+         */
+        "reportFailed": string;
+        /**
+         * 作品を投稿する
+         */
+        "publishTitle": string;
+        /**
+         * 相手の同意を待っています...
+         */
+        "publishWaiting": string;
+        /**
+         * もう少し描いてから投稿しましょう
+         */
+        "publishNotReady": string;
+        /**
+         * 投稿済み
+         */
+        "publishAgreed": string;
+        /**
+         * 一言メッセージを添えてください（100文字以内）
+         */
+        "publishMessage": string;
+        /**
+         * 投稿を確定
+         */
+        "publishConfirm": string;
+        /**
+         * 相手が作品の投稿を提案しています。同意しますか？
+         */
+        "publishPartnerRequest": string;
+        /**
+         * 相手が投稿を拒否しました
+         */
+        "publishRejected": string;
+        /**
+         * 投稿に失敗しました
+         */
+        "publishFailed": string;
+        /**
+         * 現在この機能は利用できません
+         */
+        "publishUnavailable": string;
+        /**
+         * キャンバス全体をダウンロード
+         */
+        "downloadAll": string;
+        /**
+         * 自分の絵のみダウンロード
+         */
+        "downloadMine": string;
+        /**
+         * ランダム絵チャット設定
+         */
+        "adminSettings": string;
+        /**
+         * Botアカウントのユーザー名
+         */
+        "adminBotAccount": string;
+        /**
+         * ランダム絵チャットの作品投稿・参加者呼びかけに使用するbotアカウント
+         */
+        "adminBotAccountDesc": string;
+        /**
+         * お題（1行に1つ）
+         */
+        "adminTopicList": string;
+        /**
+         * 改行区切りでお題を入力してください。ユーザーが「お題」ボタンを押すとランダムに1つ表示されます。
+         */
+        "adminTopicListDesc": string;
+        /**
+         * 注意事項
+         */
+        "adminNoticeText": string;
+        /**
+         * マッチング開始前にユーザーに表示される注意事項テキスト。空の場合はデフォルトの注意事項が表示されます。
+         */
+        "adminNoticeTextDesc": string;
+        /**
+         * 保存しました
+         */
+        "saved": string;
+        /**
+         * 指定されたユーザーが見つかりません
+         */
+        "userNotFound": string;
+        /**
+         * 保存に失敗しました
+         */
+        "saveFailed": string;
+    };
 }

@@ -402,6 +402,10 @@ export type GlobalEvents = {
 		name: `noctownPlayerStream:${string}`;
 		payload: { type: string; body: Record<string, unknown> | null };
 	};
+	paintChat: {
+		name: `paintChatStream:${string}`;
+		payload: { type: string; body: Record<string, unknown> | null };
+	};
 };
 
 // API event definitions
@@ -525,5 +529,11 @@ export class GlobalEventService {
 	@bindThis
 	public publishNoctownPlayerStream(playerId: string, type: string, value?: Record<string, unknown>): void {
 		this.publish(`noctownPlayerStream:${playerId}`, type, typeof value === 'undefined' ? null : value);
+	}
+
+	// ランダム絵チャットのルームストリームにイベントを配信する
+	@bindThis
+	public publishPaintChatStream(roomId: string, type: string, value?: Record<string, unknown>): void {
+		this.publish(`paintChatStream:${roomId}`, type, typeof value === 'undefined' ? null : value);
 	}
 }
