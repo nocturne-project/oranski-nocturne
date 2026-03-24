@@ -41,6 +41,10 @@ export const paramDef = {
 	properties: {
 		botAccountUsername: { type: 'string', nullable: true },
 		topicList: { type: 'string' },
+		topicListSpring: { type: 'string' },
+		topicListSummer: { type: 'string' },
+		topicListAutumn: { type: 'string' },
+		topicListWinter: { type: 'string' },
 		noticeText: { type: 'string' },
 	},
 	required: [],
@@ -81,10 +85,12 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				}
 			}
 
-			// お題リスト
-			if (ps.topicList !== undefined) {
-				updateData.topicList = ps.topicList;
-			}
+			// お題リスト（汎用 + 季節別）
+			if (ps.topicList !== undefined) updateData.topicList = ps.topicList;
+			if (ps.topicListSpring !== undefined) updateData.topicListSpring = ps.topicListSpring;
+			if (ps.topicListSummer !== undefined) updateData.topicListSummer = ps.topicListSummer;
+			if (ps.topicListAutumn !== undefined) updateData.topicListAutumn = ps.topicListAutumn;
+			if (ps.topicListWinter !== undefined) updateData.topicListWinter = ps.topicListWinter;
 
 			// 注意事項テキスト
 			if (ps.noticeText !== undefined) {

@@ -73,9 +73,9 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw new ApiError(meta.errors.alreadyUsed);
 			}
 
-			// お題リスト取得
-			const settings = await this.paintChatService.getSettings();
-			const topics = settings.topicList.split('\n').map(t => t.trim()).filter(t => t.length > 0);
+			// お題リスト取得（汎用 + 現在の季節を結合）
+			const topicListText = await this.paintChatService.getCurrentTopicList();
+			const topics = topicListText.split('\n').map(t => t.trim()).filter(t => t.length > 0);
 
 			if (topics.length === 0) {
 				throw new ApiError(meta.errors.noTopicsConfigured);

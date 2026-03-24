@@ -219,28 +219,67 @@ export class PaintChatService {
 		});
 	}
 
+	// 現在の季節を判定する（春:3-5月, 夏:6-8月, 秋:9-11月, 冬:12-2月）
+	@bindThis
+	public getCurrentSeason(): 'spring' | 'summer' | 'autumn' | 'winter' {
+		const month = new Date().getMonth() + 1; // 1-12
+		if (month >= 3 && month <= 5) return 'spring';
+		if (month >= 6 && month <= 8) return 'summer';
+		if (month >= 9 && month <= 11) return 'autumn';
+		return 'winter';
+	}
+
 	// admin設定を取得する（なければデフォルト値で作成）
 	@bindThis
 	public async getSettings(): Promise<{
 		botAccountId: string | null;
 		topicList: string;
+		topicListSpring: string;
+		topicListSummer: string;
+		topicListAutumn: string;
+		topicListWinter: string;
 		noticeText: string;
 	}> {
 		let setting = await this.paintChatSettingsRepository.findOne({ where: {} });
 		if (setting == null) {
-			const id = this.idService.gen();
+			const settingId = this.idService.gen();
 			await this.paintChatSettingsRepository.insert({
-				id,
+				id: settingId,
 				botAccountId: null,
 				topicList: '',
+				topicListSpring: '',
+				topicListSummer: '',
+				topicListAutumn: '',
+				topicListWinter: '',
 				noticeText: '',
 			});
-			setting = await this.paintChatSettingsRepository.findOneByOrFail({ id });
+			setting = await this.paintChatSettingsRepository.findOneByOrFail({ id: settingId });
 		}
 		return {
 			botAccountId: setting.botAccountId,
 			topicList: setting.topicList,
+			topicListSpring: setting.topicListSpring,
+			topicListSummer: setting.topicListSummer,
+			topicListAutumn: setting.topicListAutumn,
+			topicListWinter: setting.topicListWinter,
 			noticeText: setting.noticeText,
 		};
+	}
+
+	// 現在の季節のお題リストを取得する（汎用 + 季節別を結合）
+	@bindThis
+	public async getCurrentTopicList(): Promise<string> {
+		const settings = await this.getSettings();
+		const season = this.getCurrentSeason();
+		let seasonalList = '';
+		switch (season) {
+			case 'spring': seasonalList = settings.topicListSpring; break;
+			case 'summer': seasonalList = settings.topicListSummer; break;
+			case 'autumn': seasonalList = settings.topicListAutumn; break;
+			case 'winter': seasonalList = settings.topicListWinter; break;
+		}
+		// 汎用リスト + 季節別リストを結合
+		const combined = [settings.topicList, seasonalList].filter(s => s.trim()).join('\n');
+		return combined;
 	}
 }

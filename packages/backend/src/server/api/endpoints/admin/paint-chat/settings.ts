@@ -58,6 +58,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				botAccountId: settings.botAccountId,
 				botAccountUsername,
 				topicList: settings.topicList,
+				topicListSpring: settings.topicListSpring,
+				topicListSummer: settings.topicListSummer,
+				topicListAutumn: settings.topicListAutumn,
+				topicListWinter: settings.topicListWinter,
 				noticeText: settings.noticeText,
 			};
 		});

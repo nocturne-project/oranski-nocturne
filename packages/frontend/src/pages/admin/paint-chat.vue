@@ -17,11 +17,51 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</MkFolder>
 
 		<MkFolder>
-			<template #label>お題リスト</template>
+			<template #label>お題リスト（汎用 - 全季節共通）</template>
 			<div :class="$style.section">
 				<MkTextarea v-model="topicList" :class="$style.topicArea">
-					<template #label>お題（1行に1つ）</template>
-					<template #caption>改行区切りでお題を入力してください。ユーザーが「お題」ボタンを押すとランダムに1つ表示されます。</template>
+					<template #label>汎用お題（1行に1つ）</template>
+					<template #caption>どの季節でも出るお題です。改行区切りで入力してください。</template>
+				</MkTextarea>
+			</div>
+		</MkFolder>
+
+		<MkFolder>
+			<template #label>お題リスト（春: 3〜5月）</template>
+			<div :class="$style.section">
+				<MkTextarea v-model="topicListSpring" :class="$style.topicArea">
+					<template #label>春のお題（1行に1つ）</template>
+					<template #caption>3月〜5月に出るお題です。汎用お題と合わせてランダムに選ばれます。</template>
+				</MkTextarea>
+			</div>
+		</MkFolder>
+
+		<MkFolder>
+			<template #label>お題リスト（夏: 6〜8月）</template>
+			<div :class="$style.section">
+				<MkTextarea v-model="topicListSummer" :class="$style.topicArea">
+					<template #label>夏のお題（1行に1つ）</template>
+					<template #caption>6月〜8月に出るお題です。</template>
+				</MkTextarea>
+			</div>
+		</MkFolder>
+
+		<MkFolder>
+			<template #label>お題リスト（秋: 9〜11月）</template>
+			<div :class="$style.section">
+				<MkTextarea v-model="topicListAutumn" :class="$style.topicArea">
+					<template #label>秋のお題（1行に1つ）</template>
+					<template #caption>9月〜11月に出るお題です。</template>
+				</MkTextarea>
+			</div>
+		</MkFolder>
+
+		<MkFolder>
+			<template #label>お題リスト（冬: 12〜2月）</template>
+			<div :class="$style.section">
+				<MkTextarea v-model="topicListWinter" :class="$style.topicArea">
+					<template #label>冬のお題（1行に1つ）</template>
+					<template #caption>12月〜2月に出るお題です。</template>
 				</MkTextarea>
 			</div>
 		</MkFolder>
@@ -73,6 +113,10 @@ import { definePage } from '@/page.js';
 
 const botAccountUsername = ref('');
 const topicList = ref('');
+const topicListSpring = ref('');
+const topicListSummer = ref('');
+const topicListAutumn = ref('');
+const topicListWinter = ref('');
 const noticeText = ref('');
 const stegoResult = ref<string | null>(null);
 
@@ -81,6 +125,10 @@ onMounted(async () => {
 		const settings = await misskeyApi('admin/paint-chat/settings' as any) as any;
 		botAccountUsername.value = settings.botAccountUsername ?? '';
 		topicList.value = settings.topicList ?? '';
+		topicListSpring.value = settings.topicListSpring ?? '';
+		topicListSummer.value = settings.topicListSummer ?? '';
+		topicListAutumn.value = settings.topicListAutumn ?? '';
+		topicListWinter.value = settings.topicListWinter ?? '';
 		noticeText.value = settings.noticeText ?? '';
 	} catch {
 		os.alert({ type: 'error', text: '設定の読み込みに失敗しました' });
@@ -92,6 +140,10 @@ async function save() {
 		await misskeyApi('admin/paint-chat/settings/update' as any, {
 			botAccountUsername: botAccountUsername.value || null,
 			topicList: topicList.value,
+			topicListSpring: topicListSpring.value,
+			topicListSummer: topicListSummer.value,
+			topicListAutumn: topicListAutumn.value,
+			topicListWinter: topicListWinter.value,
 			noticeText: noticeText.value,
 		} as any);
 		os.alert({ type: 'success', text: '保存しました' });
