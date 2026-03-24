@@ -130,6 +130,36 @@ export class PaintChatService {
 		return { room, participantA, participantB };
 	}
 
+	// 一人で遊ぶモード: マッチング不要で一人用ルームを作成する
+	@bindThis
+	public async createSoloRoom(userId: MiUser['id']): Promise<{
+		room: PaintChatRoom;
+		participant: PaintChatParticipant;
+	}> {
+		const roomId = this.idService.gen();
+
+		await this.paintChatRoomsRepository.insert({
+			id: roomId,
+			status: 'active',
+		});
+
+		const recentNames = await this.getRecentAnonymousNames(userId);
+		const name = this.generateAnonymousName(recentNames);
+		const participantId = this.idService.gen();
+
+		await this.paintChatParticipantsRepository.insert({
+			id: participantId,
+			roomId,
+			userId,
+			anonymousName: name,
+		});
+
+		const room = await this.paintChatRoomsRepository.findOneByOrFail({ id: roomId });
+		const participant = await this.paintChatParticipantsRepository.findOneByOrFail({ id: participantId });
+
+		return { room, participant };
+	}
+
 	// ユーザーIDからルーム内のラッパーユーザーIDを解決する
 	@bindThis
 	public async resolveParticipant(roomId: string, userId: MiUser['id']): Promise<PaintChatParticipant | null> {

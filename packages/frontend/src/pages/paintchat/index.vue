@@ -32,6 +32,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<button :class="$style.agreeButton" class="_buttonPrimary" @click="startMatching">
 					同意してマッチング開始
 				</button>
+				<button :class="$style.soloButton" @click="startSolo">
+					一人で遊ぶ
+				</button>
 			</div>
 		</div>
 
@@ -109,6 +112,18 @@ async function startMatching() {
 	}
 }
 
+// 一人で遊ぶモード: マッチング不要で即座にルーム作成
+async function startSolo() {
+	try {
+		const res = await misskeyApi('paint-chat/solo' as any) as any;
+		if (res.roomId) {
+			(router as any).push(`/paintchat/${res.roomId}`);
+		}
+	} catch {
+		await os.alert({ type: 'error', text: 'ルームの作成に失敗しました' });
+	}
+}
+
 // マッチングキャンセル
 async function cancelMatching() {
 	try {
@@ -174,6 +189,26 @@ definePage(() => ({
 	border-radius: 8px;
 	font-size: 1em;
 	cursor: pointer;
+}
+
+// 「一人で遊ぶ」ボタン（控えめなテキストリンク風）
+.soloButton {
+	display: block;
+	width: 100%;
+	padding: 8px;
+	margin-top: 12px;
+	border-radius: 8px;
+	border: 1px solid var(--divider);
+	background: transparent;
+	color: var(--fgTransparent);
+	font-size: 0.85em;
+	cursor: pointer;
+	text-align: center;
+
+	&:hover {
+		color: var(--fg);
+		background: var(--bg);
+	}
 }
 
 .waitingPhase {

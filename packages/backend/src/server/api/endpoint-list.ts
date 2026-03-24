@@ -598,6 +598,7 @@ export * as 'paint-chat/join' from './endpoints/paint-chat/join.js';
 export * as 'paint-chat/leave-queue' from './endpoints/paint-chat/leave-queue.js';
 export * as 'paint-chat/room' from './endpoints/paint-chat/room.js';
 export * as 'paint-chat/settings' from './endpoints/paint-chat/settings.js';
+export * as 'paint-chat/solo' from './endpoints/paint-chat/solo.js';
 export * as 'paint-chat/message' from './endpoints/paint-chat/message.js';
 export * as 'paint-chat/messages' from './endpoints/paint-chat/messages.js';
 export * as 'paint-chat/topic' from './endpoints/paint-chat/topic.js';
