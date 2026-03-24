@@ -68,7 +68,7 @@ export class PaintChatMatchingService {
 
 		// 呼びかけ投稿
 		await this.noteCreateService.create(botUser, {
-			text: 'ランダム絵チャットで一緒にお絵かきしませんか？\n/paintchat から参加できます',
+			text: 'ランダム絵チャットで一緒にお絵かきしませんか？\n[ここから参加できます](/paintchat)',
 			localOnly: true,
 			visibility: 'public',
 		});
