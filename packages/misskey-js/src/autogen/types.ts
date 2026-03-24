@@ -45585,6 +45585,7 @@ export interface operations {
                     /** Format: misskey:id */
                     roomId: string;
                     message: string;
+                    imageBase64?: string;
                 };
             };
         };
