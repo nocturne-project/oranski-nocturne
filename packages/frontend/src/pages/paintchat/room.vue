@@ -363,6 +363,26 @@ onUnmounted(() => {
 	window.document.removeEventListener('visibilitychange', onVisibilityChange);
 });
 
+// ウィジェットペインをこの画面でのみ非表示にする（タブレット/PC対応: キャンバス領域を最大化）
+let widgetStyleEl: HTMLStyleElement | null = null;
+onMounted(() => {
+	widgetStyleEl = window.document.createElement('style');
+	widgetStyleEl.textContent = `
+		/* ランダム絵チャット画面でウィジェットペインを非表示 */
+		.widgets-area, [class*="widgetsArea"], [class*="widgets_area"] {
+			display: none !important;
+		}
+	`;
+	window.document.head.appendChild(widgetStyleEl);
+});
+
+onUnmounted(() => {
+	if (widgetStyleEl) {
+		widgetStyleEl.remove();
+		widgetStyleEl = null;
+	}
+});
+
 definePage(() => ({
 	title: 'ランダム絵チャット',
 	icon: 'ti ti-brush',

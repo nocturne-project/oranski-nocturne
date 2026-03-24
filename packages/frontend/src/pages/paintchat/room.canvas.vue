@@ -44,9 +44,9 @@ const emit = defineEmits<{
 const containerRef = ref<HTMLDivElement | null>(null);
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 
-// キャンバスサイズ（800x600デフォルト）
-const canvasWidth = 800;
-const canvasHeight = 600;
+// キャンバスサイズ（1600x1200: 高画質優先）
+const canvasWidth = 1600;
+const canvasHeight = 1200;
 
 // ズームレベル（0.25〜6倍）
 const zoomLevel = ref(1);
@@ -68,6 +68,11 @@ let isPinching = false;
 
 // 2本指ダブルタップでアンドゥ
 let lastTwoFingerTapTime = 0;
+
+// ストローク開始の遅延（ドット防止: 移動検出後にbeginStroke）
+let pendingStrokeStart: { x: number; y: number } | null = null;
+let strokeStarted = false;
+const STROKE_START_THRESHOLD = 3; // ピクセル: この距離以上動いたらストローク開始
 
 // カーソル移動のスロットル（50ms）
 let lastCursorEmit = 0;
@@ -95,14 +100,20 @@ let lastX = 0;
 let lastY = 0;
 let lastTime = 0;
 
+// 筆圧シミュレーション: 書き始め/書き終わりを細く、中間を適度な太さに
+let strokePointCount = 0;
+
 function simulatePressure(x: number, y: number): number {
 	const now = Date.now();
 	const dt = now - lastTime;
+	strokePointCount++;
+
 	if (dt === 0 || lastTime === 0) {
 		lastX = x;
 		lastY = y;
 		lastTime = now;
-		return 0.5;
+		// 書き始めは細く
+		return 0.3;
 	}
 	const dx = x - lastX;
 	const dy = y - lastY;
@@ -110,8 +121,16 @@ function simulatePressure(x: number, y: number): number {
 	lastX = x;
 	lastY = y;
 	lastTime = now;
-	// 速いほど細く、遅いほど太く
-	return Math.max(0.2, Math.min(1.0, 1.0 - speed * 0.5));
+
+	// ベース筆圧: 速度ベース（速いほど細く）
+	let pressure = Math.max(0.2, Math.min(0.8, 0.7 - speed * 0.3));
+
+	// 書き始め（最初の3ポイント）はフェードイン
+	if (strokePointCount <= 3) {
+		pressure *= strokePointCount / 3;
+	}
+
+	return pressure;
 }
 
 // --- タッチイベント ---
@@ -145,9 +164,10 @@ function onTouchStart(e: TouchEvent) {
 		return;
 	}
 
-	const { x, y } = getCanvasCoords(touch.clientX, touch.clientY);
-	const pressure = simulatePressure(x, y);
-	props.engine.beginStroke(x, y, pressure);
+	// ストローク開始を遅延（2本指パンへの切替時にドットが描かれるのを防止）
+	// touchMoveで一定距離以上動いたら実際にbeginStrokeする
+	pendingStrokeStart = { x: touch.clientX, y: touch.clientY };
+	strokeStarted = false;
 }
 
 function onTouchMove(e: TouchEvent) {
@@ -189,6 +209,21 @@ function onTouchMove(e: TouchEvent) {
 		return;
 	}
 
+	// ストローク開始の遅延処理: 一定距離以上動いたらbeginStroke
+	if (pendingStrokeStart && !strokeStarted) {
+		const dx = touch.clientX - pendingStrokeStart.x;
+		const dy = touch.clientY - pendingStrokeStart.y;
+		if (Math.sqrt(dx * dx + dy * dy) < STROKE_START_THRESHOLD) return; // まだ動いていない
+		// 十分動いたのでストローク開始
+		const startCoords = getCanvasCoords(pendingStrokeStart.x, pendingStrokeStart.y);
+		const startPressure = simulatePressure(startCoords.x, startCoords.y);
+		props.engine.beginStroke(startCoords.x, startCoords.y, startPressure);
+		strokeStarted = true;
+		pendingStrokeStart = null;
+	}
+
+	if (!strokeStarted) return;
+
 	const { x, y } = getCanvasCoords(touch.clientX, touch.clientY);
 	const pressure = simulatePressure(x, y);
 	props.engine.moveStroke(x, y, pressure);
@@ -202,15 +237,19 @@ function onTouchMove(e: TouchEvent) {
 }
 
 function onTouchEnd() {
-	// ピンチ状態のリセット
 	isPinching = false;
 	lastPinchDistance = 0;
+	pendingStrokeStart = null;
 
-	const stroke = props.engine.endStroke();
-	if (stroke) {
-		emit('strokeEnd', stroke);
+	if (strokeStarted) {
+		const stroke = props.engine.endStroke();
+		if (stroke) {
+			emit('strokeEnd', stroke);
+		}
 	}
+	strokeStarted = false;
 	lastTime = 0;
+	strokePointCount = 0;
 }
 
 // --- マウスイベント ---
@@ -263,6 +302,7 @@ function onMouseUp() {
 		emit('strokeEnd', stroke);
 	}
 	lastTime = 0;
+	strokePointCount = 0;
 }
 
 // --- マウスホイールズーム ---

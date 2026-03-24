@@ -155,6 +155,10 @@ const emit = defineEmits<{
 }>();
 
 const currentTool = ref<ToolType>('pen');
+
+// ペンと消しゴムの太さを個別に記憶
+const penWidth = ref(3);
+const eraserWidth = ref(8);
 const currentColor = ref('#000000');
 const currentWidth = ref(3);
 const currentOpacity = ref(1.0);
@@ -170,9 +174,22 @@ const colors = [
 const widths = [1, 2, 3, 5, 8, 12, 20];
 
 function selectTool(tool: ToolType) {
+	// 現在のツールの太さを保存
+	if (currentTool.value === 'pen') penWidth.value = currentWidth.value;
+	else if (currentTool.value === 'eraser') eraserWidth.value = currentWidth.value;
+
 	currentTool.value = tool;
+
+	// 新しいツールの太さを復元
+	if (tool === 'pen') {
+		currentWidth.value = penWidth.value;
+		emit('widthChange', penWidth.value);
+	} else if (tool === 'eraser') {
+		currentWidth.value = eraserWidth.value;
+		emit('widthChange', eraserWidth.value);
+	}
+
 	emit('toolChange', tool);
-	// 移動ツール選択時にmoveModeをemit
 	emit('moveMode', tool === 'move');
 }
 
@@ -397,16 +414,31 @@ function togglePanel(panel: 'color' | 'width' | 'download') {
 	background: var(--accentedBg, rgba(134,179,0,0.1));
 }
 
-// 太さプレビューの丸（暗い背景でも見えるように色を付ける）
+// 太さプレビューの丸（黒色固定、白背景で高コントラスト）
 .widthCircle {
 	border-radius: 50%;
-	background: var(--fg);
+	background: #000000;
 	min-width: 4px;
 	min-height: 4px;
 }
 
 .widthLabel {
 	font-size: 10px;
+	color: var(--fg);
+}
+
+// 太さセルの白背景（暗いテーマでもプレビューが見える）
+.widthCell {
+	background: #ffffff !important;
+	color: #333333 !important;
+
+	&:hover { background: #f0f0f0 !important; }
+}
+
+.widthSelected {
+	border-color: #5b86e5 !important;
+	background: #e8f0ff !important;
+	box-shadow: 0 0 0 2px #5b86e5;
 }
 
 .opacitySlider {
