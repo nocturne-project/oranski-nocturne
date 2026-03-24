@@ -11,10 +11,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 	@touchstart="onTouchStart"
 	@touchmove="onTouchMove"
 	@touchend="onTouchEnd"
-	@mousedown="onMouseDown"
-	@mousemove="onMouseMove"
-	@mouseup="onMouseUp"
-	@mouseleave="onMouseUp"
+	@pointerdown="onPointerDown"
+	@pointermove="onPointerMove"
+	@pointerup="onPointerUp"
+	@pointerleave="onPointerUp"
+	@touchstart="onTouchStart"
+	@touchmove="onTouchMove"
+	@touchend="onTouchEnd"
 	@wheel.prevent="onWheel"
 >
 	<canvas
@@ -206,9 +209,21 @@ function onTouchMove(e: TouchEvent) {
 		const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
 
 		if (isPinching && lastPinchDistance > 0) {
-			// ズーム
 			const scale = distance / lastPinchDistance;
-			zoomLevel.value = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoomLevel.value * scale));
+			const oldZoom = zoomLevel.value;
+			const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, oldZoom * scale));
+			zoomLevel.value = newZoom;
+
+			// ズーム中心点からの拡大: ピンチ中心を基準にパンを補正
+			if (containerRef.value) {
+				const rect = containerRef.value.getBoundingClientRect();
+				const pivotX = centerX - rect.left - rect.width / 2;
+				const pivotY = centerY - rect.top - rect.height / 2;
+				const zoomRatio = newZoom / oldZoom;
+				panX.value = pivotX - (pivotX - panX.value) * zoomRatio;
+				panY.value = pivotY - (pivotY - panY.value) * zoomRatio;
+			}
+
 			// パン（2本指の中心の移動量）
 			panX.value += centerX - lastPinchCenterX;
 			panY.value += centerY - lastPinchCenterY;
@@ -274,12 +289,27 @@ function onTouchEnd() {
 	strokePointCount = 0;
 }
 
-// --- マウスイベント ---
-let isMouseDown = false;
+// --- PointerEvent（マウス+スタイラス筆圧対応） ---
+// ハードウェア筆圧が利用可能な場合はそれを使用し、そうでなければ速度ベースのシミュレーションを使用
+let isPointerDown = false;
+let hasHardwarePressure = false; // ハードウェア筆圧が検出されたか
 
-function onMouseDown(e: MouseEvent) {
+function getEffectivePressure(e: PointerEvent, x: number, y: number): number {
+	// ハードウェア筆圧が利用可能な場合（スタイラスペン等）
+	if (e.pressure > 0 && e.pressure < 1 && e.pointerType !== 'mouse') {
+		hasHardwarePressure = true;
+		return e.pressure;
+	}
+	// マウスまたは筆圧非対応デバイスの場合は速度ベースシミュレーション
+	return simulatePressure(x, y);
+}
+
+function onPointerDown(e: PointerEvent) {
+	// タッチイベントはtouchStart/touchMoveで処理するので、ここではペン/マウスのみ
+	if (e.pointerType === 'touch') return;
 	if (e.button !== 0) return;
-	isMouseDown = true;
+	isPointerDown = true;
+	hasHardwarePressure = false;
 
 	if (isMoveMode.value) {
 		lastPinchCenterX = e.clientX;
@@ -287,7 +317,6 @@ function onMouseDown(e: MouseEvent) {
 		return;
 	}
 
-	// スポイトモード
 	if (isEyedropperMode.value) {
 		const color = getPixelColor(e.clientX, e.clientY);
 		if (color) emit('eyedrop', color);
@@ -295,12 +324,14 @@ function onMouseDown(e: MouseEvent) {
 	}
 
 	const { x, y } = getCanvasCoords(e.clientX, e.clientY);
-	const pressure = simulatePressure(x, y);
+	const pressure = getEffectivePressure(e, x, y);
 	props.engine.beginStroke(x, y, pressure);
 }
 
-function onMouseMove(e: MouseEvent) {
-	if (isMouseDown && isMoveMode.value) {
+function onPointerMove(e: PointerEvent) {
+	if (e.pointerType === 'touch') return;
+
+	if (isPointerDown && isMoveMode.value) {
 		panX.value += e.clientX - lastPinchCenterX;
 		panY.value += e.clientY - lastPinchCenterY;
 		lastPinchCenterX = e.clientX;
@@ -310,8 +341,8 @@ function onMouseMove(e: MouseEvent) {
 
 	const { x, y } = getCanvasCoords(e.clientX, e.clientY);
 
-	if (isMouseDown) {
-		const pressure = simulatePressure(x, y);
+	if (isPointerDown) {
+		const pressure = getEffectivePressure(e, x, y);;
 		props.engine.moveStroke(x, y, pressure);
 
 		const now = Date.now();
@@ -323,21 +354,35 @@ function onMouseMove(e: MouseEvent) {
 	}
 }
 
-function onMouseUp() {
-	if (!isMouseDown) return;
-	isMouseDown = false;
+function onPointerUp(e: PointerEvent) {
+	if (e.pointerType === 'touch') return;
+	if (!isPointerDown) return;
+	isPointerDown = false;
 	const stroke = props.engine.endStroke();
 	if (stroke) {
 		emit('strokeEnd', stroke);
 	}
 	lastTime = 0;
 	strokePointCount = 0;
+	hasHardwarePressure = false;
 }
 
-// --- マウスホイールズーム ---
+// --- マウスホイールズーム（カーソル位置基準） ---
 function onWheel(e: WheelEvent) {
+	const oldZoom = zoomLevel.value;
 	const delta = e.deltaY > 0 ? -0.1 : 0.1;
-	zoomLevel.value = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoomLevel.value + delta));
+	const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, oldZoom + delta));
+	zoomLevel.value = newZoom;
+
+	// カーソル位置を基準にパンを補正
+	if (containerRef.value && oldZoom !== newZoom) {
+		const rect = containerRef.value.getBoundingClientRect();
+		const pivotX = e.clientX - rect.left - rect.width / 2;
+		const pivotY = e.clientY - rect.top - rect.height / 2;
+		const zoomRatio = newZoom / oldZoom;
+		panX.value = pivotX - (pivotX - panX.value) * zoomRatio;
+		panY.value = pivotY - (pivotY - panY.value) * zoomRatio;
+	}
 }
 
 // 外部からズーム操作するためのメソッド
