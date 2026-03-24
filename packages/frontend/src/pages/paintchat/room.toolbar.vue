@@ -21,6 +21,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 		:class="[$style.btn, currentTool === 'eraser' ? $style.active : '']"
 		@click="selectTool('eraser')"
 	><i class="ti ti-eraser"></i></button>
+	<button
+		:class="[$style.btn, currentTool === 'eyedropper' ? $style.active : '']"
+		@click="selectTool('eyedropper')"
+	><i class="ti ti-color-picker"></i></button>
 
 	<!-- 色（現在色のドット表示） -->
 	<button :class="$style.btn" @click="togglePanel('color')">
@@ -79,8 +83,21 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<button :class="$style.panelClose" @click="activePanel = null">閉じる</button>
 	</div>
 
-	<!-- カラーパレット -->
+	<!-- カラー選択 -->
 	<template v-if="activePanel === 'color'">
+		<!-- カラーピッカー（input type=color） -->
+		<div :class="$style.colorPickerRow">
+			<input
+				type="color"
+				:value="currentColor"
+				:class="$style.colorPickerInput"
+				@input="onColorPickerChange"
+			>
+			<span :class="$style.colorHex">{{ currentColor }}</span>
+		</div>
+
+		<!-- プリセットパレット -->
+		<div :class="$style.sectionLabel">プリセット</div>
 		<div :class="$style.colorGrid">
 			<button
 				v-for="color in colors"
@@ -89,6 +106,20 @@ SPDX-License-Identifier: AGPL-3.0-only
 				:style="{ background: color }"
 				@click="selectColor(color)"
 			></button>
+		</div>
+
+		<!-- カラーヒストリー（最近使った色） -->
+		<div v-if="colorHistory.length > 0" :class="$style.colorHistorySection">
+			<div :class="$style.sectionLabel">最近使った色</div>
+			<div :class="$style.colorGrid">
+				<button
+					v-for="(color, idx) in colorHistory"
+					:key="'h-' + idx"
+					:class="[$style.colorCell, currentColor === color ? $style.colorSelected : '']"
+					:style="{ background: color }"
+					@click="selectColor(color)"
+				></button>
+			</div>
 		</div>
 	</template>
 
@@ -164,6 +195,9 @@ const currentWidth = ref(3);
 const currentOpacity = ref(1.0);
 const activePanel = ref<'color' | 'width' | 'download' | null>(null);
 
+// カラーヒストリー（最近使った色、最大10件、重複なし）
+const colorHistory = ref<string[]>([]);
+
 const colors = [
 	'#000000', '#ffffff', '#ff0000', '#ff6600', '#ffcc00',
 	'#33cc33', '#0099ff', '#6633ff', '#ff33cc', '#996633',
@@ -194,9 +228,28 @@ function selectTool(tool: ToolType) {
 }
 
 function selectColor(color: string) {
+	// カラーヒストリーに追加（重複除去、先頭に追加、最大10件）
+	const idx = colorHistory.value.indexOf(color);
+	if (idx >= 0) colorHistory.value.splice(idx, 1);
+	colorHistory.value.unshift(color);
+	if (colorHistory.value.length > 10) colorHistory.value.pop();
+
 	currentColor.value = color;
 	emit('colorChange', color);
 	activePanel.value = null;
+}
+
+// カラーピッカー（input type=color）の変更ハンドラ
+function onColorPickerChange(e: Event) {
+	const color = (e.target as HTMLInputElement).value;
+	selectColor(color);
+}
+
+// 外部からスポイトで色を設定する（room.vueから呼ばれる）
+function setColorFromEyedropper(color: string) {
+	selectColor(color);
+	// スポイト使用後はペンツールに戻す
+	selectTool('pen');
 }
 
 function selectWidth(width: number) {
@@ -213,6 +266,8 @@ function onOpacityChange(e: Event) {
 function togglePanel(panel: 'color' | 'width' | 'download') {
 	activePanel.value = activePanel.value === panel ? null : panel;
 }
+
+defineExpose({ setColorFromEyedropper });
 </script>
 
 <style lang="scss" module>
@@ -352,6 +407,36 @@ function togglePanel(panel: 'color' | 'width' | 'download') {
 	color: var(--fg);
 	cursor: pointer;
 	font-size: 12px;
+}
+
+// カラーピッカー行
+.colorPickerRow {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+
+.colorPickerInput {
+	width: 40px;
+	height: 40px;
+	border: none;
+	border-radius: 8px;
+	cursor: pointer;
+	padding: 0;
+
+	&::-webkit-color-swatch-wrapper { padding: 2px; }
+	&::-webkit-color-swatch { border-radius: 6px; border: none; }
+}
+
+.colorHex {
+	font-family: monospace;
+	font-size: 12px;
+	color: var(--fg);
+}
+
+.colorHistorySection {
+	margin-top: 8px;
 }
 
 // カラーグリッド

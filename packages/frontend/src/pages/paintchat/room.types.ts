@@ -4,7 +4,7 @@
  */
 
 // ツールの種類
-export type ToolType = 'move' | 'pen' | 'eraser';
+export type ToolType = 'move' | 'pen' | 'eraser' | 'eyedropper';
 
 // 筆圧ポイント
 export interface PressurePoint {

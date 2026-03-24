@@ -31,6 +31,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<!-- 左サイドバーツールバー（absoluteで左端に配置） -->
 			<XToolbar
 				v-if="canvasEngine"
+				ref="toolbarRef"
 				@toolChange="onToolChange"
 				@colorChange="onColorChange"
 				@widthChange="onWidthChange"
@@ -55,6 +56,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					@strokeEnd="onStrokeEnd"
 					@progress="onProgress"
 					@cursorMove="onCursorMove"
+					@eyedrop="onEyedrop"
 				/>
 			</div>
 		</div>
@@ -110,6 +112,8 @@ const roomInfo = ref<RoomInfo | null>(null);
 // マッチング直後は相手も入室しているはずなのでデフォルトはonline
 const partnerPresence = ref<PresenceStatus>('online');
 const canvasCompRef = ref<InstanceType<typeof XCanvas> | null>(null);
+const toolbarRef = ref<InstanceType<typeof XToolbar> | null>(null);
+let isEyedropperMode = false;
 const chatRef = ref<InstanceType<typeof XChat> | null>(null);
 const publishRef = ref<InstanceType<typeof XPublish> | null>(null);
 const strokeCount = ref(0);
@@ -214,10 +218,18 @@ function onCursorMove(x: number, y: number) {
 }
 
 function onToolChange(tool: ToolType) {
-	// 移動ツールはcanvasEngineには渡さない（描画ツールのみ）
-	if (tool !== 'move') {
+	isEyedropperMode = tool === 'eyedropper';
+	canvasCompRef.value?.setEyedropperMode(isEyedropperMode);
+	// 移動/スポイトツールはcanvasEngineには渡さない（描画ツールのみ）
+	if (tool !== 'move' && tool !== 'eyedropper') {
 		canvasEngine.value?.setState({ currentTool: tool });
 	}
+}
+
+// スポイト: キャンバスからピクセル色を取得してツールバーに反映
+function onEyedrop(color: string) {
+	toolbarRef.value?.setColorFromEyedropper(color);
+	canvasEngine.value?.setState({ currentColor: color });
 }
 
 function onColorChange(color: string) {

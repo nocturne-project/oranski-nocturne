@@ -39,7 +39,15 @@ const emit = defineEmits<{
 	(e: 'strokeEnd', stroke: any): void;
 	(e: 'progress', points: any[]): void;
 	(e: 'cursorMove', x: number, y: number): void;
+	(e: 'eyedrop', color: string): void;
 }>();
+
+// スポイトモード（外部から設定）
+const isEyedropperMode = ref(false);
+
+function setEyedropperMode(enabled: boolean) {
+	isEyedropperMode.value = enabled;
+}
 
 const containerRef = ref<HTMLDivElement | null>(null);
 const canvasRef = ref<HTMLCanvasElement | null>(null);
@@ -164,6 +172,13 @@ function onTouchStart(e: TouchEvent) {
 		return;
 	}
 
+	// スポイトモード時はピクセル色を取得
+	if (isEyedropperMode.value) {
+		const color = getPixelColor(touch.clientX, touch.clientY);
+		if (color) emit('eyedrop', color);
+		return;
+	}
+
 	// ストローク開始を遅延（2本指パンへの切替時にドットが描かれるのを防止）
 	// touchMoveで一定距離以上動いたら実際にbeginStrokeする
 	pendingStrokeStart = { x: touch.clientX, y: touch.clientY };
@@ -265,6 +280,13 @@ function onMouseDown(e: MouseEvent) {
 		return;
 	}
 
+	// スポイトモード
+	if (isEyedropperMode.value) {
+		const color = getPixelColor(e.clientX, e.clientY);
+		if (color) emit('eyedrop', color);
+		return;
+	}
+
 	const { x, y } = getCanvasCoords(e.clientX, e.clientY);
 	const pressure = simulatePressure(x, y);
 	props.engine.beginStroke(x, y, pressure);
@@ -330,7 +352,17 @@ function setMoveMode(enabled: boolean) {
 	isMoveMode.value = enabled;
 }
 
-defineExpose({ zoomIn, zoomOut, zoomReset, zoomLevel, setMoveMode });
+// スポイト用: 指定座標のピクセル色を取得する
+function getPixelColor(clientX: number, clientY: number): string | null {
+	if (!canvasRef.value) return null;
+	const ctx = canvasRef.value.getContext('2d');
+	if (!ctx) return null;
+	const { x, y } = getCanvasCoords(clientX, clientY);
+	const pixel = ctx.getImageData(Math.round(x), Math.round(y), 1, 1).data;
+	return `#${pixel[0].toString(16).padStart(2, '0')}${pixel[1].toString(16).padStart(2, '0')}${pixel[2].toString(16).padStart(2, '0')}`;
+}
+
+defineExpose({ zoomIn, zoomOut, zoomReset, zoomLevel, setMoveMode, setEyedropperMode, getPixelColor });
 
 onUnmounted(() => {
 	props.engine.dispose();
