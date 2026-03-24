@@ -851,6 +851,7 @@ import type {
 	PaintChatRoomRequest,
 	PaintChatRoomResponse,
 	PaintChatSettingsResponse,
+	PaintChatSoloResponse,
 	PaintChatTopicRequest,
 	PaintChatTopicResponse,
 	PingResponse,
@@ -1493,6 +1494,7 @@ export type Endpoints = {
 	'paint-chat/report': { req: PaintChatReportRequest; res: PaintChatReportResponse };
 	'paint-chat/room': { req: PaintChatRoomRequest; res: PaintChatRoomResponse };
 	'paint-chat/settings': { req: EmptyRequest; res: PaintChatSettingsResponse };
+	'paint-chat/solo': { req: EmptyRequest; res: PaintChatSoloResponse };
 	'paint-chat/topic': { req: PaintChatTopicRequest; res: PaintChatTopicResponse };
 	'ping': { req: EmptyRequest; res: PingResponse };
 	'pinned-users': { req: EmptyRequest; res: PinnedUsersResponse };

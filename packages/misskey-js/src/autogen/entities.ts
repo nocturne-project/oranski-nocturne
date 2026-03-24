@@ -854,6 +854,7 @@ export type PaintChatReportResponse = operations['paint-chat___report']['respons
 export type PaintChatRoomRequest = operations['paint-chat___room']['requestBody']['content']['application/json'];
 export type PaintChatRoomResponse = operations['paint-chat___room']['responses']['200']['content']['application/json'];
 export type PaintChatSettingsResponse = operations['paint-chat___settings']['responses']['200']['content']['application/json'];
+export type PaintChatSoloResponse = operations['paint-chat___solo']['responses']['200']['content']['application/json'];
 export type PaintChatTopicRequest = operations['paint-chat___topic']['requestBody']['content']['application/json'];
 export type PaintChatTopicResponse = operations['paint-chat___topic']['responses']['200']['content']['application/json'];
 export type PingResponse = operations['ping']['responses']['200']['content']['application/json'];

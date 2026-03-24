@@ -2794,6 +2794,7 @@ declare namespace entities {
         PaintChatRoomRequest,
         PaintChatRoomResponse,
         PaintChatSettingsResponse,
+        PaintChatSoloResponse,
         PaintChatTopicRequest,
         PaintChatTopicResponse,
         PingResponse,
@@ -4779,6 +4780,9 @@ type PaintChatRoomResponse = operations['paint-chat___room']['responses']['200']
 
 // @public (undocumented)
 type PaintChatSettingsResponse = operations['paint-chat___settings']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type PaintChatSoloResponse = operations['paint-chat___solo']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
 type PaintChatTopicRequest = operations['paint-chat___topic']['requestBody']['content']['application/json'];

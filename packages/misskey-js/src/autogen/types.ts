@@ -4883,6 +4883,15 @@ export type paths = {
          */
         post: operations['paint-chat___settings'];
     };
+    '/paint-chat/solo': {
+        /**
+         * paint-chat/solo
+         * @description No description provided.
+         *
+         *     **Credential required**: *Yes* / **Permission**: *write:account*
+         */
+        post: operations['paint-chat___solo'];
+    };
     '/paint-chat/topic': {
         /**
          * paint-chat/topic
@@ -11900,6 +11909,10 @@ export interface operations {
                         botAccountId: string | null;
                         botAccountUsername: string | null;
                         topicList: string;
+                        topicListSpring: string;
+                        topicListSummer: string;
+                        topicListAutumn: string;
+                        topicListWinter: string;
                         noticeText: string;
                     };
                 };
@@ -11957,6 +11970,10 @@ export interface operations {
                 'application/json': {
                     botAccountUsername?: string | null;
                     topicList?: string;
+                    topicListSpring?: string;
+                    topicListSummer?: string;
+                    topicListAutumn?: string;
+                    topicListWinter?: string;
                     noticeText?: string;
                 };
             };
@@ -45865,6 +45882,67 @@ export interface operations {
                 content: {
                     'application/json': {
                         noticeText: string;
+                    };
+                };
+            };
+            /** @description Client error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Authentication error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Forbidden error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description I'm Ai */
+            418: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+        };
+    };
+    'paint-chat___solo': {
+        responses: {
+            /** @description OK (with results) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': {
+                        /** Format: id */
+                        roomId: string;
                     };
                 };
             };
