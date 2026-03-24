@@ -270,7 +270,8 @@ async function leaveRoom() {
 	try {
 		await misskeyApi('paint-chat/leave' as any, { roomId: props.roomId } as any);
 	} catch {
-		// エラーは無視
+		// 退出通知に失敗。相手にはまだ入室中と表示される可能性がある。
+		await os.alert({ type: 'warning', text: '退出の通知に失敗しました。相手にはまだ入室中と表示されている可能性があります。' });
 	}
 	(router as any).push('/paintchat');
 }

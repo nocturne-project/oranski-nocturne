@@ -60,7 +60,7 @@ onMounted(async () => {
 		topicList.value = settings.topicList ?? '';
 		noticeText.value = settings.noticeText ?? '';
 	} catch {
-		// 初回は設定なし
+		os.alert({ type: 'error', text: '設定の読み込みに失敗しました' });
 	}
 });
 
