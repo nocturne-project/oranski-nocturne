@@ -49,23 +49,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 			@downloadMine="onDownloadMine"
 		/>
 
-		<!-- テキストチャット -->
-		<XChat
-			v-if="roomInfo"
-			ref="chatRef"
-			:roomId="props.roomId"
-			:participants="roomInfo.participants"
-		/>
-
-		<!-- 投稿同意フロー -->
-		<XPublish
-			v-if="roomInfo"
-			ref="publishRef"
-			:roomId="props.roomId"
-			:canPublish="strokeCount > 0"
-			@getCanvasImage="onGetCanvasImage"
-		/>
-
 		<!-- 下部バー（通報・退出ボタン、テキスト付き） -->
 		<div :class="$style.bottomBar">
 			<button :class="$style.reportButton" @click="reportRoom">通報</button>
@@ -77,6 +60,21 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<div v-else :class="$style.loading">
 		<MkLoading/>
 	</div>
+
+	<!-- チャットとPublishはfixedレイヤーで表示（コンテナのflexレイアウトに含めない） -->
+	<XChat
+		v-if="roomInfo"
+		ref="chatRef"
+		:roomId="props.roomId"
+		:participants="roomInfo.participants"
+	/>
+	<XPublish
+		v-if="roomInfo"
+		ref="publishRef"
+		:roomId="props.roomId"
+		:canPublish="strokeCount > 0"
+		@getCanvasImage="onGetCanvasImage"
+	/>
 </MkStickyContainer>
 </template>
 

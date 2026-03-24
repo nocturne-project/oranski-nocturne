@@ -218,7 +218,7 @@ defineExpose({ addMessage });
 	font-size: 14px;
 	font-weight: bold;
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-	z-index: 100;
+	z-index: 9000;
 	display: flex;
 	align-items: center;
 	gap: 6px;
@@ -236,15 +236,15 @@ defineExpose({ addMessage });
 	background: #ff4444;
 }
 
-// チャットパネル（不透過背景）
+// チャットパネル（全画面、確実に不透過）
 .chatPanel {
 	position: fixed;
 	bottom: 0;
 	left: 0;
 	right: 0;
 	top: 0;
-	background: var(--panel);
-	z-index: 200;
+	background: var(--bg, #1a1a2e);
+	z-index: 10000;
 	display: flex;
 	flex-direction: column;
 }
@@ -255,7 +255,7 @@ defineExpose({ addMessage });
 	justify-content: space-between;
 	padding: 12px 16px;
 	border-bottom: 1px solid var(--divider);
-	background: var(--panel);
+	background: var(--header, var(--bg, #1a1a2e));
 	flex-shrink: 0;
 }
 
@@ -283,7 +283,7 @@ defineExpose({ addMessage });
 	flex: 1;
 	overflow-y: auto;
 	padding: 12px 16px;
-	background: var(--bg);
+	background: var(--bg, #1a1a2e);
 }
 
 .emptyMessage {
@@ -317,7 +317,7 @@ defineExpose({ addMessage });
 .inputArea {
 	padding: 8px 12px;
 	border-top: 1px solid var(--divider);
-	background: var(--panel);
+	background: var(--bg, #1a1a2e);
 	flex-shrink: 0;
 }
 
