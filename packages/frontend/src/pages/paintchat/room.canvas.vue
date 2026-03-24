@@ -313,13 +313,18 @@ function onTouchEnd() {
 // --- PointerEvent（マウス+スタイラス筆圧対応） ---
 // ハードウェア筆圧が利用可能な場合はそれを使用し、そうでなければ速度ベースのシミュレーションを使用
 let isPointerDown = false;
-let hasHardwarePressure = false; // ハードウェア筆圧が検出されたか
+let hasHardwarePressure = false;
+let lastHwPressure = 0.5; // ハードウェア筆圧のスムージング用
 
 function getEffectivePressure(e: PointerEvent, x: number, y: number): number {
 	// ハードウェア筆圧が利用可能な場合（スタイラスペン等）
 	if (e.pressure > 0 && e.pressure < 1 && e.pointerType !== 'mouse') {
 		hasHardwarePressure = true;
-		return e.pressure;
+		// 筆圧スムージング: 急激な変化を抑えてドットを防止
+		const smoothFactor = 0.35;
+		lastHwPressure = lastHwPressure + (e.pressure - lastHwPressure) * (1 - smoothFactor);
+		// 最低筆圧を保証（極端に細い線やドットを防止）
+		return Math.max(0.08, lastHwPressure);
 	}
 	// マウスまたは筆圧非対応デバイスの場合は速度ベースシミュレーション
 	return simulatePressure(x, y);
@@ -331,6 +336,7 @@ function onPointerDown(e: PointerEvent) {
 	if (e.button !== 0) return;
 	isPointerDown = true;
 	hasHardwarePressure = false;
+	lastHwPressure = 0.5;
 
 	if (isMoveMode.value) {
 		lastPinchCenterX = e.clientX;

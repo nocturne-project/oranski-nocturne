@@ -201,7 +201,7 @@ const currentTool = ref<ToolType>('pen');
 
 // ペンと消しゴムの太さを個別に記憶
 const penWidth = ref(3);
-const eraserWidth = ref(8);
+const eraserWidth = ref(20);
 const currentColor = ref('#000000');
 const currentWidth = ref(3);
 const currentOpacity = ref(1.0);
@@ -217,7 +217,7 @@ const colors = [
 	'#99ff99', '#66ccff', '#cc99ff', '#ffccee', '#cc9966',
 ];
 
-const widths = [1, 2, 3, 5, 8, 12, 20];
+const widths = [1, 2, 3, 5, 8, 12, 20, 40, 80, 120, 200];
 
 function selectTool(tool: ToolType) {
 	// 現在のツールの太さを保存

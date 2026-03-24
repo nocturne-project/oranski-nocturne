@@ -338,8 +338,10 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 					ctx.globalAlpha = state.currentOpacity;
 				}
 
+				// 前後のpressureを補間してlineWidthの急変を防止
+				const avgPressure = (from.pressure + to.pressure) / 2;
 				ctx.beginPath();
-				ctx.lineWidth = state.currentWidth * pressure;
+				ctx.lineWidth = Math.max(0.5, state.currentWidth * avgPressure);
 				ctx.moveTo(from.x, from.y);
 				ctx.lineTo(to.x, to.y);
 				ctx.stroke();
