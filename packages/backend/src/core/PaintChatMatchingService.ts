@@ -71,7 +71,8 @@ export class PaintChatMatchingService {
 		if (botUser == null) return;
 
 		// 呼びかけ投稿
-		const paintChatUrl = `${this.config.url}paintchat`;
+		const baseUrl = this.config.url.endsWith('/') ? this.config.url : this.config.url + '/';
+		const paintChatUrl = `${baseUrl}paintchat`;
 		await this.noteCreateService.create(botUser, {
 			text: `ランダム絵チャットで一緒にお絵かきしませんか？\n[ここから参加できます](${paintChatUrl})`,
 			localOnly: true,
