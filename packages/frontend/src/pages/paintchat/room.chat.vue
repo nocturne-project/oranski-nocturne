@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
 <!-- テキストチャット: 開閉可能、未読点滅、お題・サイコロボタン付き。モバイルではフルスクリーン切替。 -->
 <div :class="$style.chatWrapper">

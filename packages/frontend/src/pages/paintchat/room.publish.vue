@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
 <!-- 投稿同意フロー: 同意ボタン、品質ガード、一言メッセージ入力 -->
 <div :class="$style.publishWrapper">

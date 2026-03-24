@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
 <!-- キャンバスエリア。タッチ操作は全て描画入力として扱う。スクロール/ズーム無効化。 -->
 <div

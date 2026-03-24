@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
 <!-- アイビスペイント風ツールバー: 画面下部にコンパクト配置、タップで展開するパネル式 -->
 <div :class="$style.toolbar">
