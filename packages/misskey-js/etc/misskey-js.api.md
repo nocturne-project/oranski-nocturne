@@ -312,6 +312,21 @@ type AdminNoqSettingsUpdateRequest = operations['admin___noq___settings___update
 type AdminNoqSettingsUpdateResponse = operations['admin___noq___settings___update']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
+type AdminPaintChatSettingsResponse = operations['admin___paint-chat___settings']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type AdminPaintChatSettingsUpdateRequest = operations['admin___paint-chat___settings___update']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type AdminPaintChatSettingsUpdateResponse = operations['admin___paint-chat___settings___update']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type AdminPaintChatStegoExtractRequest = operations['admin___paint-chat___stego___extract']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type AdminPaintChatStegoExtractResponse = operations['admin___paint-chat___stego___extract']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
 type AdminPromoCreateRequest = operations['admin___promo___create']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
@@ -2019,6 +2034,11 @@ declare namespace entities {
         AdminNoqSettingsResponse,
         AdminNoqSettingsUpdateRequest,
         AdminNoqSettingsUpdateResponse,
+        AdminPaintChatSettingsResponse,
+        AdminPaintChatSettingsUpdateRequest,
+        AdminPaintChatSettingsUpdateResponse,
+        AdminPaintChatStegoExtractRequest,
+        AdminPaintChatStegoExtractResponse,
         AdminPromoCreateRequest,
         AdminQueueClearRequest,
         AdminQueueDeliverDelayedResponse,
@@ -2753,6 +2773,29 @@ declare namespace entities {
         PagesShowResponse,
         PagesUnlikeRequest,
         PagesUpdateRequest,
+        PaintChatDiceRequest,
+        PaintChatDiceResponse,
+        PaintChatJoinResponse,
+        PaintChatLeaveRequest,
+        PaintChatLeaveResponse,
+        PaintChatLeaveQueueResponse,
+        PaintChatMessageRequest,
+        PaintChatMessageResponse,
+        PaintChatMessagesRequest,
+        PaintChatMessagesResponse,
+        PaintChatPublishAgreeRequest,
+        PaintChatPublishAgreeResponse,
+        PaintChatPublishMessageRequest,
+        PaintChatPublishMessageResponse,
+        PaintChatPublishRejectRequest,
+        PaintChatPublishRejectResponse,
+        PaintChatReportRequest,
+        PaintChatReportResponse,
+        PaintChatRoomRequest,
+        PaintChatRoomResponse,
+        PaintChatSettingsResponse,
+        PaintChatTopicRequest,
+        PaintChatTopicResponse,
         PingResponse,
         PinnedUsersResponse,
         PromoReadRequest,
@@ -4673,6 +4716,75 @@ type PagesUnlikeRequest = operations['pages___unlike']['requestBody']['content']
 
 // @public (undocumented)
 type PagesUpdateRequest = operations['pages___update']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type PaintChatDiceRequest = operations['paint-chat___dice']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type PaintChatDiceResponse = operations['paint-chat___dice']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type PaintChatJoinResponse = operations['paint-chat___join']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type PaintChatLeaveQueueResponse = operations['paint-chat___leave-queue']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type PaintChatLeaveRequest = operations['paint-chat___leave']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type PaintChatLeaveResponse = operations['paint-chat___leave']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type PaintChatMessageRequest = operations['paint-chat___message']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type PaintChatMessageResponse = operations['paint-chat___message']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type PaintChatMessagesRequest = operations['paint-chat___messages']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type PaintChatMessagesResponse = operations['paint-chat___messages']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type PaintChatPublishAgreeRequest = operations['paint-chat___publish___agree']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type PaintChatPublishAgreeResponse = operations['paint-chat___publish___agree']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type PaintChatPublishMessageRequest = operations['paint-chat___publish___message']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type PaintChatPublishMessageResponse = operations['paint-chat___publish___message']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type PaintChatPublishRejectRequest = operations['paint-chat___publish___reject']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type PaintChatPublishRejectResponse = operations['paint-chat___publish___reject']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type PaintChatReportRequest = operations['paint-chat___report']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type PaintChatReportResponse = operations['paint-chat___report']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type PaintChatRoomRequest = operations['paint-chat___room']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type PaintChatRoomResponse = operations['paint-chat___room']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type PaintChatSettingsResponse = operations['paint-chat___settings']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type PaintChatTopicRequest = operations['paint-chat___topic']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type PaintChatTopicResponse = operations['paint-chat___topic']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
 function parse(_acct: string): Acct;
