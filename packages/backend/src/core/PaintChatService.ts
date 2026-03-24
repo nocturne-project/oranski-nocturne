@@ -57,16 +57,31 @@ export class PaintChatService {
 	) {
 	}
 
-	// ランダムな匿名名を生成する。existingNameと被らないようにする。
+	// ランダムな匿名名を生成する。excludeNamesに含まれる名前は除外する。
 	@bindThis
-	public generateAnonymousName(existingName?: string): string {
+	public generateAnonymousName(excludeNames: string[] = []): string {
 		let name: string;
+		let attempts = 0;
 		do {
 			const color = COLORS[Math.floor(Math.random() * COLORS.length)];
 			const animal = ANIMALS[Math.floor(Math.random() * ANIMALS.length)];
 			name = `${color}${animal}`;
-		} while (existingName != null && name === existingName);
+			attempts++;
+			// 全300通りを使い切った場合は除外を諦める（安全弁）
+			if (attempts > 300) break;
+		} while (excludeNames.includes(name));
 		return name;
+	}
+
+	// ユーザーの直近の匿名名を取得する（「毎回異なる」保証用: FR-005）
+	@bindThis
+	public async getRecentAnonymousNames(userId: MiUser['id'], limit = 3): Promise<string[]> {
+		const recent = await this.paintChatParticipantsRepository.find({
+			where: { userId },
+			order: { joinedAt: 'DESC' },
+			take: limit,
+		});
+		return recent.map(p => p.anonymousName);
 	}
 
 	// ルームを作成し、二人の参加者を登録する
@@ -84,9 +99,11 @@ export class PaintChatService {
 			status: 'active',
 		});
 
-		// 匿名名生成（重複しないように）
-		const nameA = this.generateAnonymousName();
-		const nameB = this.generateAnonymousName(nameA);
+		// 匿名名生成（前回のマッチングと被らないように + 同室内重複防止: FR-005）
+		const recentNamesA = await this.getRecentAnonymousNames(userIdA);
+		const recentNamesB = await this.getRecentAnonymousNames(userIdB);
+		const nameA = this.generateAnonymousName(recentNamesA);
+		const nameB = this.generateAnonymousName([...recentNamesB, nameA]);
 
 		// 参加者登録（ラッパーユーザーID = PaintChatParticipant.id）
 		const participantAId = this.idService.gen();

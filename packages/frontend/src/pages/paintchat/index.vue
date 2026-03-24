@@ -99,7 +99,8 @@ async function startMatching() {
 		// status === 'waiting' の場合はWebSocketでmatchedイベントを待つ
 	} catch (e: any) {
 		if (e.code === 'ALREADY_WAITING') {
-			// 既に待機中の場合はWebSocketイベントを待つ
+			// 既に別のタブで待機中。このタブでもWebSocketイベントを待つが通知を表示する（FR-015）
+			await os.alert({ type: 'info', text: '既に別のタブでマッチング待機中です。このタブでもマッチング通知を受け取れます。' });
 		} else {
 			phase.value = 'notice';
 			await os.alert({ type: 'error', text: 'マッチングの開始に失敗しました' });
