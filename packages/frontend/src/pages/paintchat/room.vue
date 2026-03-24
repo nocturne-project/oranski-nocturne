@@ -32,6 +32,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<XToolbar
 				v-if="canvasEngine"
 				ref="toolbarRef"
+				:hasUnreadChat="chatRef?.hasUnread"
 				@toolChange="onToolChange"
 				@colorChange="onColorChange"
 				@widthChange="onWidthChange"
@@ -43,6 +44,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				@moveMode="(enabled: boolean) => canvasCompRef?.setMoveMode(enabled)"
 				@downloadAll="onDownloadAll"
 				@downloadMine="onDownloadMine"
+				@toggleChat="onToggleChat"
 				@publish="onPublishRequest"
 				@report="reportRoom"
 				@leave="leaveRoom"
@@ -226,6 +228,15 @@ function onToolChange(tool: ToolType) {
 	}
 }
 
+// チャットの開閉トグル
+function onToggleChat() {
+	if (chatRef.value?.isOpen) {
+		chatRef.value.closeChat();
+	} else {
+		chatRef.value?.openChat();
+	}
+}
+
 // スポイト: キャンバスからピクセル色を取得してツールバーに反映
 function onEyedrop(color: string) {
 	toolbarRef.value?.setColorFromEyedropper(color);
@@ -375,29 +386,12 @@ onUnmounted(() => {
 	window.document.removeEventListener('visibilitychange', onVisibilityChange);
 });
 
-// ウィジェットペインをこの画面でのみ非表示にする（タブレット/PC対応: キャンバス領域を最大化）
-let widgetStyleEl: HTMLStyleElement | null = null;
-onMounted(() => {
-	widgetStyleEl = window.document.createElement('style');
-	widgetStyleEl.textContent = `
-		/* ランダム絵チャット画面でウィジェットペインを非表示 */
-		.widgets-area, [class*="widgetsArea"], [class*="widgets_area"] {
-			display: none !important;
-		}
-	`;
-	window.document.head.appendChild(widgetStyleEl);
-});
-
-onUnmounted(() => {
-	if (widgetStyleEl) {
-		widgetStyleEl.remove();
-		widgetStyleEl = null;
-	}
-});
+// ウィジェット非表示はdefinePageのneedWideAreaで制御（universal.vueが参照）
 
 definePage(() => ({
 	title: 'ランダム絵チャット',
 	icon: 'ti ti-brush',
+	needWideArea: true, // ウィジェットペインを非表示にしてキャンバス領域を最大化
 }));
 </script>
 

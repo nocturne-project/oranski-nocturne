@@ -31,9 +31,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<span :class="$style.colorDot" :style="{ background: currentColor }"></span>
 	</button>
 
-	<!-- 太さ（プレビュー丸） -->
+	<!-- 太さ -->
 	<button :class="$style.btn" @click="togglePanel('width')">
-		<span :class="$style.widthDot" :style="{ width: Math.min(currentWidth * 2, 16) + 'px', height: Math.min(currentWidth * 2, 16) + 'px' }"></span>
+		<i class="ti ti-line-height"></i>
 	</button>
 
 	<div :class="$style.separator"></div>
@@ -55,6 +55,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 	</button>
 
 	<div :class="$style.separator"></div>
+
+	<!-- チャット（未読時に光る） -->
+	<button :class="[$style.btn, hasUnreadChat ? $style.unreadGlow : '']" @click="$emit('toggleChat')">
+		<i class="ti ti-message-circle"></i>
+	</button>
 
 	<!-- 投稿 -->
 	<button :class="$style.btn" @click="$emit('publish')">
@@ -165,7 +170,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import type { ToolType } from './room.types.js';
 
 const emit = defineEmits<{
@@ -180,10 +185,17 @@ const emit = defineEmits<{
 	(e: 'moveMode', enabled: boolean): void;
 	(e: 'downloadAll'): void;
 	(e: 'downloadMine'): void;
+	(e: 'toggleChat'): void;
 	(e: 'publish'): void;
 	(e: 'report'): void;
 	(e: 'leave'): void;
 }>();
+
+const props = defineProps<{
+	hasUnreadChat?: boolean;
+}>();
+
+const hasUnreadChat = computed(() => props.hasUnreadChat ?? false);
 
 const currentTool = ref<ToolType>('pen');
 
@@ -227,8 +239,14 @@ function selectTool(tool: ToolType) {
 	emit('moveMode', tool === 'move');
 }
 
+// パネルを閉じて色を選択する（プリセット/ヒストリーのタップ用）
 function selectColor(color: string) {
-	// カラーヒストリーに追加（重複除去、先頭に追加、最大10件）
+	applyColor(color);
+	activePanel.value = null;
+}
+
+// パネルを閉じずに色を適用する（カラーピッカー/スライダー用: FR-062）
+function applyColor(color: string) {
 	const idx = colorHistory.value.indexOf(color);
 	if (idx >= 0) colorHistory.value.splice(idx, 1);
 	colorHistory.value.unshift(color);
@@ -236,19 +254,17 @@ function selectColor(color: string) {
 
 	currentColor.value = color;
 	emit('colorChange', color);
-	activePanel.value = null;
 }
 
-// カラーピッカー（input type=color）の変更ハンドラ
+// カラーピッカー（input type=color）の変更ハンドラ: パネルは閉じない
 function onColorPickerChange(e: Event) {
 	const color = (e.target as HTMLInputElement).value;
-	selectColor(color);
+	applyColor(color);
 }
 
 // 外部からスポイトで色を設定する（room.vueから呼ばれる）
 function setColorFromEyedropper(color: string) {
-	selectColor(color);
-	// スポイト使用後はペンツールに戻す
+	applyColor(color);
 	selectTool('pen');
 }
 
@@ -363,6 +379,17 @@ defineExpose({ setColorFromEyedropper });
 // サイドバー下部に通報・退出を押し下げるスペーサー
 .bottomSpacer {
 	flex: 1;
+}
+
+// 未読チャット時のグロー効果
+.unreadGlow {
+	animation: chatPulse 1.5s ease-in-out infinite;
+	color: #5b86e5 !important;
+}
+
+@keyframes chatPulse {
+	0%, 100% { box-shadow: 0 0 4px rgba(91, 134, 229, 0.4); }
+	50% { box-shadow: 0 0 12px rgba(91, 134, 229, 0.8); }
 }
 
 // 通報・退出など危険系ボタン

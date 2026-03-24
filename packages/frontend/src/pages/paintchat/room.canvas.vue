@@ -109,7 +109,9 @@ let lastY = 0;
 let lastTime = 0;
 
 // 筆圧シミュレーション: 書き始め/書き終わりを細く、中間を適度な太さに
+// 玉（球状の太り）を防ぐため、フェードイン/アウトを強化
 let strokePointCount = 0;
+let lastPressure = 0.15;
 
 function simulatePressure(x: number, y: number): number {
 	const now = Date.now();
@@ -120,8 +122,9 @@ function simulatePressure(x: number, y: number): number {
 		lastX = x;
 		lastY = y;
 		lastTime = now;
-		// 書き始めは細く
-		return 0.3;
+		// 書き始めは非常に細く
+		lastPressure = 0.15;
+		return 0.15;
 	}
 	const dx = x - lastX;
 	const dy = y - lastY;
@@ -130,15 +133,19 @@ function simulatePressure(x: number, y: number): number {
 	lastY = y;
 	lastTime = now;
 
-	// ベース筆圧: 速度ベース（速いほど細く）
-	let pressure = Math.max(0.2, Math.min(0.8, 0.7 - speed * 0.3));
+	// ベース筆圧: 速度ベース（速いほど細く）、上限を抑える
+	let targetPressure = Math.max(0.15, Math.min(0.6, 0.5 - speed * 0.2));
 
-	// 書き始め（最初の3ポイント）はフェードイン
-	if (strokePointCount <= 3) {
-		pressure *= strokePointCount / 3;
+	// 書き始め（最初の5ポイント）はゆっくりフェードイン
+	if (strokePointCount <= 5) {
+		targetPressure *= strokePointCount / 5;
 	}
 
-	return pressure;
+	// 急激な筆圧変化を抑えてスムーズにする（補間）
+	const smoothing = 0.3;
+	lastPressure = lastPressure + (targetPressure - lastPressure) * smoothing;
+
+	return Math.max(0.1, lastPressure);
 }
 
 // --- タッチイベント ---

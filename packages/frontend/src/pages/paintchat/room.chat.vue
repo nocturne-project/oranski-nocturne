@@ -6,16 +6,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <!-- テキストチャット: 開閉可能、未読点滅、お題・サイコロボタン付き -->
 <div :class="$style.chatWrapper">
-	<!-- チャットトグルボタン（閉じている時のみ表示） -->
-	<button
-		v-if="!isOpen"
-		:class="[$style.chatToggle, hasUnread ? $style.chatToggleUnread : '']"
-		@click="openChat"
-	>
-		チャット
-		<span v-if="hasUnread" :class="$style.unreadDot"></span>
-	</button>
-
 	<!-- チャットパネル（開いている時） -->
 	<div v-if="isOpen" :class="$style.chatPanel">
 		<!-- ヘッダー -->
@@ -196,7 +186,7 @@ function scrollToBottom() {
 	}
 }
 
-defineExpose({ addMessage });
+defineExpose({ addMessage, openChat, closeChat, isOpen, hasUnread });
 </script>
 
 <style lang="scss" module>
