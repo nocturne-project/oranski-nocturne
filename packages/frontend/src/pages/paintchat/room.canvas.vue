@@ -59,7 +59,7 @@ const canvasHeight = 1200;
 // ズームレベル（0.25〜6倍）
 const zoomLevel = ref(1);
 const MIN_ZOOM = 0.25;
-const MAX_ZOOM = 6;
+const MAX_ZOOM = 12;
 
 // パン（移動）オフセット
 const panX = ref(0);
