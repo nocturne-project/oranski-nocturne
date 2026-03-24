@@ -42,6 +42,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 				@moveMode="(enabled: boolean) => canvasCompRef?.setMoveMode(enabled)"
 				@downloadAll="onDownloadAll"
 				@downloadMine="onDownloadMine"
+				@publish="onPublishRequest"
+				@report="reportRoom"
+				@leave="leaveRoom"
 			/>
 			<!-- キャンバス（サイドバー幅分左にオフセット） -->
 			<div :class="$style.canvasInner">
@@ -56,12 +59,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</div>
 		</div>
 
-		<!-- 下部バー（通報・退出ボタン、テキスト付き） -->
-		<div :class="$style.bottomBar">
-			<button :class="$style.reportButton" @click="reportRoom">通報</button>
-			<div :class="$style.bottomSpacer"></div>
-			<button :class="$style.leaveButton" @click="leaveRoom">退出する</button>
-		</div>
 	</div>
 
 	<div v-else :class="$style.loading">
@@ -275,6 +272,16 @@ function onGetCanvasImage() {
 	}
 }
 
+// 投稿リクエスト（ツールバーの投稿ボタンから呼ばれる。確認ダイアログ付き。）
+async function onPublishRequest() {
+	const confirm = await os.confirm({
+		type: 'question',
+		text: 'この作品をタイムラインに投稿しますか？相手の同意も必要です。',
+	});
+	if (confirm.canceled) return;
+	publishRef.value?.onPublishRequested();
+}
+
 // 通報処理
 async function reportRoom() {
 	const confirm = await os.confirm({
@@ -436,46 +443,6 @@ definePage(() => ({
 	overflow: hidden;
 }
 
-.bottomBar {
-	display: flex;
-	align-items: center;
-	padding: 8px 16px;
-	border-top: 1px solid var(--divider);
-	background: var(--panel);
-	flex-shrink: 0;
-}
-
-.bottomSpacer {
-	flex: 1;
-}
-
-.reportButton {
-	padding: 6px 14px;
-	border-radius: 6px;
-	border: 1px solid var(--divider);
-	background: transparent;
-	cursor: pointer;
-	color: #ff6b6b;
-	font-size: 13px;
-
-	&:hover {
-		background: rgba(255, 107, 107, 0.1);
-	}
-}
-
-.leaveButton {
-	padding: 6px 16px;
-	border-radius: 6px;
-	border: 1px solid var(--divider);
-	background: transparent;
-	cursor: pointer;
-	color: var(--fg);
-	font-size: 13px;
-
-	&:hover {
-		background: var(--bg);
-	}
-}
 
 .loading {
 	display: flex;

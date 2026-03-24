@@ -49,6 +49,25 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<button :class="$style.btn" @click="togglePanel('download')">
 		<i class="ti ti-download"></i>
 	</button>
+
+	<div :class="$style.separator"></div>
+
+	<!-- 投稿 -->
+	<button :class="$style.btn" @click="$emit('publish')">
+		<i class="ti ti-share"></i>
+	</button>
+
+	<div :class="$style.bottomSpacer"></div>
+
+	<!-- 通報 -->
+	<button :class="[$style.btn, $style.dangerBtn]" @click="$emit('report')">
+		<i class="ti ti-flag"></i>
+	</button>
+
+	<!-- 退出 -->
+	<button :class="[$style.btn, $style.dangerBtn]" @click="$emit('leave')">
+		<i class="ti ti-door-exit"></i>
+	</button>
 </div>
 
 <!-- 展開パネル（サイドバーの右隣に表示） -->
@@ -130,6 +149,9 @@ const emit = defineEmits<{
 	(e: 'moveMode', enabled: boolean): void;
 	(e: 'downloadAll'): void;
 	(e: 'downloadMine'): void;
+	(e: 'publish'): void;
+	(e: 'report'): void;
+	(e: 'leave'): void;
 }>();
 
 const currentTool = ref<ToolType>('pen');
@@ -264,6 +286,22 @@ function togglePanel(panel: 'color' | 'width' | 'download') {
 	background: var(--divider);
 	margin: 4px 0;
 	flex-shrink: 0;
+}
+
+// サイドバー下部に通報・退出を押し下げるスペーサー
+.bottomSpacer {
+	flex: 1;
+}
+
+// 通報・退出など危険系ボタン
+.dangerBtn {
+	color: #ff6b6b !important;
+	opacity: 0.7;
+
+	&:hover {
+		opacity: 1;
+		background: rgba(255, 107, 107, 0.15) !important;
+	}
 }
 
 // 展開パネル（サイドバーの右隣に表示）
