@@ -64,8 +64,8 @@ export class PaintChatCanvasService {
 		for (const d of data) {
 			try {
 				strokes.push(JSON.parse(d) as StrokeData);
-			} catch {
-				// 不正なJSONデータはスキップ
+			} catch (e) {
+				console.warn(`[PaintChat] Invalid stroke data in canvas, skipping:`, d.substring(0, 100));
 			}
 		}
 		return strokes;
@@ -99,8 +99,9 @@ export class PaintChatCanvasService {
 			try {
 				const parsed = JSON.parse(s) as StrokeData;
 				return parsed.id !== strokeId;
-			} catch {
-				return true; // パース失敗したデータは保持
+			} catch (e) {
+				console.warn(`[PaintChat] Invalid stroke data in undo, keeping:`, s.substring(0, 100));
+				return true;
 			}
 		});
 

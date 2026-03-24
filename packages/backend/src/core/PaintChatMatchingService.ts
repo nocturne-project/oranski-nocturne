@@ -53,7 +53,9 @@ export class PaintChatMatchingService {
 
 		// 1分後にbot呼びかけ投稿をスケジュール（FR-047）
 		setTimeout(() => {
-			this.tryPostRecruitment(userId).catch(() => {});
+			this.tryPostRecruitment(userId).catch((err) => {
+				console.warn(`[PaintChat] bot recruitment posting failed for user ${userId}:`, err);
+			});
 		}, 60000);
 	}
 
