@@ -4,88 +4,107 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<!-- アイビスペイント風ツールバー: 画面下部にコンパクト配置、タップで展開するパネル式 -->
-<div :class="$style.toolbar">
-	<!-- メインツールバー（常時表示） -->
-	<div :class="$style.mainBar">
-		<!-- ツール選択 -->
-		<button
-			:class="[$style.toolBtn, currentTool === 'pen' ? $style.active : '']"
-			@click="selectTool('pen')"
-		>ペン</button>
-		<button
-			:class="[$style.toolBtn, currentTool === 'eraser' ? $style.active : '']"
-			@click="selectTool('eraser')"
-		>消しゴム</button>
+<!-- マジカルドロー風の左サイドバーツールバー。常に表示、スクロール不要。 -->
+<div :class="$style.sidebar">
+	<!-- ツール選択 -->
+	<button
+		:class="[$style.btn, currentTool === 'pen' ? $style.active : '']"
+		@click="selectTool('pen')"
+	><i class="ti ti-pencil"></i></button>
+	<button
+		:class="[$style.btn, currentTool === 'eraser' ? $style.active : '']"
+		@click="selectTool('eraser')"
+	><i class="ti ti-eraser"></i></button>
 
-		<!-- カラーボタン（色プレビュー付きテキスト） -->
-		<button :class="$style.toolBtn" @click="togglePanel('color')">
-			<span :class="$style.colorDot" :style="{ background: currentColor }"></span>
-			色
-		</button>
+	<!-- 色（現在色のドット表示） -->
+	<button :class="$style.btn" @click="togglePanel('color')">
+		<span :class="$style.colorDot" :style="{ background: currentColor }"></span>
+	</button>
 
-		<!-- 太さボタン -->
-		<button :class="$style.toolBtn" @click="togglePanel('width')">太さ</button>
+	<!-- 太さ（プレビュー丸） -->
+	<button :class="$style.btn" @click="togglePanel('width')">
+		<span :class="$style.widthDot" :style="{ width: Math.min(currentWidth * 2, 16) + 'px', height: Math.min(currentWidth * 2, 16) + 'px' }"></span>
+	</button>
 
-		<!-- アンドゥ -->
-		<button :class="$style.toolBtn" @click="$emit('undo')">戻す</button>
+	<div :class="$style.separator"></div>
 
-		<!-- ズーム -->
-		<button :class="$style.toolBtn" @click="$emit('zoomOut')">-</button>
-		<button :class="$style.toolBtn" @click="$emit('zoomReset')">等倍</button>
-		<button :class="$style.toolBtn" @click="$emit('zoomIn')">+</button>
+	<!-- アンドゥ -->
+	<button :class="$style.btn" @click="$emit('undo')">
+		<i class="ti ti-arrow-back-up"></i>
+	</button>
 
-		<!-- ダウンロード -->
-		<button :class="$style.toolBtn" @click="togglePanel('download')">保存</button>
+	<!-- ズーム -->
+	<button :class="[$style.btn, $style.textBtn]" @click="$emit('zoomOut')">縮小</button>
+	<button :class="[$style.btn, $style.textBtn]" @click="$emit('zoomIn')">拡大</button>
+
+	<div :class="$style.separator"></div>
+
+	<!-- 保存 -->
+	<button :class="$style.btn" @click="togglePanel('download')">
+		<i class="ti ti-download"></i>
+	</button>
+</div>
+
+<!-- 展開パネル（サイドバーの右隣に表示） -->
+<div v-if="activePanel" :class="$style.panel">
+	<div :class="$style.panelHeader">
+		<span v-if="activePanel === 'color'">色選択</span>
+		<span v-else-if="activePanel === 'width'">太さ / 透明度</span>
+		<span v-else-if="activePanel === 'download'">保存</span>
+		<button :class="$style.panelClose" @click="activePanel = null">閉じる</button>
 	</div>
 
-	<!-- 展開パネル -->
-	<div v-if="activePanel === 'color'" :class="$style.panel">
-		<div :class="$style.colorPalette">
+	<!-- カラーパレット -->
+	<template v-if="activePanel === 'color'">
+		<div :class="$style.colorGrid">
 			<button
 				v-for="color in colors"
 				:key="color"
-				:class="[$style.paletteColor, currentColor === color ? $style.selectedColor : '']"
+				:class="[$style.colorCell, currentColor === color ? $style.colorSelected : '']"
 				:style="{ background: color }"
 				@click="selectColor(color)"
 			></button>
 		</div>
-		<!-- 透明度スライダー -->
-		<div :class="$style.sliderRow">
-			<span :class="$style.sliderLabel">透明度</span>
+	</template>
+
+	<!-- 太さ + 透明度 -->
+	<template v-if="activePanel === 'width'">
+		<div :class="$style.widthSection">
+			<span :class="$style.sectionLabel">太さ</span>
+			<div :class="$style.widthGrid">
+				<button
+					v-for="w in widths"
+					:key="w"
+					:class="[$style.widthCell, currentWidth === w ? $style.widthSelected : '']"
+					@click="selectWidth(w)"
+				>
+					<span :class="$style.widthCircle" :style="{ width: Math.min(w * 2, 20) + 'px', height: Math.min(w * 2, 20) + 'px' }"></span>
+					<span :class="$style.widthLabel">{{ w }}</span>
+				</button>
+			</div>
+		</div>
+		<div :class="$style.opacitySection">
+			<span :class="$style.sectionLabel">透明度: {{ Math.round(currentOpacity * 100) }}%</span>
 			<input
 				type="range"
 				min="10"
 				max="100"
 				:value="currentOpacity * 100"
-				:class="$style.slider"
+				:class="$style.opacitySlider"
 				@input="onOpacityChange"
 			>
-			<span :class="$style.sliderValue">{{ Math.round(currentOpacity * 100) }}%</span>
 		</div>
-	</div>
+	</template>
 
-	<div v-if="activePanel === 'width'" :class="$style.panel">
-		<div :class="$style.widthOptions">
-			<button
-				v-for="w in widths"
-				:key="w"
-				:class="[$style.widthOption, currentWidth === w ? $style.selectedWidth : '']"
-				@click="selectWidth(w)"
-			>
-				<div :class="$style.widthDot" :style="{ width: w + 'px', height: w + 'px' }"></div>
-			</button>
-		</div>
-	</div>
-
-	<div v-if="activePanel === 'download'" :class="$style.panel">
-		<button :class="$style.panelBtn" @click="$emit('downloadAll')">
-			<i class="ti ti-photo-down"></i> キャンバス全体をダウンロード
+	<!-- ダウンロード -->
+	<template v-if="activePanel === 'download'">
+		<button :class="$style.panelAction" @click="$emit('downloadAll')">
+			キャンバス全体を保存
 		</button>
-		<button :class="$style.panelBtn" @click="$emit('downloadMine')">
-			<i class="ti ti-user-down"></i> 自分の絵のみダウンロード
+		<button :class="$style.panelAction" @click="$emit('downloadMine')">
+			自分の絵のみ保存
 		</button>
-	</div>
+	</template>
 </div>
 </template>
 
@@ -112,7 +131,6 @@ const currentWidth = ref(3);
 const currentOpacity = ref(1.0);
 const activePanel = ref<'color' | 'width' | 'download' | null>(null);
 
-// カラーパレット
 const colors = [
 	'#000000', '#ffffff', '#ff0000', '#ff6600', '#ffcc00',
 	'#33cc33', '#0099ff', '#6633ff', '#ff33cc', '#996633',
@@ -120,13 +138,11 @@ const colors = [
 	'#99ff99', '#66ccff', '#cc99ff', '#ffccee', '#cc9966',
 ];
 
-// 線の太さ選択肢
 const widths = [1, 2, 3, 5, 8, 12, 20];
 
 function selectTool(tool: ToolType) {
 	currentTool.value = tool;
 	emit('toolChange', tool);
-	activePanel.value = null;
 }
 
 function selectColor(color: string) {
@@ -138,7 +154,6 @@ function selectColor(color: string) {
 function selectWidth(width: number) {
 	currentWidth.value = width;
 	emit('widthChange', width);
-	activePanel.value = null;
 }
 
 function onOpacityChange(e: Event) {
@@ -153,185 +168,204 @@ function togglePanel(panel: 'color' | 'width' | 'download') {
 </script>
 
 <style lang="scss" module>
-.toolbar {
-	position: relative;
-	border-top: 1px solid var(--divider);
-	background: var(--panel);
-	flex-shrink: 0;
-}
-
-.mainBar {
+// 左サイドバー（マジカルドロー風）。常に表示、縦配置。
+.sidebar {
+	position: absolute;
+	left: 0;
+	top: 0;
+	bottom: 0;
+	width: 44px;
+	background: var(--panel, #2a2a3e);
+	border-right: 1px solid var(--divider);
 	display: flex;
+	flex-direction: column;
 	align-items: center;
-	justify-content: center;
-	gap: 4px;
-	padding: 6px 8px;
-	flex-wrap: wrap;
+	padding: 4px 0;
+	gap: 2px;
+	z-index: 10;
+	overflow-y: auto;
+	overflow-x: hidden;
+
+	// スクロールバーを非表示
+	&::-webkit-scrollbar { width: 0; }
+	scrollbar-width: none;
 }
 
-.colorDot {
-	width: 12px;
-	height: 12px;
-	border-radius: 50%;
-	border: 1px solid var(--divider);
-	flex-shrink: 0;
-}
-
-.toolBtn {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: 4px;
-	padding: 6px 12px;
+.btn {
+	width: 36px;
+	height: 36px;
 	border-radius: 8px;
-	border: 1px solid var(--divider);
-	background: var(--panel);
-	cursor: pointer;
-	font-size: 13px;
+	border: none;
+	background: transparent;
 	color: var(--fg);
-	transition: background 0.1s;
-	white-space: nowrap;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 18px;
+	flex-shrink: 0;
 
 	&:hover {
-		background: var(--bg);
+		background: var(--bg, rgba(255,255,255,0.1));
 	}
 }
 
 .active {
-	background: var(--accent);
+	background: var(--accent) !important;
 	color: white;
-
-	&:hover {
-		background: var(--accent);
-	}
 }
 
-.colorBtn {
-	width: 32px;
-	height: 32px;
+// テキスト付きボタン（サイドバー幅に収まるようフォントサイズ調整）
+.textBtn {
+	font-size: 10px;
+	letter-spacing: -0.5px;
+}
+
+.colorDot {
+	width: 20px;
+	height: 20px;
 	border-radius: 50%;
-	border: 2px solid var(--divider);
-	cursor: pointer;
-	flex-shrink: 0;
+	border: 2px solid var(--fg);
 }
 
-.widthPreview {
+.widthDot {
 	border-radius: 50%;
 	background: var(--fg);
 	min-width: 4px;
 	min-height: 4px;
 }
 
+.separator {
+	width: 28px;
+	height: 1px;
+	background: var(--divider);
+	margin: 4px 0;
+	flex-shrink: 0;
+}
+
+// 展開パネル（サイドバーの右隣に表示）
 .panel {
 	position: absolute;
-	bottom: 100%;
-	left: 0;
-	right: 0;
-	background: var(--bg);
-	border-top: 1px solid var(--divider);
-	padding: 12px;
-	box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+	left: 44px;
+	top: 0;
+	width: 200px;
+	max-height: 100%;
+	background: var(--panel, #2a2a3e);
+	border-right: 1px solid var(--divider);
+	z-index: 11;
+	overflow-y: auto;
+	padding: 8px;
 }
 
-.colorPalette {
+.panelHeader {
 	display: flex;
-	flex-wrap: wrap;
-	gap: 6px;
-	justify-content: center;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 8px;
+	font-size: 13px;
+	font-weight: bold;
 }
 
-.paletteColor {
+.panelClose {
+	padding: 2px 8px;
+	border-radius: 4px;
+	border: 1px solid var(--divider);
+	background: transparent;
+	color: var(--fg);
+	cursor: pointer;
+	font-size: 12px;
+}
+
+// カラーグリッド
+.colorGrid {
+	display: grid;
+	grid-template-columns: repeat(5, 1fr);
+	gap: 4px;
+}
+
+.colorCell {
 	width: 32px;
 	height: 32px;
 	border-radius: 6px;
 	border: 2px solid transparent;
 	cursor: pointer;
 
-	&:hover {
-		border-color: var(--accent);
-	}
+	&:hover { border-color: var(--fg); }
 }
 
-.selectedColor {
-	border-color: var(--accent);
+.colorSelected {
+	border-color: var(--accent) !important;
 	box-shadow: 0 0 0 2px var(--accent);
 }
 
-.sliderRow {
+// 太さセクション
+.widthSection, .opacitySection {
+	margin-bottom: 12px;
+}
+
+.sectionLabel {
+	font-size: 12px;
+	color: var(--fgTransparent);
+	display: block;
+	margin-bottom: 6px;
+}
+
+.widthGrid {
 	display: flex;
-	align-items: center;
-	gap: 8px;
-	margin-top: 12px;
+	flex-wrap: wrap;
+	gap: 4px;
 }
 
-.sliderLabel {
-	font-size: 0.85em;
-	white-space: nowrap;
-}
-
-.slider {
-	flex: 1;
-}
-
-.sliderValue {
-	font-size: 0.85em;
-	min-width: 40px;
-	text-align: right;
-}
-
-.widthOptions {
+.widthCell {
 	display: flex;
-	gap: 8px;
-	justify-content: center;
+	flex-direction: column;
 	align-items: center;
-}
-
-.widthOption {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 44px;
-	height: 44px;
-	border-radius: 8px;
-	border: 2px solid transparent;
+	gap: 2px;
+	padding: 4px 8px;
+	border-radius: 6px;
+	border: 1px solid var(--divider);
 	background: transparent;
 	cursor: pointer;
+	color: var(--fg);
 
-	&:hover {
-		background: var(--bgSecondary);
-	}
+	&:hover { background: var(--bg); }
 }
 
-.selectedWidth {
+.widthSelected {
 	border-color: var(--accent);
+	background: var(--accentedBg, rgba(134,179,0,0.1));
 }
 
-.widthDot {
+// 太さプレビューの丸（暗い背景でも見えるように色を付ける）
+.widthCircle {
 	border-radius: 50%;
 	background: var(--fg);
-	min-width: 2px;
-	min-height: 2px;
+	min-width: 4px;
+	min-height: 4px;
 }
 
-.panelBtn {
-	display: flex;
-	align-items: center;
-	gap: 8px;
+.widthLabel {
+	font-size: 10px;
+}
+
+.opacitySlider {
 	width: 100%;
-	padding: 10px 12px;
+}
+
+// ダウンロードアクション
+.panelAction {
+	display: block;
+	width: 100%;
+	padding: 10px;
+	margin-bottom: 4px;
+	border-radius: 6px;
 	border: none;
 	background: transparent;
-	cursor: pointer;
-	font-size: 0.95em;
 	color: var(--fg);
-	border-radius: 6px;
+	cursor: pointer;
+	font-size: 13px;
+	text-align: left;
 
-	&:hover {
-		background: var(--bgSecondary);
-	}
-
-	& + & {
-		margin-top: 4px;
-	}
+	&:hover { background: var(--bg); }
 }
 </style>

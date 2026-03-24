@@ -227,6 +227,28 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 				ctx.globalAlpha = 1.0;
 			}
 		}
+
+		// 自分が描画中のストロークもプレビュー表示（redrawAll後に消えてしまう問題の対策）
+		if (state.isDrawing && state.currentPoints.length >= 2) {
+			ctx.save();
+			ctx.lineCap = 'round';
+			ctx.lineJoin = 'round';
+			if (state.currentTool === 'eraser') {
+				ctx.globalCompositeOperation = 'destination-out';
+			} else {
+				ctx.globalCompositeOperation = 'source-over';
+				ctx.strokeStyle = state.currentColor;
+				ctx.globalAlpha = state.currentOpacity;
+			}
+			ctx.beginPath();
+			ctx.lineWidth = state.currentWidth * (state.currentPoints[0].pressure || 0.5);
+			ctx.moveTo(state.currentPoints[0].x, state.currentPoints[0].y);
+			for (let i = 1; i < state.currentPoints.length; i++) {
+				ctx.lineTo(state.currentPoints[i].x, state.currentPoints[i].y);
+			}
+			ctx.stroke();
+			ctx.restore();
+		}
 	}
 
 	return {

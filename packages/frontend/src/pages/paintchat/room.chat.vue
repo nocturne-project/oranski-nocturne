@@ -204,26 +204,25 @@ defineExpose({ addMessage });
 	position: relative;
 }
 
-// チャットトグルFABボタン（不透過、グラスモーフィズム風）
+// チャットトグルFABボタン（高コントラスト、どのテーマでも視認可能）
 .chatToggle {
 	position: fixed;
 	bottom: 80px;
 	right: 16px;
-	padding: 10px 20px;
-	border-radius: 24px;
-	background: color-mix(in srgb, var(--accent) 85%, black);
-	color: white;
-	border: 1px solid rgba(255, 255, 255, 0.2);
+	padding: 12px 22px;
+	border-radius: 28px;
+	background: #5b86e5;
+	color: #ffffff;
+	border: 2px solid rgba(255, 255, 255, 0.3);
 	cursor: pointer;
-	font-size: 14px;
+	font-size: 15px;
 	font-weight: bold;
-	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-	backdrop-filter: blur(8px);
-	-webkit-backdrop-filter: blur(8px);
+	box-shadow: 0 4px 20px rgba(91, 134, 229, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
 	z-index: 9000;
 	display: flex;
 	align-items: center;
 	gap: 6px;
+	letter-spacing: 1px;
 }
 
 // 未読時のゆっくり点滅

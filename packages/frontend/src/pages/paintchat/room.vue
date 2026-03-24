@@ -26,32 +26,34 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</div>
 		</div>
 
-		<!-- キャンバスエリア -->
+		<!-- キャンバス + サイドバーツールバー（position: relativeコンテナ） -->
 		<div :class="$style.canvasArea">
-			<XCanvas
+			<!-- 左サイドバーツールバー（absoluteで左端に配置） -->
+			<XToolbar
 				v-if="canvasEngine"
-				ref="canvasCompRef"
-				:engine="canvasEngine"
-				@strokeEnd="onStrokeEnd"
-				@progress="onProgress"
-				@cursorMove="onCursorMove"
+				@toolChange="onToolChange"
+				@colorChange="onColorChange"
+				@widthChange="onWidthChange"
+				@opacityChange="onOpacityChange"
+				@undo="onUndo"
+				@zoomIn="canvasCompRef?.zoomIn()"
+				@zoomOut="canvasCompRef?.zoomOut()"
+				@zoomReset="canvasCompRef?.zoomReset()"
+				@downloadAll="onDownloadAll"
+				@downloadMine="onDownloadMine"
 			/>
+			<!-- キャンバス（サイドバー幅分左にオフセット） -->
+			<div :class="$style.canvasInner">
+				<XCanvas
+					v-if="canvasEngine"
+					ref="canvasCompRef"
+					:engine="canvasEngine"
+					@strokeEnd="onStrokeEnd"
+					@progress="onProgress"
+					@cursorMove="onCursorMove"
+				/>
+			</div>
 		</div>
-
-		<!-- ツールバー -->
-		<XToolbar
-			v-if="canvasEngine"
-			@toolChange="onToolChange"
-			@colorChange="onColorChange"
-			@widthChange="onWidthChange"
-			@opacityChange="onOpacityChange"
-			@undo="onUndo"
-			@zoomIn="canvasCompRef?.zoomIn()"
-			@zoomOut="canvasCompRef?.zoomOut()"
-			@zoomReset="canvasCompRef?.zoomReset()"
-			@downloadAll="onDownloadAll"
-			@downloadMine="onDownloadMine"
-		/>
 
 		<!-- 下部バー（通報・退出ボタン、テキスト付き） -->
 		<div :class="$style.bottomBar">
@@ -413,11 +415,21 @@ definePage(() => ({
 	color: var(--fgTransparent);
 }
 
+// キャンバスとサイドバーのコンテナ
 .canvasArea {
 	flex: 1;
 	position: relative;
 	overflow: hidden;
-	touch-action: none;
+}
+
+// キャンバス本体（サイドバー44px分左オフセット）
+.canvasInner {
+	position: absolute;
+	left: 44px;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	overflow: hidden;
 }
 
 .bottomBar {

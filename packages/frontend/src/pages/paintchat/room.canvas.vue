@@ -53,6 +53,13 @@ const zoomLevel = ref(1);
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 3;
 
+// 2本指ピンチズーム用の状態
+let lastPinchDistance = 0;
+let isPinching = false;
+
+// 2本指ダブルタップでアンドゥ
+let lastTwoFingerTapTime = 0;
+
 // カーソル移動のスロットル（50ms）
 let lastCursorEmit = 0;
 
@@ -102,6 +109,22 @@ function simulatePressure(x: number, y: number): number {
 // 1本指: 描画（preventDefaultでスクロール防止）
 // 2本指以上: ブラウザのピンチズームに委ねる（preventDefaultしない）
 function onTouchStart(e: TouchEvent) {
+	// 2本指ダブルタップ検出 → アンドゥ
+	if (e.touches.length === 2) {
+		const now = Date.now();
+		if (now - lastTwoFingerTapTime < 400) {
+			// ダブルタップ: アンドゥ実行
+			const strokeId = props.engine.undo();
+			if (strokeId) {
+				emit('strokeEnd', null as any); // undoシグナル
+			}
+			lastTwoFingerTapTime = 0;
+		} else {
+			lastTwoFingerTapTime = now;
+		}
+		return;
+	}
+
 	if (e.touches.length !== 1) return;
 	e.preventDefault();
 	const touch = e.touches[0];
@@ -111,11 +134,22 @@ function onTouchStart(e: TouchEvent) {
 }
 
 function onTouchMove(e: TouchEvent) {
-	if (e.touches.length !== 1) {
-		// 2本指以上: 描画中なら中断してブラウザにピンチズームを委ねる
+	// 2本指ピンチズーム処理
+	if (e.touches.length >= 2) {
+		e.preventDefault();
 		if (props.engine.getState().isDrawing) {
 			props.engine.endStroke();
 		}
+		const dx = e.touches[0].clientX - e.touches[1].clientX;
+		const dy = e.touches[0].clientY - e.touches[1].clientY;
+		const distance = Math.sqrt(dx * dx + dy * dy);
+
+		if (isPinching && lastPinchDistance > 0) {
+			const scale = distance / lastPinchDistance;
+			zoomLevel.value = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoomLevel.value * scale));
+		}
+		lastPinchDistance = distance;
+		isPinching = true;
 		return;
 	}
 	e.preventDefault();
@@ -133,6 +167,10 @@ function onTouchMove(e: TouchEvent) {
 }
 
 function onTouchEnd() {
+	// ピンチ状態のリセット
+	isPinching = false;
+	lastPinchDistance = 0;
+
 	const stroke = props.engine.endStroke();
 	if (stroke) {
 		emit('strokeEnd', stroke);
@@ -211,7 +249,7 @@ onUnmounted(() => {
 	align-items: center;
 	justify-content: center;
 	background: #f0f0f0;
-	touch-action: pinch-zoom; // 1本指描画、2本指ピンチズーム許可
+	touch-action: none; // JSで1本指描画/2本指ピンチを制御
 	user-select: none;
 	-webkit-user-select: none;
 	overflow: hidden;
