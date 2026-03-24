@@ -202,6 +202,7 @@ export function extractRoomId(canvas: HTMLCanvasElement): string | null {
 }
 
 // キャンバスをステガノグラフィ付きでダウンロードする
+// iOSではBlob + application/pngでPhotosに保存可能にする
 export function downloadWithSteganography(
 	canvas: HTMLCanvasElement,
 	roomId: string,
@@ -215,8 +216,15 @@ export function downloadWithSteganography(
 
 	embedRoomId(offscreen, roomId);
 
-	const link = window.document.createElement('a');
-	link.download = filename;
-	link.href = offscreen.toDataURL('image/png');
-	link.click();
+	// Blob方式でダウンロード（iOS Safari対応）
+	offscreen.toBlob((blob) => {
+		if (!blob) return;
+		const url = URL.createObjectURL(blob);
+		const link = window.document.createElement('a');
+		link.download = filename;
+		link.href = url;
+		link.click();
+		// メモリリーク防止
+		setTimeout(() => URL.revokeObjectURL(url), 5000);
+	}, 'image/png');
 }

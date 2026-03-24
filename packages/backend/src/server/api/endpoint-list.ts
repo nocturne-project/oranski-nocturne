@@ -602,6 +602,7 @@ export * as 'paint-chat/solo' from './endpoints/paint-chat/solo.js';
 export * as 'paint-chat/message' from './endpoints/paint-chat/message.js';
 export * as 'paint-chat/messages' from './endpoints/paint-chat/messages.js';
 export * as 'paint-chat/topic' from './endpoints/paint-chat/topic.js';
+export * as 'paint-chat/canvas' from './endpoints/paint-chat/canvas.js';
 export * as 'paint-chat/dice' from './endpoints/paint-chat/dice.js';
 export * as 'paint-chat/leave' from './endpoints/paint-chat/leave.js';
 export * as 'paint-chat/report' from './endpoints/paint-chat/report.js';

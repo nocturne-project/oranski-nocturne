@@ -87,7 +87,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import MkStickyContainer from '@/components/global/MkStickyContainer.vue';
 import MkPageHeader from '@/components/global/MkPageHeader.vue';
 import MkLoading from '@/pages/_loading_.vue';
@@ -357,6 +357,18 @@ onMounted(async () => {
 
 		// キャンバスエンジン初期化
 		canvasEngine.value = createCanvasEngine(res.myParticipantId);
+
+		// リロード時のキャンバス復元: Redisからストロークデータを取得して再描画
+		try {
+			const canvasData = await misskeyApi('paint-chat/canvas' as any, { roomId: props.roomId } as any) as any;
+			if (canvasData && (canvasData.strokes?.length > 0 || canvasData.mergedImage)) {
+				// canvasEngine.initが完了するまで少し待つ（nextTick）
+				await nextTick();
+				canvasEngine.value?.restoreStrokes(canvasData.strokes ?? [], canvasData.mergedImage);
+			}
+		} catch {
+			// 復元失敗は無視（新規セッションとして開始）
+		}
 
 		// WebSocket接続開始
 		paintChat.connect();

@@ -39,6 +39,8 @@ export interface CanvasEngine {
 	redraw(): void;
 	// マージ（フラット化）
 	mergeOldStrokes(): string | null;
+	// キャンバス復元（リロード時にRedisのストロークデータから再描画）
+	restoreStrokes(savedStrokes: StrokeData[], mergedImageBase64?: string | null): void;
 	// 画像出力
 	toDataURL(type?: string): string;
 	toMyStrokesDataURL(): string;
@@ -441,6 +443,38 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 
 		redraw() {
 			redrawAll();
+		},
+
+		// リロード時にRedisのストロークデータからキャンバスを復元する
+		restoreStrokes(savedStrokes: StrokeData[], mergedImageBase64?: string | null) {
+			// マージ済み画像があれば復元
+			if (mergedImageBase64 && ctx && canvas) {
+				const img = new Image();
+				img.onload = () => {
+					if (!ctx || !canvas) return;
+					ctx.drawImage(img, 0, 0);
+					mergedImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+					// ストロークを追加して再描画
+					for (const stroke of savedStrokes) {
+						strokes.push(stroke);
+						// 自分のストロークバッファにも追加
+						if (myStrokesCtx && stroke.participantId === myParticipantId) {
+							renderStroke(myStrokesCtx, stroke);
+						}
+					}
+					redrawAll();
+				};
+				img.src = mergedImageBase64;
+			} else {
+				// マージ済み画像なし: ストロークのみ復元
+				for (const stroke of savedStrokes) {
+					strokes.push(stroke);
+					if (myStrokesCtx && stroke.participantId === myParticipantId) {
+						renderStroke(myStrokesCtx, stroke);
+					}
+				}
+				redrawAll();
+			}
 		},
 
 		mergeOldStrokes(): string | null {
