@@ -303,6 +303,17 @@ async function leaveRoom() {
 onMounted(async () => {
 	try {
 		const res = await misskeyApi('paint-chat/room' as any, { roomId: props.roomId } as any) as any;
+
+		// セッション終了済みルームの場合は通知して戻す
+		if (res.room.status === 'ended') {
+			await os.alert({
+				type: 'info',
+				text: 'このルームは終了しました。',
+			});
+			(router as any).push('/paintchat');
+			return;
+		}
+
 		roomInfo.value = res;
 
 		// キャンバスエンジン初期化

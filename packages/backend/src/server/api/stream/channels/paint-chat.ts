@@ -191,10 +191,22 @@ export class PaintChatChannel extends Channel {
 		this.send(data.type, data.body);
 	}
 
+	// チャネル切断時。相手にpartnerLeft通知を送り、30秒後にsessionEndedを送出する。
 	@bindThis
 	public dispose(): void {
 		if (this.roomId != null) {
-			(this.subscriber as any).off(`paintChatStream:${this.roomId}`, this.onEvent);
+			// 相手に退出を通知
+			this.broadcastToRoom('partnerLeft', {});
+
+			// 30秒後にsessionEndedを送出（タイムアウト処理）
+			const roomId = this.roomId;
+			setTimeout(() => {
+				this.globalEventService.publishPaintChatStream(roomId, 'sessionEnded', {
+					reason: 'timeout',
+				} as any);
+			}, 30000);
+
+			(this.subscriber as any).off(`paintChatStream:${roomId}`, this.onEvent);
 		}
 	}
 }
