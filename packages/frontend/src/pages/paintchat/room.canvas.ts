@@ -131,6 +131,13 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 	// マージ済みベース画像
 	let mergedImageData: ImageData | null = null;
 
+	// 自分のストローク専用オフスクリーンバッファ（マージで消えない永続バッファ）
+	// toMyStrokesDataURLはこのバッファから出力する
+	let myStrokesCanvas: HTMLCanvasElement | null = null;
+	let myStrokesCtx: CanvasRenderingContext2D | null = null;
+	// undo用: 自分のマージ済み画像データ
+	let myMergedImageData: ImageData | null = null;
+
 	// ストローク履歴（アンドゥ対象）
 	const strokes: StrokeData[] = [];
 
@@ -184,6 +191,11 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 
 		mergedImageData = offCtx.getImageData(0, 0, offscreen.width, offscreen.height);
 
+		// 自分のストロークバッファのスナップショットも保存（undo時の復元用）
+		if (myStrokesCanvas && myStrokesCtx) {
+			myMergedImageData = myStrokesCtx.getImageData(0, 0, myStrokesCanvas.width, myStrokesCanvas.height);
+		}
+
 		for (const stroke of toMerge) {
 			const idx = strokes.indexOf(stroke);
 			if (idx >= 0) strokes.splice(idx, 1);
@@ -191,6 +203,25 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 
 		redrawAll();
 		return offscreen.toDataURL('image/png');
+	}
+
+	// 自分のストロークバッファを再構築する（アンドゥ時に呼ぶ）
+	// マージ済みスナップショット + strokes配列内の自分のストロークで再描画
+	function rebuildMyStrokesBuffer(): void {
+		if (!myStrokesCtx || !myStrokesCanvas) return;
+		// マージ済みスナップショットがあればそこから復元
+		if (myMergedImageData) {
+			myStrokesCtx.putImageData(myMergedImageData, 0, 0);
+		} else {
+			myStrokesCtx.fillStyle = '#ffffff';
+			myStrokesCtx.fillRect(0, 0, myStrokesCanvas.width, myStrokesCanvas.height);
+		}
+		// 残っている自分のストロークを再描画
+		for (const stroke of strokes) {
+			if (stroke.participantId === myParticipantId) {
+				renderStroke(myStrokesCtx, stroke);
+			}
+		}
 	}
 
 	// 全体を再描画する
@@ -261,6 +292,15 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 			// 白い背景で初期化
 			ctx.fillStyle = '#ffffff';
 			ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+			// 自分のストローク専用バッファを初期化
+			myStrokesCanvas = window.document.createElement('canvas');
+			myStrokesCanvas.width = canvas.width;
+			myStrokesCanvas.height = canvas.height;
+			myStrokesCtx = myStrokesCanvas.getContext('2d')!;
+			// 白背景
+			myStrokesCtx.fillStyle = '#ffffff';
+			myStrokesCtx.fillRect(0, 0, myStrokesCanvas.width, myStrokesCanvas.height);
 		},
 
 		getState() {
@@ -328,6 +368,11 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 			strokes.push(stroke);
 			state.currentPoints = [];
 
+			// 自分のストローク専用バッファにも描画（マージで消えない永続バッファ）
+			if (myStrokesCtx && stroke.participantId === myParticipantId) {
+				renderStroke(myStrokesCtx, stroke);
+			}
+
 			// アンドゥ上限を超えたらバックグラウンドでマージ（FR-024/FR-025）
 			const myStrokes = strokes.filter(s => s.participantId === myParticipantId);
 			if (myStrokes.length > MAX_UNDO) {
@@ -361,6 +406,8 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 				if (strokes[i].participantId === myParticipantId) {
 					const removed = strokes.splice(i, 1)[0];
 					redrawAll();
+					// myStrokesCanvasも再描画（アンドゥ反映）
+					rebuildMyStrokesBuffer();
 					return removed.id;
 				}
 			}
@@ -378,10 +425,15 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 		clear() {
 			strokes.length = 0;
 			mergedImageData = null;
+			myMergedImageData = null;
 			if (ctx && canvas) {
 				ctx.clearRect(0, 0, canvas.width, canvas.height);
 				ctx.fillStyle = '#ffffff';
 				ctx.fillRect(0, 0, canvas.width, canvas.height);
+			}
+			if (myStrokesCtx && myStrokesCanvas) {
+				myStrokesCtx.fillStyle = '#ffffff';
+				myStrokesCtx.fillRect(0, 0, myStrokesCanvas.width, myStrokesCanvas.height);
 			}
 		},
 
@@ -398,33 +450,19 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 		},
 
 		toMyStrokesDataURL(): string {
-			if (!canvas) return '';
-
-			// 自分のストロークのみを描画したキャンバスを生成
-			const offscreen = window.document.createElement('canvas');
-			offscreen.width = canvas.width;
-			offscreen.height = canvas.height;
-			const offCtx = offscreen.getContext('2d')!;
-
-			// 透明背景
-			offCtx.clearRect(0, 0, offscreen.width, offscreen.height);
-
-			// 白い背景
-			offCtx.fillStyle = '#ffffff';
-			offCtx.fillRect(0, 0, offscreen.width, offscreen.height);
-
-			for (const stroke of strokes) {
-				if (stroke.participantId === myParticipantId) {
-					renderStroke(offCtx, stroke);
-				}
+			// 自分のストローク専用バッファから出力（マージ後のストロークも含む永続バッファ）
+			if (myStrokesCanvas) {
+				return myStrokesCanvas.toDataURL('image/png');
 			}
-
-			return offscreen.toDataURL('image/png');
+			return canvas?.toDataURL('image/png') ?? '';
 		},
 
 		dispose() {
 			canvas = null;
 			ctx = null;
+			myStrokesCanvas = null;
+			myStrokesCtx = null;
+			myMergedImageData = null;
 			strokes.length = 0;
 			remoteProgress.clear();
 		},
