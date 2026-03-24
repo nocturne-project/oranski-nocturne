@@ -78,7 +78,7 @@ export class PaintChatMatchingService {
 		await this.noteCreateService.create(botUser, {
 			text: `ランダム絵チャットで一緒にお絵かきしませんか？\n[ここから参加できます](${paintChatUrl})`,
 			localOnly: true,
-			visibility: 'home',
+			visibility: 'public',
 		});
 
 		await this.markRecruitmentPosted(userId);
