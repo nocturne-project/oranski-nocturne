@@ -6,6 +6,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <!-- マジカルドロー風の左サイドバーツールバー。常に表示、スクロール不要。 -->
 <div :class="$style.sidebar">
+	<!-- 移動ツール（マジカルドロー風、一番上に配置） -->
+	<button
+		:class="[$style.btn, currentTool === 'move' ? $style.active : '']"
+		@click="selectTool('move')"
+	><i class="ti ti-arrows-move"></i></button>
+
 	<!-- ツール選択 -->
 	<button
 		:class="[$style.btn, currentTool === 'pen' ? $style.active : '']"
@@ -121,6 +127,7 @@ const emit = defineEmits<{
 	(e: 'zoomIn'): void;
 	(e: 'zoomOut'): void;
 	(e: 'zoomReset'): void;
+	(e: 'moveMode', enabled: boolean): void;
 	(e: 'downloadAll'): void;
 	(e: 'downloadMine'): void;
 }>();
@@ -143,6 +150,8 @@ const widths = [1, 2, 3, 5, 8, 12, 20];
 function selectTool(tool: ToolType) {
 	currentTool.value = tool;
 	emit('toolChange', tool);
+	// 移動ツール選択時にmoveModeをemit
+	emit('moveMode', tool === 'move');
 }
 
 function selectColor(color: string) {

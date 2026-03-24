@@ -39,6 +39,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				@zoomIn="canvasCompRef?.zoomIn()"
 				@zoomOut="canvasCompRef?.zoomOut()"
 				@zoomReset="canvasCompRef?.zoomReset()"
+				@moveMode="(enabled: boolean) => canvasCompRef?.setMoveMode(enabled)"
 				@downloadAll="onDownloadAll"
 				@downloadMine="onDownloadMine"
 			/>
@@ -216,7 +217,10 @@ function onCursorMove(x: number, y: number) {
 }
 
 function onToolChange(tool: ToolType) {
-	canvasEngine.value?.setState({ currentTool: tool });
+	// 移動ツールはcanvasEngineには渡さない（描画ツールのみ）
+	if (tool !== 'move') {
+		canvasEngine.value?.setState({ currentTool: tool });
+	}
 }
 
 function onColorChange(color: string) {

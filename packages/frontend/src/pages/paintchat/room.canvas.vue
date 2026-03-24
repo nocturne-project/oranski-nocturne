@@ -22,7 +22,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		:class="$style.canvas"
 		:width="canvasWidth"
 		:height="canvasHeight"
-		:style="{ transform: `scale(${zoomLevel})`, transformOrigin: 'center center' }"
+		:style="{ transform: `translate(${panX}px, ${panY}px) scale(${zoomLevel})`, transformOrigin: 'center center' }"
 	></canvas>
 </div>
 </template>
@@ -48,13 +48,22 @@ const canvasRef = ref<HTMLCanvasElement | null>(null);
 const canvasWidth = 800;
 const canvasHeight = 600;
 
-// ズームレベル（0.5〜3倍）
+// ズームレベル（0.25〜6倍）
 const zoomLevel = ref(1);
-const MIN_ZOOM = 0.5;
-const MAX_ZOOM = 3;
+const MIN_ZOOM = 0.25;
+const MAX_ZOOM = 6;
 
-// 2本指ピンチズーム用の状態
+// パン（移動）オフセット
+const panX = ref(0);
+const panY = ref(0);
+
+// 移動モード（移動ツール選択時にtrue）
+const isMoveMode = ref(false);
+
+// 2本指ピンチズーム・パン用の状態
 let lastPinchDistance = 0;
+let lastPinchCenterX = 0;
+let lastPinchCenterY = 0;
 let isPinching = false;
 
 // 2本指ダブルタップでアンドゥ
@@ -128,13 +137,21 @@ function onTouchStart(e: TouchEvent) {
 	if (e.touches.length !== 1) return;
 	e.preventDefault();
 	const touch = e.touches[0];
+
+	// 移動モード時は描画ではなくパン操作
+	if (isMoveMode.value) {
+		lastPinchCenterX = touch.clientX;
+		lastPinchCenterY = touch.clientY;
+		return;
+	}
+
 	const { x, y } = getCanvasCoords(touch.clientX, touch.clientY);
 	const pressure = simulatePressure(x, y);
 	props.engine.beginStroke(x, y, pressure);
 }
 
 function onTouchMove(e: TouchEvent) {
-	// 2本指ピンチズーム処理
+	// 2本指: ピンチズーム + パン（移動）同時操作
 	if (e.touches.length >= 2) {
 		e.preventDefault();
 		if (props.engine.getState().isDrawing) {
@@ -143,17 +160,35 @@ function onTouchMove(e: TouchEvent) {
 		const dx = e.touches[0].clientX - e.touches[1].clientX;
 		const dy = e.touches[0].clientY - e.touches[1].clientY;
 		const distance = Math.sqrt(dx * dx + dy * dy);
+		const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+		const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
 
 		if (isPinching && lastPinchDistance > 0) {
+			// ズーム
 			const scale = distance / lastPinchDistance;
 			zoomLevel.value = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoomLevel.value * scale));
+			// パン（2本指の中心の移動量）
+			panX.value += centerX - lastPinchCenterX;
+			panY.value += centerY - lastPinchCenterY;
 		}
 		lastPinchDistance = distance;
+		lastPinchCenterX = centerX;
+		lastPinchCenterY = centerY;
 		isPinching = true;
 		return;
 	}
 	e.preventDefault();
 	const touch = e.touches[0];
+
+	// 移動モード時はパン操作
+	if (isMoveMode.value) {
+		panX.value += touch.clientX - lastPinchCenterX;
+		panY.value += touch.clientY - lastPinchCenterY;
+		lastPinchCenterX = touch.clientX;
+		lastPinchCenterY = touch.clientY;
+		return;
+	}
+
 	const { x, y } = getCanvasCoords(touch.clientX, touch.clientY);
 	const pressure = simulatePressure(x, y);
 	props.engine.moveStroke(x, y, pressure);
@@ -184,12 +219,27 @@ let isMouseDown = false;
 function onMouseDown(e: MouseEvent) {
 	if (e.button !== 0) return;
 	isMouseDown = true;
+
+	if (isMoveMode.value) {
+		lastPinchCenterX = e.clientX;
+		lastPinchCenterY = e.clientY;
+		return;
+	}
+
 	const { x, y } = getCanvasCoords(e.clientX, e.clientY);
 	const pressure = simulatePressure(x, y);
 	props.engine.beginStroke(x, y, pressure);
 }
 
 function onMouseMove(e: MouseEvent) {
+	if (isMouseDown && isMoveMode.value) {
+		panX.value += e.clientX - lastPinchCenterX;
+		panY.value += e.clientY - lastPinchCenterY;
+		lastPinchCenterX = e.clientX;
+		lastPinchCenterY = e.clientY;
+		return;
+	}
+
 	const { x, y } = getCanvasCoords(e.clientX, e.clientY);
 
 	if (isMouseDown) {
@@ -232,9 +282,15 @@ function zoomOut() {
 
 function zoomReset() {
 	zoomLevel.value = 1;
+	panX.value = 0;
+	panY.value = 0;
 }
 
-defineExpose({ zoomIn, zoomOut, zoomReset, zoomLevel });
+function setMoveMode(enabled: boolean) {
+	isMoveMode.value = enabled;
+}
+
+defineExpose({ zoomIn, zoomOut, zoomReset, zoomLevel, setMoveMode });
 
 onUnmounted(() => {
 	props.engine.dispose();
