@@ -183,10 +183,11 @@ export class PaintChatChannel extends Channel {
 	}
 
 	// paintChatStreamからのイベントを受信
+	// stroke/progress/cursorは自分のイベントを除外。canvasCleared/undone/publish系等は全員に配信。
 	@bindThis
 	private onEvent(data: { type: string; body: any }): void {
-		// 自分自身のイベントは無視（participantIdで判定）
-		if (data.body?.participantId === this.participantId) return;
+		const selfFilterTypes = ['stroke', 'progress', 'cursor'];
+		if (selfFilterTypes.includes(data.type) && data.body?.participantId === this.participantId) return;
 		this.send(data.type, data.body);
 	}
 

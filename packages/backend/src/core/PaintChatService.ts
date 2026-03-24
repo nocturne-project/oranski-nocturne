@@ -190,8 +190,10 @@ export class PaintChatService {
 			id: this.idService.gen(),
 			reporterUserId,
 			targetUserId,
-		}).catch(() => {
-			// UNIQUE制約違反（既に登録済み）の場合は無視
+		}).catch((e: any) => {
+			// PostgreSQLのUNIQUE制約違反コード(23505)のみ無視、それ以外は再throw
+			if (e.code === '23505') return;
+			throw e;
 		});
 
 		// ルームに通報フラグを立てる

@@ -26,7 +26,11 @@ export class PaintChatMessage {
 	@JoinColumn()
 	public room: PaintChatRoom | null;
 
-	// 送信者（システムメッセージはNULL）
+	// 送信者のラッパーユーザーID
+	// type='text': 必須（ユーザー発言）
+	// type='topic': null（システム自動生成）
+	// type='dice': 必須（ユーザーが振る）
+	// type='system': null（システム通知）
 	@Column({
 		...id(),
 		nullable: true,

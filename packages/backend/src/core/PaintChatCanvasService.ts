@@ -55,12 +55,20 @@ export class PaintChatCanvasService {
 		await this.redisClient.expire(undoKey, CANVAS_TTL);
 	}
 
-	// キャンバスの全ストロークを取得する
+	// キャンバスの全ストロークを取得する（不正JSONはスキップ）
 	@bindThis
 	public async getStrokes(roomId: string): Promise<StrokeData[]> {
 		const key = `paintChat:canvas:${roomId}`;
 		const data = await this.redisClient.lrange(key, 0, -1);
-		return data.map(d => JSON.parse(d) as StrokeData);
+		const strokes: StrokeData[] = [];
+		for (const d of data) {
+			try {
+				strokes.push(JSON.parse(d) as StrokeData);
+			} catch {
+				// 不正なJSONデータはスキップ
+			}
+		}
+		return strokes;
 	}
 
 	// マージ済み画像を取得する
@@ -88,8 +96,12 @@ export class PaintChatCanvasService {
 		const canvasKey = `paintChat:canvas:${roomId}`;
 		const strokes = await this.redisClient.lrange(canvasKey, 0, -1);
 		const filtered = strokes.filter(s => {
-			const parsed = JSON.parse(s) as StrokeData;
-			return parsed.id !== strokeId;
+			try {
+				const parsed = JSON.parse(s) as StrokeData;
+				return parsed.id !== strokeId;
+			} catch {
+				return true; // パース失敗したデータは保持
+			}
 		});
 
 		// キャンバスを再構築

@@ -76,6 +76,8 @@ async function requestPublish() {
 			os.alert({ type: 'error', text: '現在この機能は利用できません' });
 		} else if (e.code === 'CANVAS_NOT_READY') {
 			os.alert({ type: 'warning', text: 'もう少し描いてから投稿しましょう' });
+		} else {
+			os.alert({ type: 'error', text: '投稿リクエストに失敗しました' });
 		}
 	}
 }
@@ -99,7 +101,7 @@ async function cancelPublish() {
 	try {
 		await misskeyApi('paint-chat/publish/reject' as any, { roomId: props.roomId } as any);
 	} catch {
-		// ignore
+		os.alert({ type: 'error', text: 'キャンセルに失敗しました' });
 	}
 	phase.value = 'idle';
 }
@@ -112,7 +114,9 @@ function onPublishRequested() {
 		text: '相手が作品の投稿を提案しています。同意しますか？',
 	}).then(async (result) => {
 		if (result.canceled) {
-			await misskeyApi('paint-chat/publish/reject' as any, { roomId: props.roomId } as any).catch(() => {});
+			await misskeyApi('paint-chat/publish/reject' as any, { roomId: props.roomId } as any).catch(() => {
+				os.alert({ type: 'error', text: '拒否の通知に失敗しました' });
+			});
 			return;
 		}
 		try {
@@ -121,7 +125,7 @@ function onPublishRequested() {
 				phase.value = 'message';
 			}
 		} catch {
-			// ignore
+			os.alert({ type: 'error', text: '同意の送信に失敗しました' });
 		}
 	});
 }

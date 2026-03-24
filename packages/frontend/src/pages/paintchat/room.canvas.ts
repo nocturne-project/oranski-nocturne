@@ -246,7 +246,7 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 		},
 
 		endStroke(): StrokeData | null {
-			if (!state.isDrawing || state.currentPoints.length === 0) {
+			if (!state.isDrawing || state.currentPoints.length === 0 || !ctx || !canvas) {
 				state.isDrawing = false;
 				return null;
 			}

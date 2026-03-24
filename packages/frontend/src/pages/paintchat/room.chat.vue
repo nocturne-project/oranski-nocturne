@@ -126,8 +126,19 @@ async function loadMessages() {
 		await nextTick();
 		scrollToBottom();
 	} catch {
-		// エラーは無視
+		addSystemMessage('メッセージの読み込みに失敗しました');
 	}
+}
+
+// システムメッセージをローカル追加するヘルパー
+function addSystemMessage(content: string) {
+	messages.value.push({
+		id: `local-${Date.now()}`,
+		participantId: null,
+		type: 'system',
+		content,
+		createdAt: new Date().toISOString(),
+	});
 }
 
 // メッセージを送信する
@@ -142,7 +153,9 @@ async function sendMessage() {
 			content: text,
 		} as any);
 	} catch {
-		// エラーは無視
+		// 送信失敗: 入力テキストを復元し、エラーを表示
+		inputText.value = text;
+		addSystemMessage('メッセージの送信に失敗しました');
 	}
 }
 
@@ -152,14 +165,9 @@ async function requestTopic() {
 		await misskeyApi('paint-chat/topic' as any, { roomId: props.roomId } as any);
 	} catch (e: any) {
 		if (e.code === 'NO_TOPICS_CONFIGURED') {
-			// お題未設定の場合のメッセージ追加
-			messages.value.push({
-				id: `local-${Date.now()}`,
-				participantId: null,
-				type: 'system',
-				content: 'お題が設定されていません',
-				createdAt: new Date().toISOString(),
-			});
+			addSystemMessage('お題が設定されていません');
+		} else {
+			addSystemMessage('お題の取得に失敗しました');
 		}
 	}
 }
@@ -169,7 +177,7 @@ async function requestDice() {
 	try {
 		await misskeyApi('paint-chat/dice' as any, { roomId: props.roomId } as any);
 	} catch {
-		// エラーは無視
+		addSystemMessage('サイコロの送信に失敗しました');
 	}
 }
 

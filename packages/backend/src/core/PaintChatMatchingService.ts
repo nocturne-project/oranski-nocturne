@@ -112,7 +112,12 @@ export class PaintChatMatchingService {
 		const waitingData = await this.redisClient.get(`${WAITING_PREFIX}${userId}`);
 		if (waitingData == null) return false;
 
-		const parsed = JSON.parse(waitingData);
+		let parsed: { joinedAt: number };
+		try {
+			parsed = JSON.parse(waitingData);
+		} catch {
+			return false;
+		}
 		const elapsed = Date.now() - parsed.joinedAt;
 
 		// 1分（60秒）経過チェック

@@ -59,13 +59,14 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 			// 振った人の参加者情報取得
 			const participant = await this.paintChatService.resolveParticipant(ps.roomId, me.id);
+			if (participant == null) throw new ApiError(meta.errors.accessDenied);
 
 			// メッセージ保存
 			const msgId = this.idService.gen();
 			await this.paintChatMessagesRepository.insert({
 				id: msgId,
 				roomId: ps.roomId,
-				participantId: participant?.id ?? null,
+				participantId: participant.id,
 				type: 'dice',
 				content: String(value),
 			});

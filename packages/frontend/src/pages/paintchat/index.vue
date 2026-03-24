@@ -55,13 +55,14 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 import { useRouter } from '@/router.js';
 import { useStream } from '@/stream.js';
 import { definePage } from '@/page.js';
+import * as os from '@/os.js';
 
 // ページの状態: notice(注意事項表示) → waiting(マッチング待機中)
 const phase = ref<'notice' | 'waiting'>('notice');
 const noticeText = ref('');
 const router = useRouter();
 const stream = useStream();
-let pollingTimer: any = null;
+// ポーリングは不要。WebSocketのmainストリームでmatchedイベントを待つ。
 
 // 注意事項テキストを取得
 misskeyApi('paint-chat/settings' as any).then((res: any) => {
@@ -76,14 +77,10 @@ misskeyApi('paint-chat/settings' as any).then((res: any) => {
 const mainConnection = stream.useChannel('main');
 mainConnection.on('paintChatMatched' as any, (data: any) => {
 	// マッチング成立: ルーム画面に遷移
-	if (pollingTimer) {
-		window.clearInterval(pollingTimer);
-		pollingTimer = null;
-	}
 	(router as any).push(`/paintchat/${data.roomId}`);
 });
 
-// マッチング開始
+// マッチング開始（joinを1回だけ呼び、以降はWebSocketのpaintChatMatchedイベントで通知を待つ）
 async function startMatching() {
 	phase.value = 'waiting';
 
@@ -94,47 +91,29 @@ async function startMatching() {
 			(router as any).push(`/paintchat/${res.roomId}`);
 			return;
 		}
+		// status === 'waiting' の場合はWebSocketでmatchedイベントを待つ
 	} catch (e: any) {
 		if (e.code === 'ALREADY_WAITING') {
-			// 既に待機中の場合はそのまま待機
+			// 既に待機中の場合はWebSocketイベントを待つ
 		} else {
 			phase.value = 'notice';
+			await os.alert({ type: 'error', text: 'マッチングの開始に失敗しました' });
 			return;
 		}
 	}
-
-	// ポーリングでマッチングを定期的に試行（5秒ごと）
-	pollingTimer = window.setInterval(async () => {
-		try {
-			const res = await misskeyApi('paint-chat/join' as any) as any;
-			if (res.status === 'matched' && res.roomId) {
-				if (pollingTimer) window.clearInterval(pollingTimer);
-				(router as any).push(`/paintchat/${res.roomId}`);
-			}
-		} catch {
-			// エラーは無視して待機続行
-		}
-	}, 5000);
 }
 
 // マッチングキャンセル
 async function cancelMatching() {
-	if (pollingTimer) {
-		window.clearInterval(pollingTimer);
-		pollingTimer = null;
-	}
 	try {
 		await misskeyApi('paint-chat/leave-queue' as any);
 	} catch {
-		// エラーは無視
+		// キャンセル失敗時もUIは戻す（10分TTLで自動期限切れ）
 	}
 	phase.value = 'notice';
 }
 
 onUnmounted(() => {
-	if (pollingTimer) {
-		window.clearInterval(pollingTimer);
-	}
 	mainConnection.dispose();
 });
 
