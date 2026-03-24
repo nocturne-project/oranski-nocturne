@@ -58,8 +58,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		private paintChatService: PaintChatService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			// まず設定が存在することを保証
+			// 設定レコードを取得（なければ作成される）
 			await this.paintChatService.getSettings();
+			const setting = await this.paintChatSettingsRepository.findOne({ where: {} });
+			if (setting == null) throw new Error('Failed to get paint chat settings');
 
 			const updateData: Record<string, any> = {
 				updatedAt: new Date(),
@@ -89,7 +91,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				updateData.noticeText = ps.noticeText;
 			}
 
-			await this.paintChatSettingsRepository.update({}, updateData);
+			// IDを指定して更新（空条件のupdateはTypeORMでエラーになるため）
+			await this.paintChatSettingsRepository.update(setting.id, updateData);
 
 			return { success: true };
 		});
