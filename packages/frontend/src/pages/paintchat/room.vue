@@ -239,13 +239,22 @@ function onDownloadAll() {
 	}
 }
 
+// 自分のストロークのみダウンロード（ステガノグラフィ付き: FR-037）
 function onDownloadMine() {
 	if (!canvasEngine.value) return;
 	const dataUrl = canvasEngine.value.toMyStrokesDataURL();
-	const link = window.document.createElement('a');
-	link.download = `paintchat-mine-${props.roomId}.png`;
-	link.href = dataUrl;
-	link.click();
+
+	// 一時canvasに描画してステガノグラフィを埋め込む
+	const img = new Image();
+	img.onload = () => {
+		const tmpCanvas = window.document.createElement('canvas');
+		tmpCanvas.width = img.width;
+		tmpCanvas.height = img.height;
+		const tmpCtx = tmpCanvas.getContext('2d')!;
+		tmpCtx.drawImage(img, 0, 0);
+		downloadWithSteganography(tmpCanvas, props.roomId, `paintchat-mine-${props.roomId}.png`);
+	};
+	img.src = dataUrl;
 }
 
 // 通報処理

@@ -43,6 +43,7 @@ export const paramDef = {
 	properties: {
 		roomId: { type: 'string', format: 'misskey:id' },
 		message: { type: 'string', maxLength: 100 },
+		imageBase64: { type: 'string' },
 	},
 	required: ['roomId', 'message'],
 } as const;
@@ -62,7 +63,36 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw new ApiError(meta.errors.messageTooLong);
 			}
 
+			// 一言メッセージを保存
 			await this.paintChatPublishService.setMessage(ps.roomId, participant.id, ps.message);
+
+			// 画像が添付されていれば、bot投稿を実行（双方のメッセージが揃った後に呼び出される）
+			if (ps.imageBase64) {
+				const participants = await this.paintChatService.getRoomParticipants(ps.roomId);
+				const publishStatus = await this.paintChatPublishService.getPublishStatus(ps.roomId);
+
+				if (publishStatus.bothAgreed && !publishStatus.published) {
+					const imageBuffer = Buffer.from(ps.imageBase64.replace(/^data:image\/\w+;base64,/, ''), 'base64');
+					const p1 = participants[0];
+					const p2 = participants[1];
+
+					// 投稿同意レコードからメッセージ取得
+					const record = await this.paintChatPublishService.getPublishRecord(ps.roomId);
+
+					const noteId = await this.paintChatPublishService.publishToTimeline(
+						ps.roomId,
+						imageBuffer,
+						p1?.anonymousName ?? '???',
+						p2?.anonymousName ?? '???',
+						record?.participant1Message ?? null,
+						record?.participant2Message ?? null,
+					);
+
+					if (noteId) {
+						this.globalEventService.publishPaintChatStream(ps.roomId, 'published', { noteId } as any);
+					}
+				}
+			}
 
 			return { success: true };
 		});

@@ -153,6 +153,46 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 		return `${myParticipantId}-${Date.now()}-${strokeIdCounter++}`;
 	}
 
+	// アンドゥ対象外のストロークをフラット化して描画パフォーマンスを維持する（FR-024/FR-025）
+	function doMergeOldStrokes(): string | null {
+		if (!ctx || !canvas) return null;
+
+		const myStrokes = strokes.filter(s => s.participantId === myParticipantId);
+		if (myStrokes.length <= MAX_UNDO) return null;
+
+		const offscreen = window.document.createElement('canvas');
+		offscreen.width = canvas.width;
+		offscreen.height = canvas.height;
+		const offCtx = offscreen.getContext('2d')!;
+
+		offCtx.fillStyle = '#ffffff';
+		offCtx.fillRect(0, 0, offscreen.width, offscreen.height);
+
+		if (mergedImageData) {
+			offCtx.putImageData(mergedImageData, 0, 0);
+		}
+
+		const toMerge = strokes.filter(s => {
+			if (s.participantId !== myParticipantId) return true;
+			const myIdx = myStrokes.indexOf(s);
+			return myIdx < myStrokes.length - MAX_UNDO;
+		});
+
+		for (const stroke of toMerge) {
+			renderStroke(offCtx, stroke);
+		}
+
+		mergedImageData = offCtx.getImageData(0, 0, offscreen.width, offscreen.height);
+
+		for (const stroke of toMerge) {
+			const idx = strokes.indexOf(stroke);
+			if (idx >= 0) strokes.splice(idx, 1);
+		}
+
+		redrawAll();
+		return offscreen.toDataURL('image/png');
+	}
+
 	// 全体を再描画する
 	function redrawAll(): void {
 		if (!ctx || !canvas) return;
@@ -266,10 +306,13 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 			strokes.push(stroke);
 			state.currentPoints = [];
 
-			// アンドゥ上限を超えたらマージ
+			// アンドゥ上限を超えたらバックグラウンドでマージ（FR-024/FR-025）
 			const myStrokes = strokes.filter(s => s.participantId === myParticipantId);
 			if (myStrokes.length > MAX_UNDO) {
-				// 自動マージはバックグラウンドで実行
+				// requestAnimationFrameでバックグラウンド実行し、描画操作を妨げない
+				window.requestAnimationFrame(() => {
+					doMergeOldStrokes();
+				});
 			}
 
 			// 完全な再描画（スムージング適用）
@@ -325,49 +368,7 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 		},
 
 		mergeOldStrokes(): string | null {
-			if (!ctx || !canvas) return null;
-
-			// アンドゥ対象外のストローク（古い方）をフラット化
-			const myStrokes = strokes.filter(s => s.participantId === myParticipantId);
-			if (myStrokes.length <= MAX_UNDO) return null;
-
-			// マージ対象 = 全ストロークのうちアンドゥ可能範囲外のもの
-			// ここでは全ストロークをマージ済み画像に変換
-			const offscreen = window.document.createElement('canvas');
-			offscreen.width = canvas.width;
-			offscreen.height = canvas.height;
-			const offCtx = offscreen.getContext('2d')!;
-
-			// 白い背景
-			offCtx.fillStyle = '#ffffff';
-			offCtx.fillRect(0, 0, offscreen.width, offscreen.height);
-
-			// マージ済み画像があればまず描画
-			if (mergedImageData) {
-				offCtx.putImageData(mergedImageData, 0, 0);
-			}
-
-			// アンドゥ対象外のストロークをオフスクリーンに描画
-			const toMerge = strokes.filter(s => {
-				if (s.participantId !== myParticipantId) return true; // 相手のストロークは全てマージ対象
-				const myIdx = myStrokes.indexOf(s);
-				return myIdx < myStrokes.length - MAX_UNDO;
-			});
-
-			for (const stroke of toMerge) {
-				renderStroke(offCtx, stroke);
-			}
-
-			mergedImageData = offCtx.getImageData(0, 0, offscreen.width, offscreen.height);
-
-			// マージ済みストロークを履歴から削除
-			for (const stroke of toMerge) {
-				const idx = strokes.indexOf(stroke);
-				if (idx >= 0) strokes.splice(idx, 1);
-			}
-
-			redrawAll();
-			return offscreen.toDataURL('image/png');
+			return doMergeOldStrokes();
 		},
 
 		toDataURL(type = 'image/png'): string {

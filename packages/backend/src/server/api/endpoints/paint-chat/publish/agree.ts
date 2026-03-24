@@ -76,9 +76,12 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw new ApiError(meta.errors.botNotConfigured);
 			}
 
-			// 品質ガード: ストロークが十分か
+			// 品質ガード: セッション時間・ストローク数・描き込み量の3条件チェック（FR-041）
 			const strokeCount = await this.paintChatCanvasService.getStrokeCount(ps.roomId);
-			if (strokeCount === 0) {
+			const strokes = await this.paintChatCanvasService.getStrokes(ps.roomId);
+			const totalPoints = strokes.reduce((sum, s) => sum + (s.points?.length ?? 0), 0);
+			const qualityCheck = await this.paintChatPublishService.checkQualityGuard(ps.roomId, strokeCount, totalPoints);
+			if (!qualityCheck.passed) {
 				throw new ApiError(meta.errors.canvasNotReady);
 			}
 

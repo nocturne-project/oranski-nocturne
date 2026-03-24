@@ -527,6 +527,10 @@ export const ROUTE_DEF = [{
 		name: 'noq',
 		component: page(() => import('@/pages/admin/noq.vue')),
 	}, {
+		path: '/paint-chat',
+		name: 'paint-chat',
+		component: page(() => import('@/pages/admin/paint-chat.vue')),
+	}, {
 		path: '/',
 		component: page(() => import('@/pages/_empty_.vue')),
 	}],
