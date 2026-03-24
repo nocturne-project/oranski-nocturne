@@ -15,7 +15,7 @@ import { ApiError } from '@/server/api/error.js';
 export const meta = {
 	tags: ['admin', 'paint-chat'],
 	requireCredential: true,
-	requireAdmin: true,
+	requireModerator: true,
 	secure: true,
 	kind: 'write:admin:paint-chat',
 
