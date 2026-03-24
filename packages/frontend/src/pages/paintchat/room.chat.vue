@@ -4,30 +4,31 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<!-- テキストチャット: 開閉可能、未読点滅、お題・サイコロボタン付き。モバイルではフルスクリーン切替。 -->
+<!-- テキストチャット: 開閉可能、未読点滅、お題・サイコロボタン付き -->
 <div :class="$style.chatWrapper">
-	<!-- チャットトグルボタン（閉じている時に表示） -->
+	<!-- チャットトグルボタン（閉じている時のみ表示） -->
 	<button
 		v-if="!isOpen"
 		:class="[$style.chatToggle, hasUnread ? $style.chatToggleUnread : '']"
 		@click="openChat"
 	>
-		<i class="ti ti-message-circle"></i>
-		<span v-if="hasUnread" :class="$style.unreadBadge">!</span>
+		チャット
+		<span v-if="hasUnread" :class="$style.unreadDot"></span>
 	</button>
 
 	<!-- チャットパネル（開いている時） -->
 	<div v-if="isOpen" :class="$style.chatPanel">
 		<!-- ヘッダー -->
 		<div :class="$style.chatHeader">
-			<span>チャット</span>
-			<button :class="$style.closeBtn" @click="closeChat">
-				<i class="ti ti-x"></i>
-			</button>
+			<span :class="$style.chatHeaderTitle">チャット</span>
+			<button :class="$style.closeBtn" @click="closeChat">閉じる</button>
 		</div>
 
 		<!-- メッセージ一覧 -->
 		<div ref="messagesRef" :class="$style.messageList">
+			<div v-if="messages.length === 0" :class="$style.emptyMessage">
+				まだメッセージはありません
+			</div>
 			<div
 				v-for="msg in messages"
 				:key="msg.id"
@@ -38,17 +39,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<span :class="$style.msgContent">{{ msg.content }}</span>
 				</template>
 				<template v-else-if="msg.type === 'topic'">
-					<span :class="$style.systemIcon"><i class="ti ti-bulb"></i></span>
 					<span :class="$style.msgContent">お題: {{ msg.content }}</span>
 				</template>
 				<template v-else-if="msg.type === 'dice'">
-					<span :class="$style.systemIcon"><i class="ti ti-dice"></i></span>
 					<span :class="$style.msgContent">
-						{{ getParticipantName(msg.participantId) }} が {{ msg.content }} を出した
+						{{ getParticipantName(msg.participantId) }} がサイコロで {{ msg.content }} を出した
 					</span>
 				</template>
 				<template v-else>
-					<span :class="$style.systemIcon"><i class="ti ti-info-circle"></i></span>
 					<span :class="$style.msgContent">{{ msg.content }}</span>
 				</template>
 			</div>
@@ -57,31 +55,27 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<!-- 入力エリア -->
 		<div :class="$style.inputArea">
 			<div :class="$style.actionButtons">
-				<button :class="$style.actionBtn" title="お題" @click="requestTopic">
-					<i class="ti ti-bulb"></i>
-				</button>
-				<button :class="$style.actionBtn" title="サイコロ" @click="requestDice">
-					<i class="ti ti-dice"></i>
-				</button>
+				<button :class="$style.actionBtn" @click="requestTopic">お題</button>
+				<button :class="$style.actionBtn" @click="requestDice">サイコロ</button>
 			</div>
-			<input
-				v-model="inputText"
-				:class="$style.textInput"
-				type="text"
-				placeholder="メッセージを入力..."
-				maxlength="500"
-				@keydown.enter="sendMessage"
-			>
-			<button :class="$style.sendBtn" :disabled="!inputText.trim()" @click="sendMessage">
-				<i class="ti ti-send"></i>
-			</button>
+			<div :class="$style.inputRow">
+				<input
+					v-model="inputText"
+					:class="$style.textInput"
+					type="text"
+					placeholder="メッセージを入力..."
+					maxlength="500"
+					@keydown.enter="sendMessage"
+				>
+				<button :class="$style.sendBtn" :disabled="!inputText.trim()" @click="sendMessage">送信</button>
+			</div>
 		</div>
 	</div>
 </div>
 </template>
 
 <script lang="ts" setup>
-import { ref, nextTick, watch } from 'vue';
+import { ref, nextTick } from 'vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import type { ChatMessage, Participant } from './room.types.js';
 
@@ -108,12 +102,22 @@ function getParticipantName(participantId: string | null): string {
 	return p?.anonymousName ?? '???';
 }
 
+// システムメッセージをローカル追加するヘルパー
+function addSystemMessage(content: string) {
+	messages.value.push({
+		id: `local-${Date.now()}`,
+		participantId: null,
+		type: 'system',
+		content,
+		createdAt: new Date().toISOString(),
+	});
+}
+
 // チャットを開く
 function openChat() {
 	isOpen.value = true;
 	hasUnread.value = false;
 	emit('open');
-	// メッセージ一覧を取得
 	loadMessages();
 }
 
@@ -135,17 +139,6 @@ async function loadMessages() {
 	}
 }
 
-// システムメッセージをローカル追加するヘルパー
-function addSystemMessage(content: string) {
-	messages.value.push({
-		id: `local-${Date.now()}`,
-		participantId: null,
-		type: 'system',
-		content,
-		createdAt: new Date().toISOString(),
-	});
-}
-
 // メッセージを送信する
 async function sendMessage() {
 	const text = inputText.value.trim();
@@ -158,7 +151,6 @@ async function sendMessage() {
 			content: text,
 		} as any);
 	} catch {
-		// 送信失敗: 入力テキストを復元し、エラーを表示
 		inputText.value = text;
 		addSystemMessage('メッセージの送信に失敗しました');
 	}
@@ -171,6 +163,8 @@ async function requestTopic() {
 	} catch (e: any) {
 		if (e.code === 'NO_TOPICS_CONFIGURED') {
 			addSystemMessage('お題が設定されていません');
+		} else if (e.code === 'TOPIC_ALREADY_USED') {
+			addSystemMessage('お題は1部屋につき1回までです');
 		} else {
 			addSystemMessage('お題の取得に失敗しました');
 		}
@@ -190,7 +184,6 @@ async function requestDice() {
 function addMessage(msg: ChatMessage) {
 	messages.value.push(msg);
 	if (!isOpen.value) {
-		// チャットが閉じていたら未読フラグを立てる
 		hasUnread.value = true;
 	} else {
 		nextTick(() => scrollToBottom());
@@ -203,7 +196,6 @@ function scrollToBottom() {
 	}
 }
 
-// 外部公開
 defineExpose({ addMessage });
 </script>
 
@@ -212,62 +204,49 @@ defineExpose({ addMessage });
 	position: relative;
 }
 
+// チャットトグルボタン（テキスト付き）
 .chatToggle {
 	position: fixed;
-	bottom: 120px;
+	bottom: 80px;
 	right: 16px;
-	width: 48px;
-	height: 48px;
-	border-radius: 50%;
+	padding: 8px 16px;
+	border-radius: 20px;
 	background: var(--accent);
 	color: white;
 	border: none;
 	cursor: pointer;
-	font-size: 22px;
-	display: flex;
-	align-items: center;
-	justify-content: center;
+	font-size: 14px;
+	font-weight: bold;
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 	z-index: 100;
+	display: flex;
+	align-items: center;
+	gap: 6px;
 }
 
-// 未読時のゆっくり点滅アニメーション
+// 未読時のゆっくり点滅
 .chatToggleUnread {
 	animation: slowPulse 2s ease-in-out infinite;
 }
 
-.unreadBadge {
-	position: absolute;
-	top: -2px;
-	right: -2px;
-	width: 18px;
-	height: 18px;
+.unreadDot {
+	width: 8px;
+	height: 8px;
 	border-radius: 50%;
 	background: #ff4444;
-	color: white;
-	font-size: 11px;
-	display: flex;
-	align-items: center;
-	justify-content: center;
 }
 
+// チャットパネル（不透過背景）
 .chatPanel {
 	position: fixed;
 	bottom: 0;
 	left: 0;
 	right: 0;
 	top: 0;
-	background: var(--bg);
+	background: var(--panel);
 	z-index: 200;
 	display: flex;
 	flex-direction: column;
-
-	@media (min-width: 768px) {
-		position: absolute;
-		top: auto;
-		height: 400px;
-		border-top: 1px solid var(--divider);
-	}
 }
 
 .chatHeader {
@@ -276,34 +255,54 @@ defineExpose({ addMessage });
 	justify-content: space-between;
 	padding: 12px 16px;
 	border-bottom: 1px solid var(--divider);
-	font-weight: bold;
+	background: var(--panel);
 	flex-shrink: 0;
 }
 
+.chatHeaderTitle {
+	font-weight: bold;
+	font-size: 16px;
+}
+
+// 閉じるボタン（テキスト）
 .closeBtn {
-	background: transparent;
-	border: none;
+	padding: 6px 14px;
+	border-radius: 6px;
+	border: 1px solid var(--divider);
+	background: var(--panel);
 	cursor: pointer;
-	font-size: 18px;
+	font-size: 14px;
 	color: var(--fg);
-	padding: 4px;
+
+	&:hover {
+		background: var(--bg);
+	}
 }
 
 .messageList {
 	flex: 1;
 	overflow-y: auto;
 	padding: 12px 16px;
+	background: var(--bg);
+}
+
+.emptyMessage {
+	text-align: center;
+	color: var(--fgTransparent);
+	padding: 40px 0;
+	font-size: 14px;
 }
 
 .message {
 	margin-bottom: 8px;
-	font-size: 0.95em;
-	line-height: 1.5;
+	font-size: 14px;
+	line-height: 1.6;
 }
 
 .systemMessage {
 	color: var(--fgTransparent);
-	font-size: 0.85em;
+	font-size: 13px;
+	font-style: italic;
 }
 
 .msgSender {
@@ -315,50 +314,47 @@ defineExpose({ addMessage });
 	word-break: break-word;
 }
 
-.systemIcon {
-	margin-right: 4px;
-}
-
 .inputArea {
-	display: flex;
-	align-items: center;
-	gap: 8px;
 	padding: 8px 12px;
 	border-top: 1px solid var(--divider);
+	background: var(--panel);
 	flex-shrink: 0;
 }
 
+// アクションボタン（テキスト付き）
 .actionButtons {
 	display: flex;
-	gap: 4px;
+	gap: 8px;
+	margin-bottom: 8px;
 }
 
 .actionBtn {
-	width: 36px;
-	height: 36px;
-	border-radius: 8px;
-	border: none;
-	background: transparent;
+	padding: 6px 14px;
+	border-radius: 16px;
+	border: 1px solid var(--divider);
+	background: var(--panel);
 	cursor: pointer;
-	font-size: 18px;
+	font-size: 13px;
 	color: var(--fg);
-	display: flex;
-	align-items: center;
-	justify-content: center;
 
 	&:hover {
-		background: var(--bgSecondary);
+		background: var(--bg);
 	}
+}
+
+.inputRow {
+	display: flex;
+	gap: 8px;
 }
 
 .textInput {
 	flex: 1;
 	padding: 8px 12px;
-	border-radius: 20px;
+	border-radius: 8px;
 	border: 1px solid var(--divider);
 	background: var(--bg);
 	color: var(--fg);
-	font-size: 0.95em;
+	font-size: 14px;
 	outline: none;
 
 	&:focus {
@@ -366,21 +362,19 @@ defineExpose({ addMessage });
 	}
 }
 
+// 送信ボタン（テキスト）
 .sendBtn {
-	width: 36px;
-	height: 36px;
-	border-radius: 50%;
+	padding: 8px 16px;
+	border-radius: 8px;
 	border: none;
 	background: var(--accent);
 	color: white;
 	cursor: pointer;
-	font-size: 16px;
-	display: flex;
-	align-items: center;
-	justify-content: center;
+	font-size: 14px;
+	font-weight: bold;
 
 	&:disabled {
-		opacity: 0.5;
+		opacity: 0.4;
 		cursor: not-allowed;
 	}
 }

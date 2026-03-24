@@ -66,12 +66,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 			@getCanvasImage="onGetCanvasImage"
 		/>
 
-		<!-- 下部バー（通報・退出ボタン） -->
+		<!-- 下部バー（通報・退出ボタン、テキスト付き） -->
 		<div :class="$style.bottomBar">
-			<button :class="$style.reportButton" @click="reportRoom">
-				<i class="ti ti-flag"></i>
-			</button>
-			<button :class="$style.leaveButton" @click="leaveRoom">退出</button>
+			<button :class="$style.reportButton" @click="reportRoom">通報</button>
+			<div :class="$style.bottomSpacer"></div>
+			<button :class="$style.leaveButton" @click="leaveRoom">退出する</button>
 		</div>
 	</div>
 
@@ -106,7 +105,8 @@ const props = defineProps<{
 
 const router = useRouter();
 const roomInfo = ref<RoomInfo | null>(null);
-const partnerPresence = ref<PresenceStatus>('offline');
+// マッチング直後は相手も入室しているはずなのでデフォルトはonline
+const partnerPresence = ref<PresenceStatus>('online');
 const chatRef = ref<InstanceType<typeof XChat> | null>(null);
 const publishRef = ref<InstanceType<typeof XPublish> | null>(null);
 const strokeCount = ref(0);
@@ -418,19 +418,25 @@ definePage(() => ({
 
 .bottomBar {
 	display: flex;
-	justify-content: flex-end;
+	align-items: center;
 	padding: 8px 16px;
 	border-top: 1px solid var(--divider);
+	background: var(--panel);
 	flex-shrink: 0;
 }
 
+.bottomSpacer {
+	flex: 1;
+}
+
 .reportButton {
-	padding: 6px 12px;
+	padding: 6px 14px;
 	border-radius: 6px;
 	border: 1px solid var(--divider);
 	background: transparent;
 	cursor: pointer;
 	color: #ff6b6b;
+	font-size: 13px;
 
 	&:hover {
 		background: rgba(255, 107, 107, 0.1);
@@ -444,9 +450,10 @@ definePage(() => ({
 	background: transparent;
 	cursor: pointer;
 	color: var(--fg);
+	font-size: 13px;
 
 	&:hover {
-		background: var(--bgSecondary);
+		background: var(--bg);
 	}
 }
 

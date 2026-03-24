@@ -29,6 +29,11 @@ export const meta = {
 			code: 'NO_TOPICS_CONFIGURED',
 			id: '4c44427e-228a-43ee-bedf-1d80d13b579c',
 		},
+		alreadyUsed: {
+			message: 'Topic has already been used in this room.',
+			code: 'TOPIC_ALREADY_USED',
+			id: '5d55538f-339b-54ff-ceef-2e91e24c690d',
+		},
 	},
 
 	res: {
@@ -58,6 +63,15 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		super(meta, paramDef, async (ps, me) => {
 			const canAccess = await this.paintChatService.canAccessRoom(ps.roomId, me.id);
 			if (!canAccess) throw new ApiError(meta.errors.accessDenied);
+
+			// 1部屋1回制限: 既にお題が出されているかチェック
+			const existingTopic = await this.paintChatMessagesRepository.findOneBy({
+				roomId: ps.roomId,
+				type: 'topic',
+			});
+			if (existingTopic != null) {
+				throw new ApiError(meta.errors.alreadyUsed);
+			}
 
 			// お題リスト取得
 			const settings = await this.paintChatService.getSettings();

@@ -12,37 +12,26 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<button
 			:class="[$style.toolBtn, currentTool === 'pen' ? $style.active : '']"
 			@click="selectTool('pen')"
-		>
-			<i class="ti ti-pencil"></i>
-		</button>
+		>ペン</button>
 		<button
 			:class="[$style.toolBtn, currentTool === 'eraser' ? $style.active : '']"
 			@click="selectTool('eraser')"
-		>
-			<i class="ti ti-eraser"></i>
-		</button>
+		>消しゴム</button>
 
-		<!-- カラーボタン -->
-		<button
-			:class="$style.colorBtn"
-			:style="{ background: currentColor }"
-			@click="togglePanel('color')"
-		></button>
+		<!-- カラーボタン（色プレビュー付きテキスト） -->
+		<button :class="$style.toolBtn" @click="togglePanel('color')">
+			<span :class="$style.colorDot" :style="{ background: currentColor }"></span>
+			色
+		</button>
 
 		<!-- 太さボタン -->
-		<button :class="$style.toolBtn" @click="togglePanel('width')">
-			<div :class="$style.widthPreview" :style="{ width: currentWidth + 'px', height: currentWidth + 'px' }"></div>
-		</button>
+		<button :class="$style.toolBtn" @click="togglePanel('width')">太さ</button>
 
-		<!-- アンドゥ・リドゥ -->
-		<button :class="$style.toolBtn" @click="$emit('undo')">
-			<i class="ti ti-arrow-back-up"></i>
-		</button>
+		<!-- アンドゥ -->
+		<button :class="$style.toolBtn" @click="$emit('undo')">戻す</button>
 
 		<!-- ダウンロード -->
-		<button :class="$style.toolBtn" @click="togglePanel('download')">
-			<i class="ti ti-download"></i>
-		</button>
+		<button :class="$style.toolBtn" @click="togglePanel('download')">保存</button>
 	</div>
 
 	<!-- 展開パネル -->
@@ -159,7 +148,7 @@ function togglePanel(panel: 'color' | 'width' | 'download') {
 .toolbar {
 	position: relative;
 	border-top: 1px solid var(--divider);
-	background: var(--bg);
+	background: var(--panel);
 	flex-shrink: 0;
 }
 
@@ -168,25 +157,35 @@ function togglePanel(panel: 'color' | 'width' | 'download') {
 	align-items: center;
 	justify-content: center;
 	gap: 4px;
-	padding: 8px 12px;
+	padding: 6px 8px;
+	flex-wrap: wrap;
+}
+
+.colorDot {
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	border: 1px solid var(--divider);
+	flex-shrink: 0;
 }
 
 .toolBtn {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 44px;
-	height: 44px;
+	gap: 4px;
+	padding: 6px 12px;
 	border-radius: 8px;
-	border: none;
-	background: transparent;
+	border: 1px solid var(--divider);
+	background: var(--panel);
 	cursor: pointer;
-	font-size: 20px;
+	font-size: 13px;
 	color: var(--fg);
 	transition: background 0.1s;
+	white-space: nowrap;
 
 	&:hover {
-		background: var(--bgSecondary);
+		background: var(--bg);
 	}
 }
 
