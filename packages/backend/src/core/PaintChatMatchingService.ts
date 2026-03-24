@@ -8,6 +8,7 @@ import Redis from 'ioredis';
 import { DI } from '@/di-symbols.js';
 import type { MiUser } from '@/models/User.js';
 import type { UsersRepository } from '@/models/_.js';
+import type { Config } from '@/config.js';
 import { PaintChatService } from '@/core/PaintChatService.js';
 import { NoteCreateService } from '@/core/NoteCreateService.js';
 import { bindThis } from '@/decorators.js';
@@ -19,6 +20,9 @@ const WAITING_PREFIX = 'paintChat:waiting:';
 @Injectable()
 export class PaintChatMatchingService {
 	constructor(
+		@Inject(DI.config)
+		private config: Config,
+
 		@Inject(DI.redis)
 		private redisClient: Redis.Redis,
 
@@ -67,8 +71,9 @@ export class PaintChatMatchingService {
 		if (botUser == null) return;
 
 		// 呼びかけ投稿
+		const paintChatUrl = `${this.config.url}paintchat`;
 		await this.noteCreateService.create(botUser, {
-			text: 'ランダム絵チャットで一緒にお絵かきしませんか？\n[ここから参加できます](/paintchat)',
+			text: `ランダム絵チャットで一緒にお絵かきしませんか？\n[ここから参加できます](${paintChatUrl})`,
 			localOnly: true,
 			visibility: 'home',
 		});
