@@ -7,7 +7,9 @@ import { Inject, Injectable } from '@nestjs/common';
 import Redis from 'ioredis';
 import { DI } from '@/di-symbols.js';
 import type { MiUser } from '@/models/User.js';
+import type { UsersRepository } from '@/models/_.js';
 import { PaintChatService } from '@/core/PaintChatService.js';
+import { NoteCreateService } from '@/core/NoteCreateService.js';
 import { bindThis } from '@/decorators.js';
 
 const QUEUE_KEY = 'paintChat:queue';
@@ -20,7 +22,11 @@ export class PaintChatMatchingService {
 		@Inject(DI.redis)
 		private redisClient: Redis.Redis,
 
+		@Inject(DI.usersRepository)
+		private usersRepository: UsersRepository,
+
 		private paintChatService: PaintChatService,
+		private noteCreateService: NoteCreateService,
 	) {
 	}
 
@@ -40,6 +46,34 @@ export class PaintChatMatchingService {
 
 		// キューに追加
 		await this.redisClient.rpush(QUEUE_KEY, userId);
+
+		// 1分後にbot呼びかけ投稿をスケジュール（FR-047）
+		setTimeout(() => {
+			this.tryPostRecruitment(userId).catch(() => {});
+		}, 60000);
+	}
+
+	// bot呼びかけ投稿を実行する（1分経過時に自動呼び出し）
+	@bindThis
+	private async tryPostRecruitment(userId: MiUser['id']): Promise<void> {
+		const shouldPost = await this.shouldPostRecruitment(userId);
+		if (!shouldPost) return;
+
+		// bot設定を取得
+		const settings = await this.paintChatService.getSettings();
+		if (settings.botAccountId == null) return;
+
+		const botUser = await this.usersRepository.findOneBy({ id: settings.botAccountId });
+		if (botUser == null) return;
+
+		// 呼びかけ投稿
+		await this.noteCreateService.create(botUser, {
+			text: 'ランダム絵チャットで一緒にお絵かきしませんか？\n/paintchat から参加できます',
+			localOnly: true,
+			visibility: 'public',
+		});
+
+		await this.markRecruitmentPosted(userId);
 	}
 
 	// マッチング待機キューから離脱する

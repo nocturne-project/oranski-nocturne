@@ -61,6 +61,29 @@ const props = defineProps<{
 	canPublish: boolean;
 }>();
 
+const emit = defineEmits<{
+	(e: 'getCanvasImage'): void;
+}>();
+
+// 親コンポーネントからキャンバス画像を受け取るためのコールバック
+let canvasImageResolver: ((dataUrl: string) => void) | null = null;
+
+// 親からキャンバス画像を受け取る
+function receiveCanvasImage(dataUrl: string) {
+	if (canvasImageResolver) {
+		canvasImageResolver(dataUrl);
+		canvasImageResolver = null;
+	}
+}
+
+// キャンバス画像を取得する（親にemitして応答を待つ）
+function requestCanvasImage(): Promise<string> {
+	return new Promise((resolve) => {
+		canvasImageResolver = resolve;
+		emit('getCanvasImage');
+	});
+}
+
 const phase = ref<'idle' | 'waiting' | 'message'>('idle');
 const isPublished = ref(false);
 const myMessage = ref('');
@@ -87,12 +110,17 @@ async function requestPublish() {
 	}
 }
 
-// 一言メッセージ送信＆投稿確定
+// 一言メッセージ送信＆投稿確定（キャンバス画像をBase64で添付）
 async function submitMessage() {
 	try {
+		// キャンバス画像を取得
+		const imageDataUrl = await requestCanvasImage();
+		const imageBase64 = imageDataUrl; // data:image/png;base64,... 形式
+
 		await misskeyApi('paint-chat/publish/message' as any, {
 			roomId: props.roomId,
 			message: myMessage.value,
+			imageBase64,
 		} as any);
 		isPublished.value = true;
 		phase.value = 'idle';
@@ -149,7 +177,7 @@ function onPublished() {
 	phase.value = 'idle';
 }
 
-defineExpose({ onPublishRequested, onPublishAgreed, onPublishRejected, onPublished });
+defineExpose({ onPublishRequested, onPublishAgreed, onPublishRejected, onPublished, receiveCanvasImage });
 </script>
 
 <style lang="scss" module>

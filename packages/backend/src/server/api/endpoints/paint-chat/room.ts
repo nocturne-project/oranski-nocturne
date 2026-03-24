@@ -74,6 +74,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			const canAccess = await this.paintChatService.canAccessRoom(ps.roomId, me.id);
 			if (!canAccess) throw new ApiError(meta.errors.accessDenied);
 
+			// セッション終了済みルームの場合はendedフラグを返す（フロントエンドで表示制御）
+
 			// 参加者取得（ラッパーユーザーIDと匿名名のみ。実ユーザーIDは非露出。）
 			const participants = await this.paintChatService.getRoomParticipants(ps.roomId);
 			const myParticipant = participants.find(p => p.userId === me.id);

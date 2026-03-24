@@ -63,6 +63,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			ref="publishRef"
 			:roomId="props.roomId"
 			:canPublish="strokeCount > 0"
+			@getCanvasImage="onGetCanvasImage"
 		/>
 
 		<!-- 下部バー（通報・退出ボタン） -->
@@ -255,6 +256,14 @@ function onDownloadMine() {
 		downloadWithSteganography(tmpCanvas, props.roomId, `paintchat-mine-${props.roomId}.png`);
 	};
 	img.src = dataUrl;
+}
+
+// 投稿同意フローからキャンバス画像を要求された時のハンドラ
+function onGetCanvasImage() {
+	if (canvasEngine.value) {
+		const dataUrl = canvasEngine.value.toDataURL('image/png');
+		publishRef.value?.receiveCanvasImage(dataUrl);
+	}
 }
 
 // 通報処理
