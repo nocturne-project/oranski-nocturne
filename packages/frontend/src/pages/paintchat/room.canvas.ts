@@ -40,7 +40,7 @@ export interface CanvasEngine {
 	// マージ（フラット化）
 	mergeOldStrokes(): string | null;
 	// キャンバス復元（リロード時にRedisのストロークデータから再描画）
-	restoreStrokes(savedStrokes: StrokeData[], mergedImageBase64?: string | null): void;
+	restoreStrokes(savedStrokes: StrokeData[], mergedImageBase64?: string | null): Promise<void>;
 	// 画像出力
 	toDataURL(type?: string): string;
 	toMyStrokesDataURL(): string;
@@ -63,6 +63,22 @@ function catmullRomPoint(
 
 // ストロークを描画する（筆圧可変幅の滑らかな線）
 // 筆圧による太さ変化は、短いセグメントごとに連続パスで描画して隙間をなくす
+// 自分のストロークバッファ用: 消しゴムを白色ペンとして描画する（destination-outだと透明になりPNGで黒く表示されるバグ防止）
+function renderStrokeForMyBuffer(ctx: CanvasRenderingContext2D, stroke: StrokeData): void {
+	if (stroke.tool === 'eraser') {
+		// 消しゴムを白色のペンストロークとして描画
+		const whiteStroke: StrokeData = {
+			...stroke,
+			tool: 'pen',
+			color: '#ffffff',
+			opacity: 1,
+		};
+		renderStroke(ctx, whiteStroke);
+	} else {
+		renderStroke(ctx, stroke);
+	}
+}
+
 function renderStroke(ctx: CanvasRenderingContext2D, stroke: StrokeData): void {
 	const points = stroke.points;
 	if (points.length === 0) return;
@@ -235,7 +251,7 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 		// 残っている自分のストロークを再描画
 		for (const stroke of strokes) {
 			if (stroke.participantId === myParticipantId) {
-				renderStroke(myStrokesCtx, stroke);
+				renderStrokeForMyBuffer(myStrokesCtx, stroke);
 			}
 		}
 	}
@@ -395,7 +411,7 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 
 			// 自分のストローク専用バッファにも描画（マージで消えない永続バッファ）
 			if (myStrokesCtx && stroke.participantId === myParticipantId) {
-				renderStroke(myStrokesCtx, stroke);
+				renderStrokeForMyBuffer(myStrokesCtx, stroke);
 			}
 
 			// アンドゥ上限を超えたらバックグラウンドでマージ（FR-024/FR-025）
@@ -467,31 +483,40 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 		},
 
 		// リロード時にRedisのストロークデータからキャンバスを復元する
-		restoreStrokes(savedStrokes: StrokeData[], mergedImageBase64?: string | null) {
+		// Promise化して画像読み込み完了を待機し、レース条件を防止する
+		async restoreStrokes(savedStrokes: StrokeData[], mergedImageBase64?: string | null) {
 			// マージ済み画像があれば復元
 			if (mergedImageBase64 && ctx && canvas) {
-				const img = new Image();
-				img.onload = () => {
-					if (!ctx || !canvas) return;
-					ctx.drawImage(img, 0, 0);
-					mergedImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-					// ストロークを追加して再描画
-					for (const stroke of savedStrokes) {
-						strokes.push(stroke);
-						// 自分のストロークバッファにも追加
-						if (myStrokesCtx && stroke.participantId === myParticipantId) {
-							renderStroke(myStrokesCtx, stroke);
+				await new Promise<void>((resolve) => {
+					const img = new Image();
+					img.onload = () => {
+						if (!ctx || !canvas) { resolve(); return; }
+						ctx.drawImage(img, 0, 0);
+						mergedImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+						// ストロークを追加して再描画
+						for (const stroke of savedStrokes) {
+							strokes.push(stroke);
+							// 自分のストロークバッファにも追加
+							if (myStrokesCtx && stroke.participantId === myParticipantId) {
+								renderStrokeForMyBuffer(myStrokesCtx, stroke);
+							}
 						}
-					}
-					redrawAll();
-				};
-				img.src = mergedImageBase64;
+						// 自分のストロークバッファのスナップショットを保存（undo復元用）
+						if (myStrokesCanvas && myStrokesCtx) {
+							myMergedImageData = myStrokesCtx.getImageData(0, 0, myStrokesCanvas.width, myStrokesCanvas.height);
+						}
+						redrawAll();
+						resolve();
+					};
+					img.onerror = () => resolve();
+					img.src = mergedImageBase64;
+				});
 			} else {
 				// マージ済み画像なし: ストロークのみ復元
 				for (const stroke of savedStrokes) {
 					strokes.push(stroke);
 					if (myStrokesCtx && stroke.participantId === myParticipantId) {
-						renderStroke(myStrokesCtx, stroke);
+						renderStrokeForMyBuffer(myStrokesCtx, stroke);
 					}
 				}
 				redrawAll();

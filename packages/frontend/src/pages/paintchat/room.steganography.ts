@@ -201,8 +201,15 @@ export function extractRoomId(canvas: HTMLCanvasElement): string | null {
 	return extractBlock(imageData.data, canvas.width, canvas.height);
 }
 
+// iOS/iPadOS判定（Safari・Chrome on iOSを含む）
+function isIOS(): boolean {
+	return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+		(navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
 // キャンバスをステガノグラフィ付きでダウンロードする
-// iOSではBlob + application/pngでPhotosに保存可能にする
+// iOS/iPadOS: Web Share APIでPhotosに直接保存可能な共有シートを表示
+// その他: data URL + <a download> でファイルダウンロード
 export function downloadWithSteganography(
 	canvas: HTMLCanvasElement,
 	roomId: string,
@@ -216,15 +223,29 @@ export function downloadWithSteganography(
 
 	embedRoomId(offscreen, roomId);
 
-	// Blob方式でダウンロード（iOS Safari対応）
-	offscreen.toBlob((blob) => {
-		if (!blob) return;
-		const url = URL.createObjectURL(blob);
-		const link = window.document.createElement('a');
-		link.download = filename;
-		link.href = url;
-		link.click();
-		// メモリリーク防止
-		setTimeout(() => URL.revokeObjectURL(url), 5000);
-	}, 'image/png');
+	if (isIOS() && navigator.share != null) {
+		// iOS: Web Share APIでPhotosへの保存を含む共有シートを表示
+		offscreen.toBlob((blob) => {
+			if (!blob) return;
+			const file = new File([blob], filename, { type: 'image/png' });
+			navigator.share({ files: [file] }).catch(() => {
+				// 共有キャンセルまたは失敗時はdata URL方式にフォールバック
+				downloadViaDataUrl(offscreen, filename);
+			});
+		}, 'image/png');
+	} else {
+		// 非iOS: data URL方式でダウンロード
+		downloadViaDataUrl(offscreen, filename);
+	}
+}
+
+// data URL方式でダウンロード（非iOS向け）
+function downloadViaDataUrl(canvas: HTMLCanvasElement, filename: string): void {
+	const dataUrl = canvas.toDataURL('image/png');
+	const link = window.document.createElement('a');
+	link.download = filename;
+	link.href = dataUrl;
+	window.document.body.appendChild(link);
+	link.click();
+	window.document.body.removeChild(link);
 }

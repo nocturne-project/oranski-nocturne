@@ -14,12 +14,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div :class="$style.roomHeader">
 			<div :class="$style.participants">
 				<span :class="$style.myName">{{ myName }}</span>
-				<span :class="$style.vs">vs</span>
-				<span :class="$style.partnerName">
-					{{ partnerName }}
-					<span v-if="partnerPresence === 'online'" :class="$style.presenceOnline">入室中</span>
-					<span v-else :class="$style.presenceOffline">退室中</span>
-				</span>
+				<template v-if="partnerName">
+					<span :class="$style.vs">vs</span>
+					<span :class="$style.partnerName">
+						{{ partnerName }}
+						<span v-if="partnerPresence === 'online'" :class="$style.presenceOnline"><span :class="$style.presenceDot"></span>入室中</span>
+						<span v-else :class="$style.presenceOffline"><span :class="$style.presenceDotOff"></span>退室中</span>
+					</span>
+				</template>
 			</div>
 			<div :class="$style.roomInfo">
 				<span :class="$style.dataNotice">データは7日間保持後に自動削除されます</span>
@@ -33,6 +35,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 				v-if="canvasEngine"
 				ref="toolbarRef"
 				:hasUnreadChat="chatRef?.hasUnread"
+				:isSolo="isSolo"
+				:myConsent="myPublishConsent"
+				:partnerConsent="partnerPublishConsent"
+				:isPublished="isPublished"
 				@toolChange="onToolChange"
 				@colorChange="onColorChange"
 				@widthChange="onWidthChange"
@@ -44,8 +50,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 				@moveMode="(enabled: boolean) => canvasCompRef?.setMoveMode(enabled)"
 				@downloadAll="onDownloadAll"
 				@downloadMine="onDownloadMine"
+				@publishMyArt="onPublishMyArt"
 				@toggleChat="onToggleChat"
-				@publish="onPublishRequest"
+				@publishConsent="onPublishConsent"
+				@publishRequest="onPublishRequest"
 				@report="reportRoom"
 				@leave="leaveRoom"
 			/>
@@ -120,6 +128,16 @@ const chatRef = ref<InstanceType<typeof XChat> | null>(null);
 const publishRef = ref<InstanceType<typeof XPublish> | null>(null);
 const strokeCount = ref(0);
 
+// 投稿許可の状態管理
+const partnerPublishConsent = ref(false);
+const isPublished = ref(false);
+
+// ソロモード判定（参加者が1人の場合）
+const isSolo = computed(() => {
+	if (!roomInfo.value) return false;
+	return roomInfo.value.participants.length <= 1;
+});
+
 // WebSocket接続
 const paintChat = usePaintChatConnection(props.roomId);
 
@@ -141,6 +159,21 @@ const canvasEngine = ref<CanvasEngine | null>(null);
 
 // ヘッダーアクション
 const headerActions = computed(() => []);
+
+// WebSocket再接続時にキャンバス状態を再取得する
+paintChat.onReconnected(async () => {
+	if (!canvasEngine.value) return;
+	try {
+		const canvasData = await misskeyApi('paint-chat/canvas' as any, { roomId: props.roomId } as any) as any;
+		if (canvasData && (canvasData.strokes?.length > 0 || canvasData.mergedImage)) {
+			// キャンバスをクリアしてから再復元（切断中に追加されたストロークも含む）
+			canvasEngine.value.clear();
+			await canvasEngine.value.restoreStrokes(canvasData.strokes ?? [], canvasData.mergedImage);
+		}
+	} catch {
+		// 復元失敗は無視
+	}
+});
 
 // リモートストロークの受信
 paintChat.on('stroke', (data) => {
@@ -172,30 +205,30 @@ paintChat.on('publishRequested', () => {
 	publishRef.value?.onPublishRequested();
 });
 paintChat.on('publishAgreed', () => {
+	// 相手が投稿を許可した
+	partnerPublishConsent.value = true;
 	publishRef.value?.onPublishAgreed();
 });
 paintChat.on('publishRejected', () => {
+	// 相手が投稿許可を取り消した
+	partnerPublishConsent.value = false;
 	publishRef.value?.onPublishRejected();
 });
 paintChat.on('published', () => {
+	isPublished.value = true;
 	publishRef.value?.onPublished();
 });
 
-// 相手の退出通知
-paintChat.on('partnerLeft', async () => {
-	await os.alert({
-		type: 'info',
-		text: '相手が退出しました。',
-	});
+// 相手の退出通知（明示的な退出）。プレゼンスをofflineにするだけでダイアログは出さない。
+paintChat.on('partnerLeft', () => {
+	partnerPresence.value = 'offline';
 });
 
-// セッション終了通知
-paintChat.on('sessionEnded', async (data) => {
-	await os.alert({
-		type: 'info',
-		text: 'セッションが終了しました。',
-	});
-	(router as any).push('/paintchat');
+// セッション終了通知（サーバーがルームを明示的に終了させた場合のみ）
+// 一時的な切断（ダウンロード、タブ切替等）では自動再接続に任せる
+paintChat.on('sessionEnded', () => {
+	// ログのみ出力。ダイアログは表示せず、ユーザーはそのまま再接続を試みる
+	console.info('[PaintChat] Session ended event received, will auto-reconnect if possible.');
 });
 
 // プレゼンス更新の受信
@@ -273,8 +306,11 @@ function onDownloadAll() {
 function onDownloadMine() {
 	if (!canvasEngine.value) return;
 	const dataUrl = canvasEngine.value.toMyStrokesDataURL();
+	downloadFromDataUrl(dataUrl, `paintchat-mine-${props.roomId}.png`);
+}
 
-	// 一時canvasに描画してステガノグラフィを埋め込む
+// data URLから一時canvasを作成してステガノグラフィ付きでダウンロードする
+function downloadFromDataUrl(dataUrl: string, filename: string) {
 	const img = new Image();
 	img.onload = () => {
 		const tmpCanvas = window.document.createElement('canvas');
@@ -282,9 +318,32 @@ function onDownloadMine() {
 		tmpCanvas.height = img.height;
 		const tmpCtx = tmpCanvas.getContext('2d')!;
 		tmpCtx.drawImage(img, 0, 0);
-		downloadWithSteganography(tmpCanvas, props.roomId, `paintchat-mine-${props.roomId}.png`);
+		downloadWithSteganography(tmpCanvas, props.roomId, filename);
 	};
 	img.src = dataUrl;
+}
+
+// 自分の絵のみbot経由で匿名投稿
+async function onPublishMyArt() {
+	if (!canvasEngine.value) return;
+
+	const confirm = await os.confirm({
+		type: 'question',
+		text: '自分が描いた部分だけをbot経由で匿名投稿しますか？',
+	});
+	if (confirm.canceled) return;
+
+	const dataUrl = canvasEngine.value.toMyStrokesDataURL();
+
+	try {
+		await misskeyApi('paint-chat/publish/my-art' as any, {
+			roomId: props.roomId,
+			imageBase64: dataUrl,
+		} as any);
+		await os.alert({ type: 'success', text: '投稿しました。' });
+	} catch {
+		await os.alert({ type: 'error', text: '投稿に失敗しました。' });
+	}
 }
 
 // 投稿同意フローからキャンバス画像を要求された時のハンドラ
@@ -295,13 +354,26 @@ function onGetCanvasImage() {
 	}
 }
 
-// 投稿リクエスト（ツールバーの投稿ボタンから呼ばれる。確認ダイアログ付き。）
+// 投稿許可の自分の状態
+const myPublishConsent = ref(false);
+
+// 投稿許可トグル: サーバー応答後にUI状態を更新（UI/サーバー状態の不整合を防止）
+async function onPublishConsent(consent: boolean) {
+	try {
+		if (consent) {
+			await misskeyApi('paint-chat/publish/agree' as any, { roomId: props.roomId } as any);
+		} else {
+			await misskeyApi('paint-chat/publish/reject' as any, { roomId: props.roomId } as any);
+		}
+		// サーバー応答成功後にUI状態を更新
+		myPublishConsent.value = consent;
+	} catch {
+		// 失敗時はUI状態を変更しない（サーバーとの整合性を維持）
+	}
+}
+
+// 投稿リクエスト（ツールバーの投稿パネルから呼ばれる。両者許可済みの場合のみ実行可能。）
 async function onPublishRequest() {
-	const confirm = await os.confirm({
-		type: 'question',
-		text: 'この作品をタイムラインに投稿しますか？相手の同意も必要です。',
-	});
-	if (confirm.canceled) return;
 	publishRef.value?.onPublishRequested();
 }
 
@@ -321,6 +393,22 @@ async function reportRoom() {
 	}
 }
 
+// リソースを完全に破棄する（退出・ページ離脱共通、二重呼び出し防止）
+let cleaned = false;
+
+function cleanup() {
+	if (cleaned) return;
+	cleaned = true;
+	// プレゼンスofflineを送信してからWebSocketを切断
+	paintChat.sendPresence('offline');
+	paintChat.disconnect();
+	// visibilitychangeリスナーを解除
+	window.document.removeEventListener('visibilitychange', onVisibilityChange);
+	// キャンバスエンジンを破棄
+	canvasEngine.value?.dispose();
+	canvasEngine.value = null;
+}
+
 // 退出処理
 async function leaveRoom() {
 	const confirm = await os.confirm({
@@ -329,11 +417,13 @@ async function leaveRoom() {
 	});
 	if (confirm.canceled) return;
 
+	// リソースを先に破棄
+	cleanup();
+
 	try {
 		await misskeyApi('paint-chat/leave' as any, { roomId: props.roomId } as any);
 	} catch {
-		// 退出通知に失敗。相手にはまだ入室中と表示される可能性がある。
-		await os.alert({ type: 'warning', text: '退出の通知に失敗しました。相手にはまだ入室中と表示されている可能性があります。' });
+		// 退出通知に失敗しても画面遷移は続行
 	}
 	(router as any).push('/paintchat');
 }
@@ -364,7 +454,7 @@ onMounted(async () => {
 			if (canvasData && (canvasData.strokes?.length > 0 || canvasData.mergedImage)) {
 				// canvasEngine.initが完了するまで少し待つ（nextTick）
 				await nextTick();
-				canvasEngine.value?.restoreStrokes(canvasData.strokes ?? [], canvasData.mergedImage);
+				await canvasEngine.value?.restoreStrokes(canvasData.strokes ?? [], canvasData.mergedImage);
 			}
 		} catch {
 			// 復元失敗は無視（新規セッションとして開始）
@@ -374,8 +464,8 @@ onMounted(async () => {
 		paintChat.connect();
 
 		// Page Visibility APIでプレゼンス状態を送信
+		// 初回接続のonline通知はサーバー側のPaintChatChannel.init()で自動送信される
 		window.document.addEventListener('visibilitychange', onVisibilityChange);
-		paintChat.sendPresence('online');
 	} catch {
 		// アクセス拒否またはルーム不存在
 		await os.alert({
@@ -386,8 +476,10 @@ onMounted(async () => {
 	}
 });
 
+// プレゼンス判定: ページが表示されているかつこの部屋のルートにいるかどうか
 function onVisibilityChange() {
-	if (window.document.hidden) {
+	const isOnRoomPage = window.location.pathname.includes(`/paintchat/${props.roomId}`);
+	if (window.document.hidden || !isOnRoomPage) {
 		paintChat.sendPresence('offline');
 	} else {
 		paintChat.sendPresence('online');
@@ -395,7 +487,8 @@ function onVisibilityChange() {
 }
 
 onUnmounted(() => {
-	window.document.removeEventListener('visibilitychange', onVisibilityChange);
+	// ページ離脱時にもリソースを完全破棄
+	cleanup();
 });
 
 // ウィジェット非表示はdefinePageのneedWideAreaで制御（universal.vueが参照）
@@ -446,13 +539,41 @@ definePage(() => ({
 .presenceOnline {
 	font-size: 0.75em;
 	color: #4caf50;
-	margin-left: 4px;
+	margin-left: 6px;
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+}
+
+.presenceDot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: #4caf50;
+	display: inline-block;
+	animation: presencePulse 2s ease-in-out infinite;
 }
 
 .presenceOffline {
 	font-size: 0.75em;
 	color: #999;
-	margin-left: 4px;
+	margin-left: 6px;
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+}
+
+.presenceDotOff {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: #999;
+	display: inline-block;
+}
+
+@keyframes presencePulse {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.4; }
 }
 
 .roomInfo {

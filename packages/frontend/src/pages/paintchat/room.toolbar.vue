@@ -4,7 +4,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<!-- マジカルドロー風の左サイドバーツールバー。常に表示、スクロール不要。 -->
+<!-- マジカルドロー風の左サイドバーツールバー。ツールが多い場合は縦スクロール可能。 -->
 <div :class="$style.sidebar">
 	<!-- 移動ツール（マジカルドロー風、一番上に配置） -->
 	<button
@@ -61,8 +61,22 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<i class="ti ti-message-circle"></i>
 	</button>
 
-	<!-- 投稿 -->
-	<button :class="$style.btn" @click="$emit('publish')">
+	<!-- 投稿許可トグル（自分が投稿に同意しているかどうか） -->
+	<button
+		v-if="!isSolo"
+		:class="[$style.btn, publishConsent ? $style.consentOn : '']"
+		:title="publishConsent ? '投稿許可中（タップで取消）' : '投稿を許可する'"
+		@click="togglePublishConsent"
+	>
+		<i :class="publishConsent ? 'ti ti-check' : 'ti ti-photo-share'"></i>
+	</button>
+
+	<!-- 投稿（両者が許可済みの場合のみ有効） -->
+	<button
+		v-if="!isSolo"
+		:class="$style.btn"
+		@click="togglePanel('publish')"
+	>
 		<i class="ti ti-share"></i>
 	</button>
 
@@ -85,6 +99,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<span v-if="activePanel === 'color'">色選択</span>
 		<span v-else-if="activePanel === 'width'">太さ / 透明度</span>
 		<span v-else-if="activePanel === 'download'">保存</span>
+		<span v-else-if="activePanel === 'publish'">作品を投稿</span>
 		<button :class="$style.panelClose" @click="activePanel = null">閉じる</button>
 	</div>
 
@@ -96,7 +111,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 				type="color"
 				:value="currentColor"
 				:class="$style.colorPickerInput"
-				@input="onColorPickerChange"
+				@input="onColorPickerInput"
+				@change="onColorPickerChange"
 			>
 			<span :class="$style.colorHex">{{ currentColor }}</span>
 		</div>
@@ -122,7 +138,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					:key="'h-' + idx"
 					:class="[$style.colorCell, currentColor === color ? $style.colorSelected : '']"
 					:style="{ background: color }"
-					@click="selectColor(color)"
+					@click="selectHistoryColor(color)"
 				></button>
 			</div>
 		</div>
@@ -157,14 +173,51 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</div>
 	</template>
 
-	<!-- ダウンロード -->
+	<!-- ダウンロード / 投稿 -->
 	<template v-if="activePanel === 'download'">
+		<div :class="$style.sectionLabel">保存</div>
 		<button :class="$style.panelAction" @click="$emit('downloadAll')">
 			キャンバス全体を保存
 		</button>
 		<button :class="$style.panelAction" @click="$emit('downloadMine')">
 			自分の絵のみ保存
 		</button>
+		<div :class="$style.separator"></div>
+		<div :class="$style.sectionLabel">自分の絵のみ匿名投稿</div>
+		<button
+			:class="$style.panelAction"
+			@click="$emit('publishMyArt')"
+		>
+			自分の絵をbot経由で投稿
+		</button>
+		<div :class="$style.publishHint">匿名のまま自分が描いた部分だけを投稿します</div>
+	</template>
+
+	<!-- 投稿パネル -->
+	<template v-if="activePanel === 'publish'">
+		<div :class="$style.publishStatus">
+			<div :class="$style.sectionLabel">投稿許可状態</div>
+			<div :class="$style.consentRow">
+				<span>自分:</span>
+				<span v-if="publishConsent" :class="$style.consentYes">許可済み</span>
+				<span v-else :class="$style.consentNo">未許可</span>
+			</div>
+			<div :class="$style.consentRow">
+				<span>相手:</span>
+				<span v-if="partnerConsent" :class="$style.consentYes">許可済み</span>
+				<span v-else :class="$style.consentNo">未許可</span>
+			</div>
+		</div>
+		<button
+			:class="$style.panelAction"
+			:disabled="!publishConsent || !partnerConsent || isPublished"
+			@click="$emit('publishRequest')"
+		>
+			{{ isPublished ? '投稿済み' : (publishConsent && partnerConsent ? '作品を投稿する' : '両者の許可が必要です') }}
+		</button>
+		<div v-if="!publishConsent" :class="$style.publishHint">
+			上のボタンで投稿を許可してください
+		</div>
 	</template>
 </div>
 </template>
@@ -185,17 +238,27 @@ const emit = defineEmits<{
 	(e: 'moveMode', enabled: boolean): void;
 	(e: 'downloadAll'): void;
 	(e: 'downloadMine'): void;
+	(e: 'publishMyArt'): void;
 	(e: 'toggleChat'): void;
-	(e: 'publish'): void;
+	(e: 'publishConsent', consent: boolean): void;
+	(e: 'publishRequest'): void;
 	(e: 'report'): void;
 	(e: 'leave'): void;
 }>();
 
 const props = defineProps<{
 	hasUnreadChat?: boolean;
+	isSolo?: boolean;
+	myConsent?: boolean;
+	partnerConsent?: boolean;
+	isPublished?: boolean;
 }>();
 
 const hasUnreadChat = computed(() => props.hasUnreadChat ?? false);
+const isSolo = computed(() => props.isSolo ?? false);
+const partnerConsent = computed(() => props.partnerConsent ?? false);
+const isPublished = computed(() => props.isPublished ?? false);
+const publishConsent = computed(() => props.myConsent ?? false);
 
 const currentTool = ref<ToolType>('pen');
 
@@ -205,7 +268,7 @@ const eraserWidth = ref(20);
 const currentColor = ref('#000000');
 const currentWidth = ref(3);
 const currentOpacity = ref(1.0);
-const activePanel = ref<'color' | 'width' | 'download' | null>(null);
+const activePanel = ref<'color' | 'width' | 'download' | 'publish' | null>(null);
 
 // カラーヒストリー（最近使った色、最大10件、重複なし）
 const colorHistory = ref<string[]>([]);
@@ -245,32 +308,49 @@ function selectTool(tool: ToolType) {
 	emit('moveMode', tool === 'move');
 }
 
-// パネルを閉じて色を選択する（プリセット/ヒストリーのタップ用）
+// パネルを閉じて色を選択する（プリセットのタップ用。プリセット色はヒストリーに追加しない）
 function selectColor(color: string) {
-	applyColor(color);
+	currentColor.value = color;
+	emit('colorChange', color);
 	activePanel.value = null;
 }
 
-// パネルを閉じずに色を適用する（カラーピッカー/スライダー用: FR-062）
-function applyColor(color: string) {
+// ヒストリーの色を選択する（パネルを閉じてヒストリーに再登録）
+function selectHistoryColor(color: string) {
+	addToHistory(color);
+	currentColor.value = color;
+	emit('colorChange', color);
+	activePanel.value = null;
+}
+
+// カラーヒストリーに色を追加する（重複除去、最大10件）
+function addToHistory(color: string) {
 	const idx = colorHistory.value.indexOf(color);
 	if (idx >= 0) colorHistory.value.splice(idx, 1);
 	colorHistory.value.unshift(color);
 	if (colorHistory.value.length > 10) colorHistory.value.pop();
+}
 
+// カラーピッカーのリアルタイム変更: 色のプレビューのみ（ヒストリーには追加しない）
+function onColorPickerInput(e: Event) {
+	const color = (e.target as HTMLInputElement).value;
 	currentColor.value = color;
 	emit('colorChange', color);
 }
 
-// カラーピッカー（input type=color）の変更ハンドラ: パネルは閉じない
+// カラーピッカーの確定時: ヒストリーに追加（パネルは閉じない: FR-062）
 function onColorPickerChange(e: Event) {
 	const color = (e.target as HTMLInputElement).value;
-	applyColor(color);
+	addToHistory(color);
+	currentColor.value = color;
+	emit('colorChange', color);
 }
 
 // 外部からスポイトで色を設定する（room.vueから呼ばれる）
 function setColorFromEyedropper(color: string) {
-	applyColor(color);
+	addToHistory(color);
+	currentColor.value = color;
+	emit('colorChange', color);
 	selectTool('pen');
 }
 
@@ -285,8 +365,13 @@ function onOpacityChange(e: Event) {
 	emit('opacityChange', value);
 }
 
-function togglePanel(panel: 'color' | 'width' | 'download') {
+function togglePanel(panel: 'color' | 'width' | 'download' | 'publish') {
 	activePanel.value = activePanel.value === panel ? null : panel;
+}
+
+// 投稿許可トグル（room.vueでサーバー応答後にpropsを更新する）
+function togglePublishConsent() {
+	emit('publishConsent', !publishConsent.value);
 }
 
 defineExpose({ setColorFromEyedropper });
@@ -578,5 +663,47 @@ defineExpose({ setColorFromEyedropper });
 	text-align: left;
 
 	&:hover { background: var(--bg); }
+
+	&:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+
+		&:hover { background: transparent; }
+	}
+}
+
+// 投稿許可ON状態のボタン
+.consentOn {
+	color: #4caf50 !important;
+	background: rgba(76, 175, 80, 0.15) !important;
+}
+
+// 投稿パネル内のステータス表示
+.publishStatus {
+	margin-bottom: 12px;
+}
+
+.consentRow {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 4px 0;
+	font-size: 13px;
+}
+
+.consentYes {
+	color: #4caf50;
+	font-weight: bold;
+}
+
+.consentNo {
+	color: var(--fgTransparent);
+}
+
+.publishHint {
+	font-size: 11px;
+	color: var(--fgTransparent);
+	margin-top: 8px;
+	text-align: center;
 }
 </style>

@@ -20,7 +20,7 @@ export function usePaintChatConnection(roomId: string) {
 	const isReconnecting = ref(false);
 
 	// 再接続用の状態
-	let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+	let reconnectTimer: number | null = null;
 	let reconnectAttempts = 0;
 	let intentionalDisconnect = false;
 
@@ -42,6 +42,9 @@ export function usePaintChatConnection(roomId: string) {
 		sessionEnded: [] as Array<(data: { reason: string }) => void>,
 	};
 
+	// 再接続成功時コールバック
+	const reconnectedCallbacks: Array<() => void> = [];
+
 	// チャネルに接続する
 	function connect() {
 		if (connection.value != null) return;
@@ -62,6 +65,14 @@ export function usePaintChatConnection(roomId: string) {
 			connection.value = ch;
 			isConnected.value = true;
 			isReconnecting.value = false;
+
+			// 再接続時はコールバックを実行する（プレゼンスonlineはサーバー側init()で自動送信される）
+			if (reconnectAttempts > 0) {
+				console.info('[PaintChat] Reconnected after', reconnectAttempts, 'attempts.');
+				for (const cb of reconnectedCallbacks) {
+					cb();
+				}
+			}
 			reconnectAttempts = 0;
 		} catch (e) {
 			console.warn('[PaintChat] Connection failed:', e);
@@ -96,7 +107,7 @@ export function usePaintChatConnection(roomId: string) {
 		const delay = Math.min(RECONNECT_BASE_INTERVAL * reconnectAttempts, RECONNECT_MAX_INTERVAL);
 		console.info(`[PaintChat] Reconnecting in ${delay / 1000}s (attempt ${reconnectAttempts}/${RECONNECT_MAX_ATTEMPTS})...`);
 
-		reconnectTimer = setTimeout(() => {
+		reconnectTimer = window.setTimeout(() => {
 			reconnectTimer = null;
 			// 既存の接続を破棄
 			if (connection.value != null) {
@@ -110,7 +121,7 @@ export function usePaintChatConnection(roomId: string) {
 	// 再接続タイマーをキャンセルする
 	function cancelReconnect() {
 		if (reconnectTimer != null) {
-			clearTimeout(reconnectTimer);
+			window.clearTimeout(reconnectTimer);
 			reconnectTimer = null;
 		}
 	}
@@ -118,10 +129,10 @@ export function usePaintChatConnection(roomId: string) {
 	// Misskeyのストリーム切断を検知して再接続する
 	// stream自体にdisconnectイベントがある場合はそれを使う
 	// なければ定期的に接続状態をチェックする
-	let healthCheckTimer: ReturnType<typeof setInterval> | null = null;
+	let healthCheckTimer: number | null = null;
 
 	function startHealthCheck() {
-		healthCheckTimer = setInterval(() => {
+		healthCheckTimer = window.setInterval(() => {
 			if (intentionalDisconnect) return;
 			// connectionがnullになっていたら切断と判断
 			if (connection.value == null && !isReconnecting.value) {
@@ -134,6 +145,11 @@ export function usePaintChatConnection(roomId: string) {
 	// イベントハンドラを登録する
 	function on<K extends keyof typeof handlers>(event: K, handler: (typeof handlers)[K][number]) {
 		(handlers[event] as any[]).push(handler);
+	}
+
+	// 再接続成功時のコールバックを登録する
+	function onReconnected(callback: () => void) {
+		reconnectedCallbacks.push(callback);
 	}
 
 	// --- 送信系メソッド ---
@@ -173,7 +189,7 @@ export function usePaintChatConnection(roomId: string) {
 	onUnmounted(() => {
 		disconnect();
 		if (healthCheckTimer != null) {
-			clearInterval(healthCheckTimer);
+			window.clearInterval(healthCheckTimer);
 			healthCheckTimer = null;
 		}
 	});
@@ -182,6 +198,7 @@ export function usePaintChatConnection(roomId: string) {
 		connect,
 		disconnect,
 		on,
+		onReconnected,
 		isConnected,
 		isReconnecting,
 		sendStroke,

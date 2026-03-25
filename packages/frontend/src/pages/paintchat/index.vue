@@ -24,7 +24,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 							<li>相手の絵のAI学習・AI利用への転用は禁止です</li>
 							<li>合作として自分のアカウントに投稿したい場合は、チャットで相手の許可を得てください</li>
 							<li>自分が描いた部分のみであれば、カミングアウトにはなりますが投稿は問題ありません</li>
+							<li>bot経由の投稿機能を使う場合、投稿の同意を先にお互い得ておいてください。同意を得られずに途中で退室されると匿名投稿ができなくなります</li>
 							<li>不適切な描画やメッセージは通報の対象となります</li>
+							<li>マッチング後に別のページに移動すると、部屋に戻れなくなる場合があります。お絵かき中はページを離れないようご注意ください</li>
 							<li>ルームデータは7日間保持後に自動削除されます</li>
 						</ul>
 					</template>
@@ -81,10 +83,11 @@ misskeyApi('paint-chat/settings' as any).then((res: any) => {
 	// 設定未取得でもデフォルトの注意事項を表示
 });
 
-// mainストリームでマッチング成立を監視
+// mainストリームでマッチング成立を監視（待機中のみルーム遷移する）
 const mainConnection = stream.useChannel('main');
 mainConnection.on('paintChatMatched' as any, (data: any) => {
-	// マッチング成立: ルーム画面に遷移
+	// 待機中でない場合は無視（一人で遊ぶ選択後やキャンセル後のマッチング通知を防止）
+	if (phase.value !== 'waiting') return;
 	(router as any).push(`/paintchat/${data.roomId}`);
 });
 
@@ -114,6 +117,9 @@ async function startMatching() {
 
 // 一人で遊ぶモード: マッチング不要で即座にルーム作成
 async function startSolo() {
+	// 万が一キューに残っていた場合に備えてクリーンアップ
+	await misskeyApi('paint-chat/leave-queue' as any).catch(() => {});
+
 	try {
 		const res = await misskeyApi('paint-chat/solo' as any) as any;
 		if (res.roomId) {
@@ -134,7 +140,22 @@ async function cancelMatching() {
 	phase.value = 'notice';
 }
 
+// マッチング待機中に画面非アクティブになったら待機を完全解除する
+// （1分後のbot募集ノートも投稿されない。leaveQueueが募集ノートも削除する）
+function onVisibilityChange() {
+	if (window.document.hidden && phase.value === 'waiting') {
+		cancelMatching();
+	}
+}
+
+window.document.addEventListener('visibilitychange', onVisibilityChange);
+
 onUnmounted(() => {
+	window.document.removeEventListener('visibilitychange', onVisibilityChange);
+	// 待機中にページ離脱した場合もキューから離脱する
+	if (phase.value === 'waiting') {
+		misskeyApi('paint-chat/leave-queue' as any).catch(() => {});
+	}
 	mainConnection.dispose();
 });
 
@@ -171,14 +192,15 @@ definePage(() => ({
 
 .noticeContent {
 	margin-bottom: 24px;
-	line-height: 1.8;
+	line-height: 1.7;
+	font-size: 0.85em;
 }
 
 .noticeList {
-	padding-left: 20px;
+	padding-left: 18px;
 
 	li {
-		margin-bottom: 8px;
+		margin-bottom: 6px;
 	}
 }
 

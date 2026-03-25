@@ -6,6 +6,7 @@
 import { Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { PaintChatService } from '@/core/PaintChatService.js';
+import { PaintChatMatchingService } from '@/core/PaintChatMatchingService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { ApiError } from '@/server/api/error.js';
 
@@ -47,6 +48,7 @@ export const paramDef = {
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
 		private paintChatService: PaintChatService,
+		private paintChatMatchingService: PaintChatMatchingService,
 		private globalEventService: GlobalEventService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
@@ -55,6 +57,9 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 			// ルームを終了する
 			await this.paintChatService.endRoom(ps.roomId);
+
+			// マッチングキューから自分を削除（残留エントリを防止。相手は次回join時に自動クリーンアップされる）
+			await this.paintChatMatchingService.leaveQueue(me.id).catch(() => {});
 
 			// 相手に退出を通知
 			this.globalEventService.publishPaintChatStream(ps.roomId, 'partnerLeft', {} as any);

@@ -40,6 +40,7 @@ export class PaintChatChannel extends Channel {
 	}
 
 	// チャネル接続時。ルームアクセス制御とラッパーユーザーID解決を行う。
+	// 接続成功時にプレゼンスonlineを自動送信する。
 	@bindThis
 	public async init(params: JsonObject): Promise<boolean> {
 		if (typeof params.roomId !== 'string') return false;
@@ -59,6 +60,12 @@ export class PaintChatChannel extends Channel {
 
 		// paintChatストリームを購読
 		(this.subscriber as any).on(`paintChatStream:${this.roomId}`, this.onEvent);
+
+		// 接続時にプレゼンスonlineを自動通知（再接続時も含む）
+		this.broadcastToRoom('presenceUpdate', {
+			participantId: this.participantId,
+			status: 'online',
+		});
 
 		return true;
 	}
@@ -95,7 +102,7 @@ export class PaintChatChannel extends Channel {
 		if (typeof body.id !== 'string' || body.id.length > 100) return false;
 		if (!Array.isArray(body.points) || body.points.length === 0 || body.points.length > 10000) return false;
 		if (typeof body.color !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(body.color)) return false;
-		if (typeof body.width !== 'number' || body.width < 1 || body.width > 100) return false;
+		if (typeof body.width !== 'number' || body.width < 1 || body.width > 200) return false;
 		if (typeof body.opacity !== 'number' || body.opacity < 0 || body.opacity > 1) return false;
 		if (body.tool !== 'pen' && body.tool !== 'eraser') return false;
 		return true;
@@ -168,8 +175,9 @@ export class PaintChatChannel extends Channel {
 		}
 	}
 
-	// プレゼンスイベント処理
+	// プレゼンスイベント処理（statusはonline/offlineのみ許可）
 	private onPresence(body: JsonObject): void {
+		if (body.status !== 'online' && body.status !== 'offline') return;
 		this.broadcastToRoom('presenceUpdate', {
 			participantId: this.participantId,
 			status: body.status,
@@ -191,22 +199,20 @@ export class PaintChatChannel extends Channel {
 		this.send(data.type, data.body);
 	}
 
-	// チャネル切断時。相手にpartnerLeft通知を送り、30秒後にsessionEndedを送出する。
+	// チャネル切断時。相手にプレゼンスoffline通知のみ送信する。
+	// partnerLeftは明示的なleave API呼び出し時のみ送信される。
+	// 一時的な切断（ダウンロード、タブ切替等）ではクライアントが自動再接続するため、
+	// sessionEndedは送信しない。
 	@bindThis
 	public dispose(): void {
 		if (this.roomId != null) {
-			// 相手に退出を通知
-			this.broadcastToRoom('partnerLeft', {});
+			// 相手にプレゼンスofflineを通知（一時的な切断の可能性があるため退出通知は送らない）
+			this.broadcastToRoom('presenceUpdate', {
+				participantId: this.participantId,
+				status: 'offline',
+			});
 
-			// 30秒後にsessionEndedを送出（タイムアウト処理）
-			const roomId = this.roomId;
-			setTimeout(() => {
-				this.globalEventService.publishPaintChatStream(roomId, 'sessionEnded', {
-					reason: 'timeout',
-				} as any);
-			}, 30000);
-
-			(this.subscriber as any).off(`paintChatStream:${roomId}`, this.onEvent);
+			(this.subscriber as any).off(`paintChatStream:${this.roomId}`, this.onEvent);
 		}
 	}
 }

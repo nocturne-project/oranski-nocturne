@@ -99,7 +99,7 @@ export class PaintChatPublishService {
 			text,
 			files: [driveFile],
 			localOnly: true,
-			visibility: 'home',
+			visibility: 'public',
 		});
 
 		// publishレコードを更新
@@ -111,6 +111,57 @@ export class PaintChatPublishService {
 		// ルームのisPublishedフラグを更新
 		await this.paintChatRoomsRepository.update(roomId, {
 			isPublished: true,
+		});
+
+		return note.id;
+	}
+
+	// 自分の絵のみをbot経由で匿名投稿する（相手の同意不要）
+	// ステガノグラフィはフロントエンド側で埋め込み済みの画像を受け取る。ルームIDはDBに記録。
+	@bindThis
+	public async publishMyArt(
+		roomId: string,
+		imageBuffer: Buffer,
+		anonymousName: string,
+	): Promise<string | null> {
+		const setting = await this.paintChatSettingsRepository.findOne({ where: {} });
+		if (setting == null || setting.botAccountId == null) return null;
+
+		const botUser = await this.usersRepository.findOneBy({ id: setting.botAccountId });
+		if (botUser == null) return null;
+
+		// 画像を一時ファイルに書き出してDriveにアップロード
+		const tmpDir = os.tmpdir();
+		const tmpPath = path.join(tmpDir, `paintchat-myart-${roomId}-${Date.now()}.png`);
+		fs.writeFileSync(tmpPath, imageBuffer);
+
+		let driveFile;
+		try {
+			driveFile = await this.driveService.addFile({
+				user: botUser,
+				path: tmpPath,
+				name: `paintchat-myart-${roomId}.png`,
+				comment: null,
+				folderId: null,
+				force: true,
+				isLink: false,
+				url: null,
+				uri: null,
+				sensitive: false,
+				requestIp: null,
+				requestHeaders: null,
+			});
+		} finally {
+			try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
+		}
+
+		const text = `ランダム絵チャットの作品（${anonymousName}の絵）`;
+
+		const note = await this.noteCreateService.create(botUser, {
+			text,
+			files: [driveFile],
+			localOnly: true,
+			visibility: 'public',
 		});
 
 		return note.id;

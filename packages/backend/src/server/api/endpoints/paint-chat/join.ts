@@ -56,6 +56,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		private globalEventService: GlobalEventService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
+			// 既存の待機エントリがあれば削除してからキューに参加
+			// （前回セッションのゴミが残っている場合の自動クリーンアップ）
+			await this.paintChatMatchingService.leaveQueue(me.id).catch(() => {});
+
 			// キューに参加
 			try {
 				await this.paintChatMatchingService.joinQueue(me.id);
@@ -75,6 +79,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 			// マッチング成立: ルーム作成
 			const { room, participantA, participantB } = await this.paintChatService.createRoom(me.id, matchedUserId);
+
+			// bot募集ノートを削除（両ユーザー分。募集していない場合は何もしない）
+			this.paintChatMatchingService.deleteRecruitmentNote(me.id).catch(() => {});
+			this.paintChatMatchingService.deleteRecruitmentNote(matchedUserId).catch(() => {});
 
 			// 両ユーザーにマッチング成立を通知（GlobalEventService経由）
 			this.globalEventService.publishMainStream(me.id, 'paintChatMatched' as any, {

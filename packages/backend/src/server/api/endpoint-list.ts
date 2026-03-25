@@ -609,6 +609,7 @@ export * as 'paint-chat/report' from './endpoints/paint-chat/report.js';
 export * as 'paint-chat/publish/agree' from './endpoints/paint-chat/publish/agree.js';
 export * as 'paint-chat/publish/reject' from './endpoints/paint-chat/publish/reject.js';
 export * as 'paint-chat/publish/message' from './endpoints/paint-chat/publish/message.js';
+export * as 'paint-chat/publish/my-art' from './endpoints/paint-chat/publish/my-art.js';
 export * as 'admin/paint-chat/settings' from './endpoints/admin/paint-chat/settings.js';
 export * as 'admin/paint-chat/settings/update' from './endpoints/admin/paint-chat/settings/update.js';
 export * as 'admin/paint-chat/stego/extract' from './endpoints/admin/paint-chat/stego/extract.js';
