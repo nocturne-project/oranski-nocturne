@@ -46,6 +46,7 @@ import { RelationshipProcessorService } from './processors/RelationshipProcessor
 import { CleanExpiredChatMessagesProcessorService } from './processors/CleanExpiredChatMessagesProcessorService.js';
 import { CleanNoctownChatLogsProcessorService } from './processors/CleanNoctownChatLogsProcessorService.js';
 import { CleanExpiredNoctownTradesProcessorService } from './processors/CleanExpiredNoctownTradesProcessorService.js';
+import { CleanIdlePaintChatRoomsProcessorService } from './processors/CleanIdlePaintChatRoomsProcessorService.js';
 
 @Module({
 	imports: [
@@ -92,6 +93,7 @@ import { CleanExpiredNoctownTradesProcessorService } from './processors/CleanExp
 		CleanExpiredChatMessagesProcessorService,
 		CleanNoctownChatLogsProcessorService,
 		CleanExpiredNoctownTradesProcessorService,
+		CleanIdlePaintChatRoomsProcessorService,
 		QueueProcessorService,
 	],
 	exports: [

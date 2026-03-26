@@ -47,6 +47,7 @@ import { CleanRemoteNotesProcessorService } from './processors/CleanRemoteNotesP
 import { CleanExpiredChatMessagesProcessorService } from './processors/CleanExpiredChatMessagesProcessorService.js';
 import { CleanNoctownChatLogsProcessorService } from './processors/CleanNoctownChatLogsProcessorService.js';
 import { CleanExpiredNoctownTradesProcessorService } from './processors/CleanExpiredNoctownTradesProcessorService.js';
+import { CleanIdlePaintChatRoomsProcessorService } from './processors/CleanIdlePaintChatRoomsProcessorService.js';
 import { QueueLoggerService } from './QueueLoggerService.js';
 import { QUEUE, baseWorkerOptions } from './const.js';
 
@@ -133,6 +134,7 @@ export class QueueProcessorService implements OnApplicationShutdown {
 		private cleanExpiredChatMessagesProcessorService: CleanExpiredChatMessagesProcessorService,
 		private cleanNoctownChatLogsProcessorService: CleanNoctownChatLogsProcessorService,
 		private cleanExpiredNoctownTradesProcessorService: CleanExpiredNoctownTradesProcessorService,
+		private cleanIdlePaintChatRoomsProcessorService: CleanIdlePaintChatRoomsProcessorService,
 	) {
 		this.logger = this.queueLoggerService.logger;
 
@@ -185,6 +187,7 @@ export class QueueProcessorService implements OnApplicationShutdown {
 					case 'cleanExpiredChatMessages': return this.cleanExpiredChatMessagesProcessorService.process(job);
 					case 'cleanNoctownChatLogs': return this.cleanNoctownChatLogsProcessorService.process(job);
 					case 'cleanExpiredNoctownTrades': return this.cleanExpiredNoctownTradesProcessorService.process(job);
+					case 'cleanIdlePaintChatRooms': return this.cleanIdlePaintChatRoomsProcessorService.process(job);
 					default: throw new Error(`unrecognized job type ${job.name} for system`);
 				}
 			};

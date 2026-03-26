@@ -95,6 +95,10 @@ const REPEATABLE_SYSTEM_JOB_DEF = [{
 	name: 'cleanExpiredNoctownTrades',
 	// 1分ごとに期限切れのNoctownトレードをexpiredステータスに更新
 	pattern: '* * * * *',
+}, {
+	name: 'cleanIdlePaintChatRooms',
+	// 10分ごとに1時間以上アイドルのお絵描きチャットルームを自動終了
+	pattern: '*/10 * * * *',
 }];
 
 function parseRedisInfo(infoText: string): Record<string, string> {
