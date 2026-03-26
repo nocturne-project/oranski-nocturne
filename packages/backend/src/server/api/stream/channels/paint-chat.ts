@@ -5,10 +5,13 @@
 
 import { Inject, Injectable, Scope } from '@nestjs/common';
 import { bindThis } from '@/decorators.js';
+import { DI } from '@/di-symbols.js';
+import type { PaintChatMessagesRepository } from '@/models/_.js';
 import type { JsonObject } from '@/misc/json-value.js';
 import { PaintChatService } from '@/core/PaintChatService.js';
 import { PaintChatCanvasService } from '@/core/PaintChatCanvasService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
+import { IdService } from '@/core/IdService.js';
 import type { StrokeData } from '@/core/PaintChatCanvasService.js';
 import Channel, { type ChannelRequest } from '../channel.js';
 import { REQUEST } from '@nestjs/core';
@@ -23,6 +26,7 @@ export class PaintChatChannel extends Channel {
 
 	private roomId: string | null = null;
 	private participantId: string | null = null;
+	private lastPresenceStatus: 'online' | 'offline' | null = null;
 
 	// レート制限用
 	private lastCursorMove: number = 0;
@@ -32,9 +36,13 @@ export class PaintChatChannel extends Channel {
 		@Inject(REQUEST)
 		request: ChannelRequest,
 
+		@Inject(DI.paintChatMessagesRepository)
+		private paintChatMessagesRepository: PaintChatMessagesRepository,
+
 		private paintChatService: PaintChatService,
 		private paintChatCanvasService: PaintChatCanvasService,
 		private globalEventService: GlobalEventService,
+		private idService: IdService,
 	) {
 		super(request);
 	}
@@ -61,11 +69,12 @@ export class PaintChatChannel extends Channel {
 		// paintChatストリームを購読
 		(this.subscriber as any).on(`paintChatStream:${this.roomId}`, this.onEvent);
 
-		// 接続時にプレゼンスonlineを自動通知（再接続時も含む）
+		// 接続時にプレゼンスonlineを自動通知（再接続時も含む）+ DB保存
 		this.broadcastToRoom('presenceUpdate', {
 			participantId: this.participantId,
 			status: 'online',
 		});
+		this.savePresenceMessage('online');
 
 		return true;
 	}
@@ -89,10 +98,13 @@ export class PaintChatChannel extends Channel {
 				await this.onClearCanvas();
 				break;
 			case 'undoStroke':
-				await this.onUndoStroke();
+				await this.onUndoStroke(body);
 				break;
 			case 'presence':
 				this.onPresence(body);
+				break;
+			case 'publishConsent':
+				this.onPublishConsent(body);
 				break;
 		}
 	}
@@ -102,9 +114,11 @@ export class PaintChatChannel extends Channel {
 		if (typeof body.id !== 'string' || body.id.length > 100) return false;
 		if (!Array.isArray(body.points) || body.points.length === 0 || body.points.length > 10000) return false;
 		if (typeof body.color !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(body.color)) return false;
-		if (typeof body.width !== 'number' || body.width < 1 || body.width > 200) return false;
+		if (typeof body.width !== 'number' || body.width < 1 || body.width > 400) return false;
 		if (typeof body.opacity !== 'number' || body.opacity < 0 || body.opacity > 1) return false;
 		if (body.tool !== 'pen' && body.tool !== 'eraser') return false;
+		// レイヤー番号（0-2、未指定の場合は0として扱う）
+		if (body.layer != null && (typeof body.layer !== 'number' || body.layer < 0 || body.layer > 2)) return false;
 		return true;
 	}
 
@@ -121,6 +135,7 @@ export class PaintChatChannel extends Channel {
 			width: body.width as number,
 			opacity: body.opacity as number,
 			tool: body.tool as 'pen' | 'eraser',
+			layer: (typeof body.layer === 'number' ? body.layer : 0),
 		};
 
 		await this.paintChatCanvasService.addStroke(this.roomId, stroke);
@@ -163,10 +178,13 @@ export class PaintChatChannel extends Channel {
 		});
 	}
 
-	// アンドゥイベント処理
-	private async onUndoStroke(): Promise<void> {
+	// アンドゥイベント処理（クライアントが指定したstrokeIdを削除する）
+	private async onUndoStroke(body?: JsonObject): Promise<void> {
 		if (this.roomId == null || this.participantId == null) return;
-		const strokeId = await this.paintChatCanvasService.undoStroke(this.roomId, this.participantId);
+		const targetStrokeId = (body && typeof body.strokeId === 'string' && body.strokeId.length > 0) ? body.strokeId : null;
+		const strokeId = targetStrokeId
+			? await this.paintChatCanvasService.removeStroke(this.roomId, this.participantId, targetStrokeId)
+			: await this.paintChatCanvasService.undoStroke(this.roomId, this.participantId);
 		if (strokeId != null) {
 			this.broadcastToRoom('undone', {
 				participantId: this.participantId,
@@ -175,19 +193,61 @@ export class PaintChatChannel extends Channel {
 		}
 	}
 
-	// プレゼンスイベント処理（statusはonline/offlineのみ許可）
+	// 投稿同意通知（WebSocket経由で相手に通知するだけ。DB操作なし。）
+	private onPublishConsent(body: JsonObject): void {
+		if (typeof body.consent !== 'boolean') return;
+		this.broadcastToRoom('publishConsentUpdate', {
+			participantId: this.participantId,
+			consent: body.consent,
+		});
+	}
+
+	// プレゼンスイベント処理（statusはonline/offlineのみ許可）+ DB保存
 	private onPresence(body: JsonObject): void {
 		if (body.status !== 'online' && body.status !== 'offline') return;
 		this.broadcastToRoom('presenceUpdate', {
 			participantId: this.participantId,
 			status: body.status,
 		});
+		this.savePresenceMessage(body.status as 'online' | 'offline');
 	}
 
 	// ルーム全体にイベントをブロードキャスト（GlobalEventService経由でRedis Pub/Subで配信）
 	private broadcastToRoom(type: string, body: object): void {
 		if (this.roomId == null) return;
 		this.globalEventService.publishPaintChatStream(this.roomId, type, body as any);
+	}
+
+	// 入退室のシステムメッセージをDBに保存しWebSocket配信する（状態変化時のみ）
+	private async savePresenceMessage(status: 'online' | 'offline'): Promise<void> {
+		if (this.roomId == null || this.participantId == null) return;
+		if (this.lastPresenceStatus === status) return; // 同じ状態の連続保存を防止
+		this.lastPresenceStatus = status;
+
+		// 匿名名を取得してメッセージに含める
+		let name = '???';
+		try {
+			const participant = await this.paintChatService.getParticipantById(this.participantId);
+			if (participant) name = participant.anonymousName;
+		} catch { /* ignore */ }
+		const content = status === 'online' ? `${name} が入室しました` : `${name} が退室しました`;
+		const msgId = this.idService.gen();
+		try {
+			await this.paintChatMessagesRepository.insert({
+				id: msgId,
+				roomId: this.roomId,
+				participantId: this.participantId,
+				type: 'system',
+				content,
+			});
+			this.broadcastToRoom('message', {
+				id: msgId,
+				participantId: this.participantId,
+				type: 'system',
+				content,
+				createdAt: new Date().toISOString(),
+			});
+		} catch { /* ignore */ }
 	}
 
 	// paintChatStreamからのイベントを受信
@@ -206,11 +266,12 @@ export class PaintChatChannel extends Channel {
 	@bindThis
 	public dispose(): void {
 		if (this.roomId != null) {
-			// 相手にプレゼンスofflineを通知（一時的な切断の可能性があるため退出通知は送らない）
+			// 相手にプレゼンスofflineを通知 + DB保存
 			this.broadcastToRoom('presenceUpdate', {
 				participantId: this.participantId,
 				status: 'offline',
 			});
+			this.savePresenceMessage('offline');
 
 			(this.subscriber as any).off(`paintChatStream:${this.roomId}`, this.onEvent);
 		}

@@ -45,6 +45,10 @@ export const meta = {
 				type: 'string',
 				optional: false, nullable: false,
 			},
+			colorPreferences: {
+				type: 'object',
+				optional: false, nullable: true,
+			},
 		},
 	},
 } as const;
@@ -93,6 +97,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					anonymousName: p.anonymousName,
 				})),
 				myParticipantId: myParticipant.id,
+				colorPreferences: myParticipant.colorPreferences ?? null,
 			};
 		});
 	}

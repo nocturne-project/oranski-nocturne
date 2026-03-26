@@ -93,7 +93,10 @@ export class ApiServerService {
 					Params: { endpoint: string; },
 					Body: Record<string, unknown>,
 					Querystring: Record<string, unknown>,
-				}>('/' + endpoint.name, { bodyLimit: 1024 * 1024 }, async (request, reply) => {
+				}>('/' + endpoint.name, {
+					// 画像データを含むエンドポイントは32MBまで許可（base64エンコードで膨らむため）
+					bodyLimit: (endpoint.name === 'paint-chat/publish/message' || endpoint.name === 'paint-chat/publish/my-art') ? 32 * 1024 * 1024 : 1024 * 1024,
+				}, async (request, reply) => {
 					if (request.method === 'GET' && !endpoint.meta.allowGet) {
 						reply.code(405);
 						reply.send();
