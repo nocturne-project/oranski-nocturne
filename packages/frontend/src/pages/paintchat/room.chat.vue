@@ -39,6 +39,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<template v-else>
 					<span :class="$style.msgContent">{{ msg.content }}</span>
 				</template>
+				<span :class="$style.msgTimestamp">{{ formatTime(msg.createdAt) }}</span>
 			</div>
 		</div>
 
@@ -84,6 +85,12 @@ const hasUnread = ref(false);
 const messages = ref<ChatMessage[]>([]);
 const inputText = ref('');
 const messagesRef = ref<HTMLDivElement | null>(null);
+
+// タイムスタンプを HH:MM 形式にフォーマットする
+function formatTime(isoString: string): string {
+	const d = new Date(isoString);
+	return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+}
 
 // 参加者名を取得する
 function getParticipantName(participantId: string | null): string {
@@ -303,6 +310,15 @@ defineExpose({ addMessage, openChat, closeChat, isOpen, hasUnread });
 
 .msgContent {
 	word-break: break-word;
+}
+
+// タイムスタンプ（小さく薄く表示）
+.msgTimestamp {
+	margin-left: 6px;
+	font-size: 10px;
+	color: var(--fgTransparent);
+	opacity: 0.6;
+	white-space: nowrap;
 }
 
 .inputArea {

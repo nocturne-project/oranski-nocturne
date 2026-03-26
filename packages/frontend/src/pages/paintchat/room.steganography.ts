@@ -176,11 +176,11 @@ export function embedRoomId(canvas: HTMLCanvasElement, roomId: string): HTMLCanv
 	const payload = buildPayload(roomId);
 	const bits = stringToBits(payload);
 
-	// LSB方式で埋め込み（PNG向け高精度）
-	embedLSB(imageData.data, bits);
-
-	// ブロック明度変調方式で埋め込み（JPEG耐性ロバスト）
+	// ブロック明度変調方式で先に埋め込み（JPEG耐性ロバスト）
 	embedBlock(imageData.data, canvas.width, canvas.height, bits);
+
+	// LSB方式で後に埋め込み（PNG向け高精度。ブロック方式の後に適用し、LSBが破壊されないようにする）
+	embedLSB(imageData.data, bits);
 
 	ctx.putImageData(imageData, 0, 0);
 	return canvas;

@@ -38,14 +38,19 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 	<div :class="$style.separator"></div>
 
+	<!-- レイヤー -->
+	<button :class="$style.btn" @click="togglePanel('layer')">
+		<span :class="$style.layerIcon">{{ currentLayerDisplay }}</span>
+	</button>
+
 	<!-- アンドゥ -->
 	<button :class="$style.btn" @click="$emit('undo')">
 		<i class="ti ti-arrow-back-up"></i>
 	</button>
 
 	<!-- ズーム -->
-	<button :class="[$style.btn, $style.textBtn]" @click="$emit('zoomOut')">縮小</button>
-	<button :class="[$style.btn, $style.textBtn]" @click="$emit('zoomIn')">拡大</button>
+	<button :class="$style.btn" @click="$emit('zoomOut')"><i class="ti ti-zoom-out"></i></button>
+	<button :class="$style.btn" @click="$emit('zoomIn')"><i class="ti ti-zoom-in"></i></button>
 
 	<div :class="$style.separator"></div>
 
@@ -99,6 +104,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<span v-if="activePanel === 'color'">色選択</span>
 		<span v-else-if="activePanel === 'width'">太さ / 透明度</span>
 		<span v-else-if="activePanel === 'download'">保存</span>
+		<span v-else-if="activePanel === 'layer'">レイヤー</span>
 		<span v-else-if="activePanel === 'publish'">作品を投稿</span>
 		<button :class="$style.panelClose" @click="activePanel = null">閉じる</button>
 	</div>
@@ -173,50 +179,71 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</div>
 	</template>
 
+	<!-- レイヤー選択 -->
+	<template v-if="activePanel === 'layer'">
+		<div :class="$style.panelBtnList">
+			<button
+				v-for="i in 3"
+				:key="i"
+				:class="[$style.panelBtn, currentLayerValue === i - 1 ? $style.layerActive : '']"
+				@click="selectLayer(i - 1)"
+			>
+				<span :class="$style.layerNum">{{ i }}</span>
+				<span>レイヤー {{ i }}</span>
+			</button>
+		</div>
+		<div :class="$style.sectionLabel">レイヤー透明度: {{ Math.round(layerOpacityValue * 100) }}%</div>
+		<input
+			type="range"
+			min="0"
+			max="100"
+			:value="layerOpacityValue * 100"
+			:class="$style.opacitySlider"
+			@input="onLayerOpacityChange"
+		>
+	</template>
+
 	<!-- ダウンロード / 投稿 -->
 	<template v-if="activePanel === 'download'">
-		<div :class="$style.sectionLabel">保存</div>
-		<button :class="$style.panelAction" @click="$emit('downloadAll')">
-			キャンバス全体を保存
-		</button>
-		<button :class="$style.panelAction" @click="$emit('downloadMine')">
-			自分の絵のみ保存
-		</button>
-		<div :class="$style.separator"></div>
-		<div :class="$style.sectionLabel">自分の絵のみ匿名投稿</div>
-		<button
-			:class="$style.panelAction"
-			@click="$emit('publishMyArt')"
-		>
-			自分の絵をbot経由で投稿
-		</button>
-		<div :class="$style.publishHint">匿名のまま自分が描いた部分だけを投稿します</div>
+		<div :class="$style.panelBtnList">
+			<button :class="$style.panelBtn" @click="$emit('downloadAll')">
+				<i class="ti ti-photo-down"></i>
+				<span>全体を保存</span>
+			</button>
+			<button :class="$style.panelBtn" @click="$emit('downloadMine')">
+				<i class="ti ti-user-down"></i>
+				<span>自分のみ保存</span>
+			</button>
+			<button :class="$style.panelBtn" @click="$emit('publishMyArt')">
+				<i class="ti ti-send"></i>
+				<span>自分の絵を投稿</span>
+			</button>
+		</div>
 	</template>
 
 	<!-- 投稿パネル -->
 	<template v-if="activePanel === 'publish'">
-		<div :class="$style.publishStatus">
-			<div :class="$style.sectionLabel">投稿許可状態</div>
+		<div :class="$style.consentStatus">
 			<div :class="$style.consentRow">
-				<span>自分:</span>
-				<span v-if="publishConsent" :class="$style.consentYes">許可済み</span>
-				<span v-else :class="$style.consentNo">未許可</span>
+				<span>自分</span>
+				<span v-if="publishConsent" :class="$style.consentYes">OK</span>
+				<span v-else :class="$style.consentNo">--</span>
 			</div>
 			<div :class="$style.consentRow">
-				<span>相手:</span>
-				<span v-if="partnerConsent" :class="$style.consentYes">許可済み</span>
-				<span v-else :class="$style.consentNo">未許可</span>
+				<span>相手</span>
+				<span v-if="partnerConsent" :class="$style.consentYes">OK</span>
+				<span v-else :class="$style.consentNo">--</span>
 			</div>
 		</div>
-		<button
-			:class="$style.panelAction"
-			:disabled="!publishConsent || !partnerConsent || isPublished"
-			@click="$emit('publishRequest')"
-		>
-			{{ isPublished ? '投稿済み' : (publishConsent && partnerConsent ? '作品を投稿する' : '両者の許可が必要です') }}
-		</button>
-		<div v-if="!publishConsent" :class="$style.publishHint">
-			上のボタンで投稿を許可してください
+		<div :class="$style.panelBtnList">
+			<button
+				:class="$style.panelBtn"
+				:disabled="!publishConsent || !partnerConsent || isPublished"
+				@click="$emit('publishRequest')"
+			>
+				<i :class="isPublished ? 'ti ti-check' : 'ti ti-share'"></i>
+				<span>{{ isPublished ? '投稿済み' : '合作を投稿' }}</span>
+			</button>
 		</div>
 	</template>
 </div>
@@ -225,6 +252,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { ref, computed } from 'vue';
 import type { ToolType } from './room.types.js';
+import { MAX_LAYERS } from './room.types.js';
 
 const emit = defineEmits<{
 	(e: 'toolChange', tool: ToolType): void;
@@ -236,6 +264,8 @@ const emit = defineEmits<{
 	(e: 'zoomOut'): void;
 	(e: 'zoomReset'): void;
 	(e: 'moveMode', enabled: boolean): void;
+	(e: 'layerChange', layer: number): void;
+	(e: 'layerOpacityChange', layer: number, opacity: number): void;
 	(e: 'downloadAll'): void;
 	(e: 'downloadMine'): void;
 	(e: 'publishMyArt'): void;
@@ -252,6 +282,8 @@ const props = defineProps<{
 	myConsent?: boolean;
 	partnerConsent?: boolean;
 	isPublished?: boolean;
+	currentLayer?: number;
+	layerOpacities?: number[];
 }>();
 
 const hasUnreadChat = computed(() => props.hasUnreadChat ?? false);
@@ -259,16 +291,19 @@ const isSolo = computed(() => props.isSolo ?? false);
 const partnerConsent = computed(() => props.partnerConsent ?? false);
 const isPublished = computed(() => props.isPublished ?? false);
 const publishConsent = computed(() => props.myConsent ?? false);
+const currentLayerValue = computed(() => props.currentLayer ?? 0);
+const layerOpacityValue = computed(() => (props.layerOpacities ?? [1, 1, 1])[currentLayerValue.value] ?? 1);
+const currentLayerDisplay = computed(() => `L${currentLayerValue.value + 1}`);
 
 const currentTool = ref<ToolType>('pen');
 
 // ペンと消しゴムの太さを個別に記憶
-const penWidth = ref(3);
+const penWidth = ref(5);
 const eraserWidth = ref(20);
 const currentColor = ref('#000000');
-const currentWidth = ref(3);
+const currentWidth = ref(5);
 const currentOpacity = ref(1.0);
-const activePanel = ref<'color' | 'width' | 'download' | 'publish' | null>(null);
+const activePanel = ref<'color' | 'width' | 'layer' | 'download' | 'publish' | null>(null);
 
 // カラーヒストリー（最近使った色、最大10件、重複なし）
 const colorHistory = ref<string[]>([]);
@@ -286,7 +321,7 @@ const colors = [
 	'#55efc4', '#81ecec', '#d4a574', '#8d6e63', '#4a3728',
 ];
 
-const widths = [1, 2, 3, 5, 8, 12, 20, 40, 80, 120, 200];
+const widths = [1, 2, 3, 5, 8, 12, 20, 40, 80, 120, 200, 300, 400];
 
 function selectTool(tool: ToolType) {
 	// 現在のツールの太さを保存
@@ -315,9 +350,8 @@ function selectColor(color: string) {
 	activePanel.value = null;
 }
 
-// ヒストリーの色を選択する（パネルを閉じてヒストリーに再登録）
+// ヒストリーの色を選択する（パネルを閉じる。ヒストリーへの再登録はストローク完了時に行う）
 function selectHistoryColor(color: string) {
-	addToHistory(color);
 	currentColor.value = color;
 	emit('colorChange', color);
 	activePanel.value = null;
@@ -338,10 +372,9 @@ function onColorPickerInput(e: Event) {
 	emit('colorChange', color);
 }
 
-// カラーピッカーの確定時: ヒストリーに追加（パネルは閉じない: FR-062）
+// カラーピッカーの確定時: パネルは閉じない（FR-062）。ヒストリーへの追加はストローク完了時。
 function onColorPickerChange(e: Event) {
 	const color = (e.target as HTMLInputElement).value;
-	addToHistory(color);
 	currentColor.value = color;
 	emit('colorChange', color);
 }
@@ -365,7 +398,7 @@ function onOpacityChange(e: Event) {
 	emit('opacityChange', value);
 }
 
-function togglePanel(panel: 'color' | 'width' | 'download' | 'publish') {
+function togglePanel(panel: 'color' | 'width' | 'layer' | 'download' | 'publish') {
 	activePanel.value = activePanel.value === panel ? null : panel;
 }
 
@@ -374,7 +407,49 @@ function togglePublishConsent() {
 	emit('publishConsent', !publishConsent.value);
 }
 
-defineExpose({ setColorFromEyedropper });
+// レイヤー選択
+function selectLayer(layer: number) {
+	emit('layerChange', layer);
+}
+
+// レイヤー透明度変更
+function onLayerOpacityChange(e: Event) {
+	const value = parseInt((e.target as HTMLInputElement).value, 10) / 100;
+	emit('layerOpacityChange', currentLayerValue.value, value);
+}
+
+// 保存されたツール設定を復元する（リロード時にroom.vueから呼ばれる）
+function restoreColors(prefs: { currentColor: string; colorHistory: string[]; penWidth?: number; eraserWidth?: number }) {
+	currentColor.value = prefs.currentColor;
+	colorHistory.value = prefs.colorHistory.slice(0, 10);
+	emit('colorChange', prefs.currentColor);
+	if (prefs.penWidth != null) {
+		penWidth.value = prefs.penWidth;
+		if (currentTool.value === 'pen') {
+			currentWidth.value = prefs.penWidth;
+			emit('widthChange', prefs.penWidth);
+		}
+	}
+	if (prefs.eraserWidth != null) {
+		eraserWidth.value = prefs.eraserWidth;
+		if (currentTool.value === 'eraser') {
+			currentWidth.value = prefs.eraserWidth;
+			emit('widthChange', prefs.eraserWidth);
+		}
+	}
+}
+
+// 現在のツール設定を取得する（保存用）
+function getColorPreferences() {
+	return {
+		currentColor: currentColor.value,
+		colorHistory: colorHistory.value,
+		penWidth: penWidth.value,
+		eraserWidth: eraserWidth.value,
+	};
+}
+
+defineExpose({ setColorFromEyedropper, addToHistory, restoreColors, getColorPreferences });
 </script>
 
 <style lang="scss" module>
@@ -420,29 +495,11 @@ defineExpose({ setColorFromEyedropper });
 	}
 }
 
-// アクティブツールの強調表示（高コントラスト + 左インジケーター + グロー効果）
+// アクティブツールの強調表示（高コントラスト + グロー効果）
 .active {
 	background: #5b86e5 !important;
 	color: #ffffff !important;
 	box-shadow: 0 0 8px rgba(91, 134, 229, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.3);
-	position: relative;
-
-	&::before {
-		content: '';
-		position: absolute;
-		left: 0;
-		top: 4px;
-		bottom: 4px;
-		width: 3px;
-		background: #ffffff;
-		border-radius: 0 2px 2px 0;
-	}
-}
-
-// テキスト付きボタン（サイドバー幅に収まるようフォントサイズ調整）
-.textBtn {
-	font-size: 10px;
-	letter-spacing: -0.5px;
 }
 
 .colorDot {
@@ -467,9 +524,9 @@ defineExpose({ setColorFromEyedropper });
 	flex-shrink: 0;
 }
 
-// サイドバー下部に通報・退出を押し下げるスペーサー
+// サイドバー下部のスペーサー（通報・退出を少し離す程度。大きな余白は作らない）
 .bottomSpacer {
-	flex: 1;
+	flex: 0 0 8px;
 }
 
 // 未読チャット時のグロー効果
@@ -648,28 +705,54 @@ defineExpose({ setColorFromEyedropper });
 	width: 100%;
 }
 
-// ダウンロードアクション
-.panelAction {
-	display: block;
+// パネル内ボタンリスト（枠線で区切られた縦並び）
+.panelBtnList {
+	display: flex;
+	flex-direction: column;
+	border: 1px solid var(--divider);
+	border-radius: 10px;
+	overflow: hidden;
+}
+
+// パネル内ボタン（アイコン+テキスト、タッチしやすいサイズ）
+.panelBtn {
+	display: flex;
+	align-items: center;
+	gap: 10px;
 	width: 100%;
-	padding: 10px;
-	margin-bottom: 4px;
-	border-radius: 6px;
+	padding: 14px;
 	border: none;
+	border-bottom: 1px solid var(--divider);
 	background: transparent;
 	color: var(--fg);
 	cursor: pointer;
 	font-size: 13px;
+	font-weight: 500;
 	text-align: left;
+	min-height: 48px;
+	transition: background 0.12s;
 
-	&:hover { background: var(--bg); }
+	&:last-child { border-bottom: none; }
+
+	&:hover { background: color-mix(in srgb, var(--fg) 8%, transparent); }
+
+	&:active { background: color-mix(in srgb, var(--fg) 14%, transparent); }
+
+	> i { font-size: 18px; opacity: 0.6; flex-shrink: 0; width: 20px; text-align: center; }
 
 	&:disabled {
-		opacity: 0.5;
+		opacity: 0.35;
 		cursor: not-allowed;
-
-		&:hover { background: transparent; }
+		&:hover, &:active { background: transparent; }
 	}
+}
+
+// 投稿許可ステータス（コンパクト横並び）
+.consentStatus {
+	display: flex;
+	gap: 12px;
+	margin-bottom: 8px;
+	padding: 0 2px;
 }
 
 // 投稿許可ON状態のボタン
@@ -700,10 +783,43 @@ defineExpose({ setColorFromEyedropper });
 	color: var(--fgTransparent);
 }
 
-.publishHint {
+// レイヤーアイコン（ツールバーボタン内に表示するレイヤー番号）
+.layerIcon {
 	font-size: 11px;
-	color: var(--fgTransparent);
-	margin-top: 8px;
-	text-align: center;
+	font-weight: 700;
+	line-height: 1;
 }
+
+// レイヤー選択のアクティブ状態（インセット+独自border-radiusで親クリッピング回避）
+.layerActive {
+	position: relative;
+	margin: 4px;
+	border-radius: 8px;
+	background: #5b86e5 !important;
+	color: #fff !important;
+	border-bottom: none !important;
+
+	> .layerNum {
+		background: rgba(255, 255, 255, 0.25);
+		color: #fff;
+	}
+
+	&:hover {
+		background: #4a75d4 !important;
+	}
+}
+
+.layerNum {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	border-radius: 6px;
+	background: color-mix(in srgb, var(--fg) 10%, transparent);
+	font-weight: 700;
+	font-size: 12px;
+	flex-shrink: 0;
+}
+
 </style>

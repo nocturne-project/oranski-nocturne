@@ -4,51 +4,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<!-- 投稿同意フロー: 同意ボタン、品質ガード、一言メッセージ入力 -->
-<div :class="$style.publishWrapper">
-	<!-- 投稿済み -->
-	<div v-if="isPublished" :class="$style.publishedBadge">
-		<i class="ti ti-check"></i> 投稿済み
-	</div>
-
-	<!-- 品質ガード: ストロークが不十分 -->
-	<div v-else-if="!canPublish" :class="$style.notReady">
-		もう少し描いてから投稿しましょう
-	</div>
-
-	<!-- 一言メッセージ入力中 -->
-	<div v-else-if="phase === 'message'" :class="$style.messagePhase">
-		<div :class="$style.messageBox">
-			<p>一言メッセージを添えてください（100文字以内）</p>
-			<input
-				v-model="myMessage"
-				:class="$style.messageInput"
-				type="text"
-				maxlength="100"
-				placeholder="一言メッセージ..."
-			>
-			<div :class="$style.messageActions">
-				<button class="_buttonPrimary" :class="$style.confirmBtn" @click="submitMessage">投稿を確定</button>
-				<button :class="$style.cancelBtn" @click="cancelPublish">キャンセル</button>
-			</div>
-		</div>
-	</div>
-
-	<!-- 同意待ち -->
-	<div v-else-if="phase === 'waiting'" :class="$style.waitingBadge">
-		<i class="ti ti-clock"></i> 相手の同意を待っています...
-	</div>
-
-	<!-- 同意ボタン -->
-	<button
-		v-else
-		:class="$style.agreeBtn"
-		:disabled="!canPublish"
-		@click="requestPublish"
-	>
-		<i class="ti ti-share"></i> 作品を投稿する
-	</button>
-</div>
+<!-- 投稿UIはツールバーに統合済み。このコンポーネントはWebSocketイベント処理とAPI呼び出しのみ担当 -->
+<div></div>
 </template>
 
 <script lang="ts" setup>
@@ -93,7 +50,7 @@ async function requestPublish() {
 	try {
 		const res = await misskeyApi('paint-chat/publish/agree' as any, { roomId: props.roomId } as any) as any;
 		if (res.status === 'both_agreed') {
-			phase.value = 'message';
+			promptAndSubmitMessage();
 		} else {
 			phase.value = 'waiting';
 		}
@@ -110,17 +67,30 @@ async function requestPublish() {
 	}
 }
 
-// 一言メッセージ送信＆投稿確定（キャンバス画像をBase64で添付）
-async function submitMessage() {
+// 一言メッセージ入力→送信＆投稿確定（ダイアログで表示、キャンバス画像をBase64で添付）
+async function promptAndSubmitMessage() {
+	// os.inputTextでダイアログを表示（キャンバスの上にモーダルで表示される）
+	const { canceled, result: message } = await os.inputText({
+		title: '一言メッセージ（100文字以内）',
+		text: '投稿に添えるメッセージを入力してください',
+		default: '',
+	});
+
+	if (canceled) {
+		cancelPublish();
+		return;
+	}
+
+	const trimmed = (message ?? '').substring(0, 100);
+
 	try {
 		// キャンバス画像を取得
 		const imageDataUrl = await requestCanvasImage();
-		const imageBase64 = imageDataUrl; // data:image/png;base64,... 形式
 
 		await misskeyApi('paint-chat/publish/message' as any, {
 			roomId: props.roomId,
-			message: myMessage.value,
-			imageBase64,
+			message: trimmed,
+			imageBase64: imageDataUrl,
 		} as any);
 		isPublished.value = true;
 		phase.value = 'idle';
@@ -155,7 +125,7 @@ function onPublishRequested() {
 		try {
 			const res = await misskeyApi('paint-chat/publish/agree' as any, { roomId: props.roomId } as any) as any;
 			if (res.status === 'both_agreed') {
-				phase.value = 'message';
+				promptAndSubmitMessage();
 			}
 		} catch {
 			os.alert({ type: 'error', text: '同意の送信に失敗しました' });
@@ -164,7 +134,8 @@ function onPublishRequested() {
 }
 
 function onPublishAgreed() {
-	phase.value = 'message';
+	// 両者同意完了: メッセージ入力ダイアログを表示
+	promptAndSubmitMessage();
 }
 
 function onPublishRejected() {
