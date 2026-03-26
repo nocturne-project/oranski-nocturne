@@ -142,17 +142,36 @@ function renderStroke(ctx: CanvasRenderingContext2D, stroke: StrokeData): void {
 		return;
 	}
 
-	// 筆圧による太さ変化を反映しつつ、隙間のない描画
-	// 短いセグメントごとにlineWidthを変えて個別にstroke（lineCap: roundで接続部の隙間を防ぐ）
-	for (let i = 0; i < interpolated.length - 1; i++) {
-		const p0 = interpolated[i];
-		const p1 = interpolated[i + 1];
-		const pressure = (p0.pressure + p1.pressure) / 2;
-		ctx.lineWidth = Math.max(0.5, stroke.width * pressure);
+	// 筆圧変化を筆圧グループに分割し、各グループを1本のパスで描画
+	// グループ内の筆圧差が小さければ1パスにまとめることで透明度累積（ボツボツ）を防ぐ
+	const PRESSURE_THRESHOLD = 0.15; // グループ分割の筆圧差閾値
+	let groupStart = 0;
+
+	while (groupStart < interpolated.length - 1) {
+		// このグループの筆圧範囲を決定
+		let groupEnd = groupStart + 1;
+		const basePressure = interpolated[groupStart].pressure;
+		while (groupEnd < interpolated.length &&
+			Math.abs(interpolated[groupEnd].pressure - basePressure) < PRESSURE_THRESHOLD) {
+			groupEnd++;
+		}
+
+		// グループ内の平均筆圧でlineWidth設定
+		let pressureSum = 0;
+		for (let i = groupStart; i < groupEnd; i++) pressureSum += interpolated[i].pressure;
+		const avgPressure = pressureSum / (groupEnd - groupStart);
+		ctx.lineWidth = Math.max(0.5, stroke.width * avgPressure);
+
+		// 1本のパスで描画（透明度累積なし）
 		ctx.beginPath();
-		ctx.moveTo(p0.x, p0.y);
-		ctx.lineTo(p1.x, p1.y);
+		ctx.moveTo(interpolated[groupStart].x, interpolated[groupStart].y);
+		for (let i = groupStart + 1; i < groupEnd; i++) {
+			ctx.lineTo(interpolated[i].x, interpolated[i].y);
+		}
 		ctx.stroke();
+
+		// 次のグループは1ポイント重複させて隙間を防ぐ
+		groupStart = Math.max(groupStart + 1, groupEnd - 1);
 	}
 
 	ctx.restore();
