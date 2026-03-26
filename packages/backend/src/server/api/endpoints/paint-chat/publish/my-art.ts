@@ -81,14 +81,21 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			const imageBuffer = Buffer.from(ps.imageBase64.replace(/^data:image\/\w+;base64,/, ''), 'base64');
 
 			// bot経由で自分の絵のみを匿名投稿（ステガノグラフィ付き、ルームID記録）
-			const noteId = await this.paintChatPublishService.publishMyArt(
-				ps.roomId,
-				imageBuffer,
-				participant.anonymousName,
-			);
+			let noteId: string | null;
+			try {
+				noteId = await this.paintChatPublishService.publishMyArt(
+					ps.roomId,
+					imageBuffer,
+					participant.anonymousName,
+					participant.id,
+				);
+			} catch (err) {
+				// 例外発生時もRedisフラグを削除して再試行可能にする
+				await this.redisClient.del(myArtKey);
+				throw err;
+			}
 
 			if (noteId == null) {
-				// bot未設定などで投稿失敗: Redisフラグを削除して再試行可能にする
 				await this.redisClient.del(myArtKey);
 				throw new ApiError(meta.errors.botNotConfigured);
 			}

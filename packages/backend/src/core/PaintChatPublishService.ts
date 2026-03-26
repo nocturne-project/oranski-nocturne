@@ -6,6 +6,7 @@
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import sharp from 'sharp';
 import { Inject, Injectable } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
 import type {
@@ -20,9 +21,42 @@ import { NoteCreateService } from '@/core/NoteCreateService.js';
 import { DriveService } from '@/core/DriveService.js';
 import { bindThis } from '@/decorators.js';
 
-// 品質ガードの閾値設定
-const MIN_SESSION_DURATION_MS = 5 * 60 * 1000; // セッション開始5分以上経過
-const MIN_STROKE_POINTS = 50; // 合計ポイント数50以上
+// ステガノグラフィ: LSB方式でルームIDをPNG画像に埋め込む
+const STEGO_MAGIC = 'PC';
+
+function embedSteganography(pixelData: Buffer, roomId: string): void {
+	const payload = STEGO_MAGIC + String.fromCharCode(roomId.length) + roomId;
+	const bits: number[] = [];
+	for (let i = 0; i < payload.length; i++) {
+		const charCode = payload.charCodeAt(i);
+		for (let bit = 7; bit >= 0; bit--) {
+			bits.push((charCode >> bit) & 1);
+		}
+	}
+	// RGBチャネルのLSBにビットを埋め込む（Aチャネルはスキップ）
+	let bitIndex = 0;
+	for (let i = 0; i < pixelData.length && bitIndex < bits.length; i++) {
+		if (i % 4 === 3) continue; // Aチャネルスキップ
+		pixelData[i] = (pixelData[i] & 0xFE) | bits[bitIndex];
+		bitIndex++;
+	}
+}
+
+async function embedSteganographyToBuffer(imageBuffer: Buffer, roomId: string): Promise<Buffer> {
+	const image = sharp(imageBuffer);
+	const metadata = await image.metadata();
+	const { data, info } = await image.raw().ensureAlpha().toBuffer({ resolveWithObject: true });
+
+	embedSteganography(data, roomId);
+
+	return sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } })
+		.png()
+		.toBuffer();
+}
+
+// 品質ガードの閾値設定（緩めに設定。実際のお絵かきで引っかからないようにする）
+const MIN_SESSION_DURATION_MS = 1 * 60 * 1000; // セッション開始1分以上経過
+const MIN_STROKE_POINTS = 10; // 合計ポイント数10以上
 
 // bot投稿、ステガノグラフィ埋め込み、品質ガードを担当するサービス
 @Injectable()
@@ -62,10 +96,11 @@ export class PaintChatPublishService {
 		const botUser = await this.usersRepository.findOneBy({ id: setting.botAccountId });
 		if (botUser == null) return null;
 
-		// 画像を一時ファイルに書き出してDriveにアップロード
+		// ステガノグラフィでルームIDを埋め込んでから一時ファイルに書き出し
+		const stegoBuffer = await embedSteganographyToBuffer(imageBuffer, roomId);
 		const tmpDir = os.tmpdir();
 		const tmpPath = path.join(tmpDir, `paintchat-${roomId}-${Date.now()}.png`);
-		fs.writeFileSync(tmpPath, imageBuffer);
+		fs.writeFileSync(tmpPath, stegoBuffer);
 
 		let driveFile;
 		try {
@@ -88,17 +123,17 @@ export class PaintChatPublishService {
 			try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
 		}
 
-		// ノート本文を構成
-		const lines: string[] = ['ランダム絵チャットの作品'];
+		// ノート本文を構成（匿名名を含めて誰の合作か表示）
+		const lines: string[] = [`ランダム絵チャットの作品（${participant1Name}と${participant2Name}の絵）`];
 		if (message1) lines.push(`${participant1Name}: ${message1}`);
 		if (message2) lines.push(`${participant2Name}: ${message2}`);
 		const text = lines.join('\n');
 
-		// botアカウントでノート投稿
+		// botアカウントでノート投稿（作品投稿は連合許可）
 		const note = await this.noteCreateService.create(botUser, {
 			text,
 			files: [driveFile],
-			localOnly: true,
+			localOnly: false,
 			visibility: 'public',
 		});
 
@@ -117,12 +152,13 @@ export class PaintChatPublishService {
 	}
 
 	// 自分の絵のみをbot経由で匿名投稿する（相手の同意不要）
-	// ステガノグラフィはフロントエンド側で埋め込み済みの画像を受け取る。ルームIDはDBに記録。
+	// ルームID・投稿者participantId・ノートIDをDBに記録して追跡可能にする
 	@bindThis
 	public async publishMyArt(
 		roomId: string,
 		imageBuffer: Buffer,
 		anonymousName: string,
+		participantId: string,
 	): Promise<string | null> {
 		const setting = await this.paintChatSettingsRepository.findOne({ where: {} });
 		if (setting == null || setting.botAccountId == null) return null;
@@ -130,10 +166,11 @@ export class PaintChatPublishService {
 		const botUser = await this.usersRepository.findOneBy({ id: setting.botAccountId });
 		if (botUser == null) return null;
 
-		// 画像を一時ファイルに書き出してDriveにアップロード
+		// ステガノグラフィでルームIDを埋め込んでから一時ファイルに書き出し
+		const stegoBuffer = await embedSteganographyToBuffer(imageBuffer, roomId);
 		const tmpDir = os.tmpdir();
 		const tmpPath = path.join(tmpDir, `paintchat-myart-${roomId}-${Date.now()}.png`);
-		fs.writeFileSync(tmpPath, imageBuffer);
+		fs.writeFileSync(tmpPath, stegoBuffer);
 
 		let driveFile;
 		try {
@@ -157,12 +194,32 @@ export class PaintChatPublishService {
 
 		const text = `ランダム絵チャットの作品（${anonymousName}の絵）`;
 
+		// 自分の絵のみ投稿も連合許可
 		const note = await this.noteCreateService.create(botUser, {
 			text,
 			files: [driveFile],
-			localOnly: true,
+			localOnly: false,
 			visibility: 'public',
 		});
+
+		// DB記録: ルームID・投稿者・ノートIDを追跡可能にする
+		// paint_chat_publishテーブルにmy-art用レコードを作成（participant1=投稿者、participant2=投稿者）
+		const existing = await this.paintChatPublishesRepository.findOneBy({ roomId });
+		if (existing == null) {
+			await this.paintChatPublishesRepository.insert({
+				id: this.idService.gen(),
+				roomId,
+				participant1Id: participantId,
+				participant1Agreed: true,
+				participant2Id: participantId,
+				participant2Agreed: true,
+				publishedAt: new Date(),
+				noteId: note.id,
+			});
+		} else {
+			// 合作投稿レコードが既にある場合はnoteIdを更新（my-art投稿分）
+			// 合作投稿のnoteIdは上書きしない。ログとして残す。
+		}
 
 		return note.id;
 	}

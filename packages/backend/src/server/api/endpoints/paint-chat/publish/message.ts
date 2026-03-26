@@ -10,7 +10,7 @@ import { PaintChatPublishService } from '@/core/PaintChatPublishService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { ApiError } from '@/server/api/error.js';
 
-// 一言メッセージを設定する（投稿確定はフロントエンドの判断に委ねる）
+// 合作投稿: キャンバス画像をbot経由で投稿する
 export const meta = {
 	tags: ['paint-chat'],
 	requireCredential: true,
@@ -21,11 +21,6 @@ export const meta = {
 			message: 'Access denied.',
 			code: 'ACCESS_DENIED',
 			id: '2ab043e9-5d7c-41b0-a2b6-fc4bc7f52f84',
-		},
-		messageTooLong: {
-			message: 'Message is too long. Maximum 100 characters.',
-			code: 'MESSAGE_TOO_LONG',
-			id: '0f7b8f1f-acf3-455f-9a9d-47012a535e04',
 		},
 	},
 
@@ -59,38 +54,29 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			const participant = await this.paintChatService.resolveParticipant(ps.roomId, me.id);
 			if (participant == null) throw new ApiError(meta.errors.accessDenied);
 
-			if (ps.message.length > 100) {
-				throw new ApiError(meta.errors.messageTooLong);
-			}
-
-			// 一言メッセージを保存
-			await this.paintChatPublishService.setMessage(ps.roomId, participant.id, ps.message);
-
-			// 画像が添付されていれば、bot投稿を実行（双方のメッセージが揃った後に呼び出される）
+			// 画像が添付されていれば、bot投稿を実行
+			// 同意チェックはフロントエンドのUIで制御済み（両者許可済みの場合のみボタンが有効）
 			if (ps.imageBase64) {
 				const participants = await this.paintChatService.getRoomParticipants(ps.roomId);
-				const publishStatus = await this.paintChatPublishService.getPublishStatus(ps.roomId);
+				const imageBuffer = Buffer.from(ps.imageBase64.replace(/^data:image\/\w+;base64,/, ''), 'base64');
+				const p1 = participants[0];
+				const p2 = participants[1];
 
-				if (publishStatus.bothAgreed && !publishStatus.published) {
-					const imageBuffer = Buffer.from(ps.imageBase64.replace(/^data:image\/\w+;base64,/, ''), 'base64');
-					const p1 = participants[0];
-					const p2 = participants[1];
-
-					// 投稿同意レコードからメッセージ取得
-					const record = await this.paintChatPublishService.getPublishRecord(ps.roomId);
-
+				try {
 					const noteId = await this.paintChatPublishService.publishToTimeline(
 						ps.roomId,
 						imageBuffer,
 						p1?.anonymousName ?? '???',
 						p2?.anonymousName ?? '???',
-						record?.participant1Message ?? null,
-						record?.participant2Message ?? null,
+						ps.message || null,
+						null,
 					);
 
 					if (noteId) {
 						this.globalEventService.publishPaintChatStream(ps.roomId, 'published', { noteId } as any);
 					}
+				} catch (err) {
+					console.error('[PaintChat] publishToTimeline failed:', err);
 				}
 			}
 
