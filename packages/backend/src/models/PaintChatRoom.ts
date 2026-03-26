@@ -41,4 +41,18 @@ export class PaintChatRoom {
 		default: false,
 	})
 	public isPublished: boolean;
+
+	// RedisからDBに退避されたキャンバスストロークデータ（JSON配列）
+	@Column('jsonb', {
+		nullable: true,
+		default: null,
+	})
+	public canvasStrokes: unknown[] | null;
+
+	// RedisからDBに退避されたマージ済み画像（Base64文字列）
+	@Column('text', {
+		nullable: true,
+		default: null,
+	})
+	public canvasMergedImage: string | null;
 }

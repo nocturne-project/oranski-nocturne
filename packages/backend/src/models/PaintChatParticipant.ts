@@ -56,4 +56,11 @@ export class PaintChatParticipant {
 		nullable: true,
 	})
 	public leftAt: Date | null;
+
+	// 色設定（選択中の色・最近使った色）。リロード時に復元する。
+	@Column('jsonb', {
+		nullable: true,
+		default: null,
+	})
+	public colorPreferences: { currentColor: string; colorHistory: string[]; penWidth?: number; eraserWidth?: number } | null;
 }
