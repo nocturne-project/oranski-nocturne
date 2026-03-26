@@ -13,6 +13,9 @@ export interface PressurePoint {
 	pressure: number;
 }
 
+// レイヤー設定
+export const MAX_LAYERS = 3;
+
 // ストロークデータ
 export interface StrokeData {
 	id: string;
@@ -22,6 +25,7 @@ export interface StrokeData {
 	width: number;
 	opacity: number;
 	tool: ToolType;
+	layer: number; // レイヤー番号（0, 1, 2）。0が最上層、2が最下層
 }
 
 // チャットメッセージの種別

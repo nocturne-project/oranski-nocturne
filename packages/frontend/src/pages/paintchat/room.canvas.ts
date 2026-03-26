@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { MAX_LAYERS } from './room.types.js';
 import type { PressurePoint, StrokeData, ToolType } from './room.types.js';
 
 // キャンバスの描画エンジン。自動スムージング（Catmull-Romスプライン補間）、ストロークマージを担当する。
@@ -19,11 +20,16 @@ export interface DrawingState {
 }
 
 export interface CanvasEngine {
-	// 初期化
+	// 初期化（メインcanvasを受け取り、レイヤーcanvasは内部で作成する）
 	init(canvas: HTMLCanvasElement): void;
 	// 描画状態
 	getState(): DrawingState;
 	setState(partial: Partial<DrawingState>): void;
+	// レイヤー操作
+	getCurrentLayer(): number;
+	setCurrentLayer(layer: number): void;
+	getLayerOpacity(layer: number): number;
+	setLayerOpacity(layer: number, opacity: number): void;
 	// ストローク操作
 	beginStroke(x: number, y: number, pressure: number): void;
 	moveStroke(x: number, y: number, pressure: number): void;
@@ -41,7 +47,7 @@ export interface CanvasEngine {
 	mergeOldStrokes(): string | null;
 	// キャンバス復元（リロード時にRedisのストロークデータから再描画）
 	restoreStrokes(savedStrokes: StrokeData[], mergedImageBase64?: string | null): Promise<void>;
-	// 画像出力
+	// 画像出力（全レイヤーを合成）
 	toDataURL(type?: string): string;
 	toMyStrokesDataURL(): string;
 	// 破棄
@@ -119,7 +125,7 @@ function renderStroke(ctx: CanvasRenderingContext2D, stroke: StrokeData): void {
 		}
 	} else {
 		// 3点以上: Catmull-Romスプライン補間
-		const steps = 6;
+		const steps = 10;
 		for (let i = 0; i < points.length - 1; i++) {
 			const p0 = points[Math.max(0, i - 1)];
 			const p1 = points[i];
@@ -136,41 +142,49 @@ function renderStroke(ctx: CanvasRenderingContext2D, stroke: StrokeData): void {
 		return;
 	}
 
-	// 筆圧が一定（変化幅が小さい）場合は1本の連続パスで高速描画
-	const pressures = interpolated.map(p => p.pressure);
-	const minP = Math.min(...pressures);
-	const maxP = Math.max(...pressures);
-
-	// 1本の連続パスで描画（隙間なし、透明度の累積問題なし）
-	// lineWidthは筆圧の平均値で統一。筆圧変化は微妙な太さ変化として許容。
-	const avgPressure = pressures.reduce((a, b) => a + b, 0) / pressures.length;
-	ctx.lineWidth = Math.max(0.5, stroke.width * avgPressure);
-	ctx.beginPath();
-	ctx.moveTo(interpolated[0].x, interpolated[0].y);
-	for (let i = 1; i < interpolated.length; i++) {
-		ctx.lineTo(interpolated[i].x, interpolated[i].y);
+	// 筆圧による太さ変化を反映しつつ、隙間のない描画
+	// 短いセグメントごとにlineWidthを変えて個別にstroke（lineCap: roundで接続部の隙間を防ぐ）
+	for (let i = 0; i < interpolated.length - 1; i++) {
+		const p0 = interpolated[i];
+		const p1 = interpolated[i + 1];
+		const pressure = (p0.pressure + p1.pressure) / 2;
+		ctx.lineWidth = Math.max(0.5, stroke.width * pressure);
+		ctx.beginPath();
+		ctx.moveTo(p0.x, p0.y);
+		ctx.lineTo(p1.x, p1.y);
+		ctx.stroke();
 	}
-	ctx.stroke();
 
 	ctx.restore();
 }
 
-// キャンバスエンジンの生成
+// キャンバスエンジンの生成（レイヤー対応）
 export function createCanvasEngine(myParticipantId: string): CanvasEngine {
+	// メインcanvas（合成結果の表示用）
 	let canvas: HTMLCanvasElement | null = null;
 	let ctx: CanvasRenderingContext2D | null = null;
 
-	// マージ済みベース画像
-	let mergedImageData: ImageData | null = null;
+	// レイヤーごとのオフスクリーンcanvas（各レイヤー独立）
+	const layerCanvases: (HTMLCanvasElement | null)[] = [null, null, null];
+	const layerCtxs: (CanvasRenderingContext2D | null)[] = [null, null, null];
+	const layerOpacities: number[] = [1.0, 1.0, 1.0];
 
-	// 自分のストローク専用オフスクリーンバッファ（マージで消えない永続バッファ）
-	// toMyStrokesDataURLはこのバッファから出力する
+	// 現在の描画対象レイヤー
+	let currentLayer = 0;
+
+	// レイヤーごとのマージ済みベース画像
+	const mergedImagePerLayer: (ImageData | null)[] = [null, null, null];
+
+	// 自分のストローク専用オフスクリーンバッファ（レイヤーごとに分離、マージで消えない永続バッファ）
+	const myLayerCanvases: (HTMLCanvasElement | null)[] = Array(MAX_LAYERS).fill(null);
+	const myLayerCtxs: (CanvasRenderingContext2D | null)[] = Array(MAX_LAYERS).fill(null);
+	const myMergedPerLayer: (ImageData | null)[] = Array(MAX_LAYERS).fill(null);
+	// 後方互換: 旧コードから参照される箇所用
 	let myStrokesCanvas: HTMLCanvasElement | null = null;
 	let myStrokesCtx: CanvasRenderingContext2D | null = null;
-	// undo用: 自分のマージ済み画像データ
 	let myMergedImageData: ImageData | null = null;
 
-	// ストローク履歴（アンドゥ対象）
+	// ストローク履歴（アンドゥ対象、全レイヤー共通）
 	const strokes: StrokeData[] = [];
 
 	// 描画状態
@@ -179,119 +193,156 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 		currentPoints: [],
 		currentTool: 'pen',
 		currentColor: '#000000',
-		currentWidth: 3,
+		currentWidth: 5,
 		currentOpacity: 1.0,
 	};
 
-	// リモートの描画進行中データ
 	const remoteProgress: Map<string, PressurePoint[]> = new Map();
-
 	let strokeIdCounter = 0;
 
 	function generateStrokeId(): string {
 		return `${myParticipantId}-${Date.now()}-${strokeIdCounter++}`;
 	}
 
-	// アンドゥ対象外のストロークをフラット化して描画パフォーマンスを維持する（FR-024/FR-025）
+	// 指定レイヤーのコンテキストを取得
+	function getLayerCtx(layer: number): CanvasRenderingContext2D | null {
+		if (layer < 0 || layer >= MAX_LAYERS) return null;
+		return layerCtxs[layer];
+	}
+
+	// レイヤーcanvasを初期化する
+	function initLayerCanvas(index: number, width: number, height: number): void {
+		const c = window.document.createElement('canvas');
+		c.width = width;
+		c.height = height;
+		const lctx = c.getContext('2d')!;
+		// レイヤーは透明背景（合成時にメインcanvasの白背景の上に重ねる）
+		lctx.clearRect(0, 0, width, height);
+		layerCanvases[index] = c;
+		layerCtxs[index] = lctx;
+	}
+
+	// レイヤー対応マージ: レイヤーごとにマージ済み画像を管理し、レイヤー順序を保持する
 	function doMergeOldStrokes(): string | null {
-		if (!ctx || !canvas) return null;
+		if (!canvas) return null;
 
 		const myStrokes = strokes.filter(s => s.participantId === myParticipantId);
 		if (myStrokes.length <= MAX_UNDO) return null;
 
-		const offscreen = window.document.createElement('canvas');
-		offscreen.width = canvas.width;
-		offscreen.height = canvas.height;
-		const offCtx = offscreen.getContext('2d')!;
-
-		offCtx.fillStyle = '#ffffff';
-		offCtx.fillRect(0, 0, offscreen.width, offscreen.height);
-
-		if (mergedImageData) {
-			offCtx.putImageData(mergedImageData, 0, 0);
-		}
-
+		// マージ対象: 自分のアンドゥ対象外ストローク + 相手の全ストローク
 		const toMerge = strokes.filter(s => {
 			if (s.participantId !== myParticipantId) return true;
 			const myIdx = myStrokes.indexOf(s);
 			return myIdx < myStrokes.length - MAX_UNDO;
 		});
 
-		for (const stroke of toMerge) {
-			renderStroke(offCtx, stroke);
+		if (toMerge.length === 0) return null;
+
+		// レイヤーごとにマージ
+		for (let layer = 0; layer < MAX_LAYERS; layer++) {
+			const lc = layerCanvases[layer];
+			if (!lc) continue;
+			const offscreen = window.document.createElement('canvas');
+			offscreen.width = lc.width;
+			offscreen.height = lc.height;
+			const offCtx = offscreen.getContext('2d')!;
+
+			// 既存のマージ済み画像があれば復元
+			if (mergedImagePerLayer[layer]) {
+				offCtx.putImageData(mergedImagePerLayer[layer]!, 0, 0);
+			}
+
+			// このレイヤーのマージ対象ストロークを描画
+			for (const stroke of toMerge) {
+				if ((stroke.layer ?? 0) === layer) {
+					renderStroke(offCtx, stroke);
+				}
+			}
+
+			mergedImagePerLayer[layer] = offCtx.getImageData(0, 0, offscreen.width, offscreen.height);
 		}
 
-		mergedImageData = offCtx.getImageData(0, 0, offscreen.width, offscreen.height);
-
-		// 自分のストロークバッファのスナップショットも保存（undo時の復元用）
-		if (myStrokesCanvas && myStrokesCtx) {
-			myMergedImageData = myStrokesCtx.getImageData(0, 0, myStrokesCanvas.width, myStrokesCanvas.height);
+		// 自分のストロークバッファのスナップショットも保存（レイヤーごと）
+		for (let layer = 0; layer < MAX_LAYERS; layer++) {
+			const mc = myLayerCanvases[layer];
+			const mctx = myLayerCtxs[layer];
+			if (mc && mctx) {
+				myMergedPerLayer[layer] = mctx.getImageData(0, 0, mc.width, mc.height);
+			}
 		}
 
+		// マージ済みストロークを配列から除去
 		for (const stroke of toMerge) {
 			const idx = strokes.indexOf(stroke);
 			if (idx >= 0) strokes.splice(idx, 1);
 		}
 
 		redrawAll();
-		return offscreen.toDataURL('image/png');
+		return 'merged';
 	}
 
-	// 自分のストロークバッファを再構築する（アンドゥ時に呼ぶ）
-	// マージ済みスナップショット + strokes配列内の自分のストロークで再描画
+	// 自分のストロークバッファを再構築する（アンドゥ時、レイヤーごと）
 	function rebuildMyStrokesBuffer(): void {
-		if (!myStrokesCtx || !myStrokesCanvas) return;
-		// マージ済みスナップショットがあればそこから復元
-		if (myMergedImageData) {
-			myStrokesCtx.putImageData(myMergedImageData, 0, 0);
-		} else {
-			myStrokesCtx.fillStyle = '#ffffff';
-			myStrokesCtx.fillRect(0, 0, myStrokesCanvas.width, myStrokesCanvas.height);
+		for (let layer = 0; layer < MAX_LAYERS; layer++) {
+			const mc = myLayerCanvases[layer];
+			const mctx = myLayerCtxs[layer];
+			if (!mc || !mctx) continue;
+			mctx.clearRect(0, 0, mc.width, mc.height);
+			if (myMergedPerLayer[layer]) {
+				mctx.putImageData(myMergedPerLayer[layer]!, 0, 0);
+			}
 		}
-		// 残っている自分のストロークを再描画
+		// 後方互換: 旧マージ画像（レイヤー0）
+		if (myMergedImageData && myLayerCtxs[0] && myLayerCanvases[0]) {
+			myLayerCtxs[0]!.putImageData(myMergedImageData, 0, 0);
+		}
 		for (const stroke of strokes) {
 			if (stroke.participantId === myParticipantId) {
-				renderStrokeForMyBuffer(myStrokesCtx, stroke);
+				const mctx = myLayerCtxs[stroke.layer ?? 0];
+				if (mctx) renderStroke(mctx, stroke);
 			}
 		}
 	}
 
-	// 全体を再描画する
+	// 各レイヤーを再描画し、メインcanvasに合成する
 	function redrawAll(): void {
 		if (!ctx || !canvas) return;
-		ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-		// 白い背景
+		// 1. 各レイヤーのオフスクリーンcanvasを再描画
+		for (let layer = 0; layer < MAX_LAYERS; layer++) {
+			const lctx = layerCtxs[layer];
+			const lc = layerCanvases[layer];
+			if (!lctx || !lc) continue;
+
+			lctx.clearRect(0, 0, lc.width, lc.height);
+
+			// マージ済み画像があればまず描画
+			if (mergedImagePerLayer[layer]) {
+				lctx.putImageData(mergedImagePerLayer[layer]!, 0, 0);
+			}
+
+			// このレイヤーの残りストロークを描画
+			for (const stroke of strokes) {
+				if ((stroke.layer ?? 0) === layer) {
+					renderStroke(lctx, stroke);
+				}
+			}
+		}
+
+		// 2. メインcanvasに合成（白背景 → レイヤー2(下) → 1 → 0(上)）
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
 		ctx.fillStyle = '#ffffff';
 		ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-		// マージ済み画像があればまず描画
-		if (mergedImageData) {
-			ctx.putImageData(mergedImageData, 0, 0);
+		for (let layer = MAX_LAYERS - 1; layer >= 0; layer--) {
+			const lc = layerCanvases[layer];
+			if (!lc) continue;
+			ctx.globalAlpha = layerOpacities[layer];
+			ctx.drawImage(lc, 0, 0);
 		}
+		ctx.globalAlpha = 1.0;
 
-		// ストロークを描画
-		for (const stroke of strokes) {
-			renderStroke(ctx, stroke);
-		}
-
-		// リモートの進行中描画
-		for (const [, points] of remoteProgress) {
-			if (points.length > 1) {
-				ctx.beginPath();
-				ctx.strokeStyle = '#cccccc';
-				ctx.lineWidth = 2;
-				ctx.globalAlpha = 0.5;
-				ctx.moveTo(points[0].x, points[0].y);
-				for (let i = 1; i < points.length; i++) {
-					ctx.lineTo(points[i].x, points[i].y);
-				}
-				ctx.stroke();
-				ctx.globalAlpha = 1.0;
-			}
-		}
-
-		// 自分が描画中のストロークもプレビュー表示（redrawAll後に消えてしまう問題の対策）
+		// 3. 描画中プレビュー（メインcanvasに直接描画。パフォーマンス優先。）
 		if (state.isDrawing && state.currentPoints.length >= 2) {
 			ctx.save();
 			ctx.lineCap = 'round';
@@ -312,6 +363,22 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 			ctx.stroke();
 			ctx.restore();
 		}
+
+		// 4. リモートの進行中描画（最上層に表示）
+		for (const [, points] of remoteProgress) {
+			if (points.length > 1) {
+				ctx.beginPath();
+				ctx.strokeStyle = '#cccccc';
+				ctx.lineWidth = 2;
+				ctx.globalAlpha = 0.5;
+				ctx.moveTo(points[0].x, points[0].y);
+				for (let i = 1; i < points.length; i++) {
+					ctx.lineTo(points[i].x, points[i].y);
+				}
+				ctx.stroke();
+				ctx.globalAlpha = 1.0;
+			}
+		}
 	}
 
 	return {
@@ -325,14 +392,22 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 			ctx.fillStyle = '#ffffff';
 			ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-			// 自分のストローク専用バッファを初期化
-			myStrokesCanvas = window.document.createElement('canvas');
-			myStrokesCanvas.width = canvas.width;
-			myStrokesCanvas.height = canvas.height;
-			myStrokesCtx = myStrokesCanvas.getContext('2d')!;
-			// 白背景
-			myStrokesCtx.fillStyle = '#ffffff';
-			myStrokesCtx.fillRect(0, 0, myStrokesCanvas.width, myStrokesCanvas.height);
+			// レイヤーcanvasを初期化
+			for (let i = 0; i < MAX_LAYERS; i++) {
+				initLayerCanvas(i, canvas.width, canvas.height);
+			}
+
+			// 自分のストローク専用バッファを初期化（レイヤーごとに透明背景）
+			for (let i = 0; i < MAX_LAYERS; i++) {
+				const mc = window.document.createElement('canvas');
+				mc.width = canvas.width;
+				mc.height = canvas.height;
+				myLayerCanvases[i] = mc;
+				myLayerCtxs[i] = mc.getContext('2d')!;
+			}
+			// 後方互換用（restoreStrokesの旧マージ画像復元等）
+			myStrokesCanvas = myLayerCanvases[0];
+			myStrokesCtx = myLayerCtxs[0];
 		},
 
 		getState() {
@@ -341,6 +416,28 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 
 		setState(partial: Partial<DrawingState>) {
 			Object.assign(state, partial);
+		},
+
+		getCurrentLayer() {
+			return currentLayer;
+		},
+
+		setCurrentLayer(layer: number) {
+			if (layer >= 0 && layer < MAX_LAYERS) {
+				currentLayer = layer;
+			}
+		},
+
+		getLayerOpacity(layer: number): number {
+			if (layer >= 0 && layer < MAX_LAYERS) return layerOpacities[layer];
+			return 1.0;
+		},
+
+		setLayerOpacity(layer: number, opacity: number) {
+			if (layer >= 0 && layer < MAX_LAYERS) {
+				layerOpacities[layer] = Math.max(0, Math.min(1, opacity));
+				redrawAll();
+			}
 		},
 
 		beginStroke(x: number, y: number, pressure: number) {
@@ -380,9 +477,12 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 
 				ctx.beginPath();
 				ctx.moveTo(pts[startIdx].x, pts[startIdx].y);
-				for (let i = startIdx + 1; i < pts.length; i++) {
-					ctx.lineTo(pts[i].x, pts[i].y);
+				for (let i = startIdx + 1; i < pts.length - 1; i++) {
+					const midX = (pts[i].x + pts[i + 1].x) / 2;
+					const midY = (pts[i].y + pts[i + 1].y) / 2;
+					ctx.quadraticCurveTo(pts[i].x, pts[i].y, midX, midY);
 				}
+				ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
 				ctx.stroke();
 				ctx.restore();
 			}
@@ -404,14 +504,16 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 				width: state.currentWidth,
 				opacity: state.currentOpacity,
 				tool: state.currentTool,
+				layer: currentLayer,
 			};
 
 			strokes.push(stroke);
 			state.currentPoints = [];
 
-			// 自分のストローク専用バッファにも描画（マージで消えない永続バッファ）
-			if (myStrokesCtx && stroke.participantId === myParticipantId) {
-				renderStrokeForMyBuffer(myStrokesCtx, stroke);
+			// 自分のストローク専用バッファにも描画（レイヤー別、マージで消えない永続バッファ）
+			if (stroke.participantId === myParticipantId) {
+				const myCtx = myLayerCtxs[stroke.layer ?? 0];
+				if (myCtx) renderStroke(myCtx, stroke);
 			}
 
 			// アンドゥ上限を超えたらバックグラウンドでマージ（FR-024/FR-025）
@@ -442,12 +544,11 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 		},
 
 		undo(): string | null {
-			// 自分の最後のストロークを削除
+			// 現在のレイヤーの自分の最後のストロークを削除
 			for (let i = strokes.length - 1; i >= 0; i--) {
-				if (strokes[i].participantId === myParticipantId) {
+				if (strokes[i].participantId === myParticipantId && (strokes[i].layer ?? 0) === currentLayer) {
 					const removed = strokes.splice(i, 1)[0];
 					redrawAll();
-					// myStrokesCanvasも再描画（アンドゥ反映）
 					rebuildMyStrokesBuffer();
 					return removed.id;
 				}
@@ -465,16 +566,22 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 
 		clear() {
 			strokes.length = 0;
-			mergedImageData = null;
+			for (let i = 0; i < MAX_LAYERS; i++) mergedImagePerLayer[i] = null;
 			myMergedImageData = null;
+			for (let i = 0; i < MAX_LAYERS; i++) myMergedPerLayer[i] = null;
 			if (ctx && canvas) {
 				ctx.clearRect(0, 0, canvas.width, canvas.height);
 				ctx.fillStyle = '#ffffff';
 				ctx.fillRect(0, 0, canvas.width, canvas.height);
 			}
-			if (myStrokesCtx && myStrokesCanvas) {
-				myStrokesCtx.fillStyle = '#ffffff';
-				myStrokesCtx.fillRect(0, 0, myStrokesCanvas.width, myStrokesCanvas.height);
+			// 全レイヤーcanvasもクリア
+			for (let i = 0; i < MAX_LAYERS; i++) {
+				const lc = layerCanvases[i];
+				const lctx = layerCtxs[i];
+				if (lc && lctx) lctx.clearRect(0, 0, lc.width, lc.height);
+				const mc = myLayerCanvases[i];
+				const mctx = myLayerCtxs[i];
+				if (mc && mctx) mctx.clearRect(0, 0, mc.width, mc.height);
 			}
 		},
 
@@ -485,25 +592,30 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 		// リロード時にRedisのストロークデータからキャンバスを復元する
 		// Promise化して画像読み込み完了を待機し、レース条件を防止する
 		async restoreStrokes(savedStrokes: StrokeData[], mergedImageBase64?: string | null) {
-			// マージ済み画像があれば復元
-			if (mergedImageBase64 && ctx && canvas) {
+			// マージ済み画像があれば復元（レイヤー導入前のデータはレイヤー0として扱う）
+			if (mergedImageBase64 && canvas) {
 				await new Promise<void>((resolve) => {
 					const img = new Image();
 					img.onload = () => {
-						if (!ctx || !canvas) { resolve(); return; }
-						ctx.drawImage(img, 0, 0);
-						mergedImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-						// ストロークを追加して再描画
+						if (!canvas) { resolve(); return; }
+						const tmpCanvas = window.document.createElement('canvas');
+						tmpCanvas.width = canvas.width;
+						tmpCanvas.height = canvas.height;
+						const tmpCtx = tmpCanvas.getContext('2d')!;
+						tmpCtx.drawImage(img, 0, 0);
+						mergedImagePerLayer[0] = tmpCtx.getImageData(0, 0, tmpCanvas.width, tmpCanvas.height);
 						for (const stroke of savedStrokes) {
 							strokes.push(stroke);
-							// 自分のストロークバッファにも追加
-							if (myStrokesCtx && stroke.participantId === myParticipantId) {
-								renderStrokeForMyBuffer(myStrokesCtx, stroke);
+							if (stroke.participantId === myParticipantId) {
+								const mctx = myLayerCtxs[stroke.layer ?? 0];
+								if (mctx) renderStroke(mctx, stroke);
 							}
 						}
-						// 自分のストロークバッファのスナップショットを保存（undo復元用）
-						if (myStrokesCanvas && myStrokesCtx) {
-							myMergedImageData = myStrokesCtx.getImageData(0, 0, myStrokesCanvas.width, myStrokesCanvas.height);
+						// マージスナップショット保存
+						for (let layer = 0; layer < MAX_LAYERS; layer++) {
+							const mc = myLayerCanvases[layer];
+							const mctx = myLayerCtxs[layer];
+							if (mc && mctx) myMergedPerLayer[layer] = mctx.getImageData(0, 0, mc.width, mc.height);
 						}
 						redrawAll();
 						resolve();
@@ -515,8 +627,9 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 				// マージ済み画像なし: ストロークのみ復元
 				for (const stroke of savedStrokes) {
 					strokes.push(stroke);
-					if (myStrokesCtx && stroke.participantId === myParticipantId) {
-						renderStrokeForMyBuffer(myStrokesCtx, stroke);
+					if (stroke.participantId === myParticipantId) {
+						const mctx = myLayerCtxs[stroke.layer ?? 0];
+						if (mctx) renderStroke(mctx, stroke);
 					}
 				}
 				redrawAll();
@@ -528,20 +641,51 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 		},
 
 		toDataURL(type = 'image/png'): string {
-			return canvas?.toDataURL(type) ?? '';
+			// 全レイヤーを透明度1.0で合成して出力（作業中のレイヤー透明度は反映しない）
+			if (!canvas || !ctx) return '';
+			const exportCanvas = window.document.createElement('canvas');
+			exportCanvas.width = canvas.width;
+			exportCanvas.height = canvas.height;
+			const ectx = exportCanvas.getContext('2d')!;
+			ectx.fillStyle = '#ffffff';
+			ectx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+			for (let layer = MAX_LAYERS - 1; layer >= 0; layer--) {
+				const lc = layerCanvases[layer];
+				if (!lc) continue;
+				ectx.globalAlpha = 1.0;
+				ectx.drawImage(lc, 0, 0);
+			}
+			return exportCanvas.toDataURL(type);
 		},
 
 		toMyStrokesDataURL(): string {
-			// 自分のストローク専用バッファから出力（マージ後のストロークも含む永続バッファ）
-			if (myStrokesCanvas) {
-				return myStrokesCanvas.toDataURL('image/png');
+			// 自分のストロークを全レイヤー合成して出力（白背景、opacity 1.0）
+			if (!canvas) return '';
+			const exportCanvas = window.document.createElement('canvas');
+			exportCanvas.width = canvas.width;
+			exportCanvas.height = canvas.height;
+			const ectx = exportCanvas.getContext('2d')!;
+			ectx.fillStyle = '#ffffff';
+			ectx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+			for (let layer = MAX_LAYERS - 1; layer >= 0; layer--) {
+				const mc = myLayerCanvases[layer];
+				if (!mc) continue;
+				ectx.globalAlpha = 1.0;
+				ectx.drawImage(mc, 0, 0);
 			}
-			return canvas?.toDataURL('image/png') ?? '';
+			return exportCanvas.toDataURL('image/png');
 		},
 
 		dispose() {
 			canvas = null;
 			ctx = null;
+			for (let i = 0; i < MAX_LAYERS; i++) {
+				layerCanvases[i] = null;
+				layerCtxs[i] = null;
+				myLayerCanvases[i] = null;
+				myLayerCtxs[i] = null;
+				myMergedPerLayer[i] = null;
+			}
 			myStrokesCanvas = null;
 			myStrokesCtx = null;
 			myMergedImageData = null;

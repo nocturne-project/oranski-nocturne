@@ -16,6 +16,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	@pointerup="onPointerUp"
 	@pointerleave="onPointerUp"
 	@wheel.prevent="onWheel"
+	@contextmenu.prevent
 >
 	<canvas
 		ref="canvasRef"
@@ -330,11 +331,31 @@ function getEffectivePressure(e: PointerEvent, x: number, y: number): number {
 	return simulatePressure(x, y);
 }
 
+// 右クリック中の一時消しゴムモード
+let isRightButtonEraser = false;
+let savedToolBeforeRightClick: string | null = null;
+
 function onPointerDown(e: PointerEvent) {
 	// タッチイベントはtouchStart/touchMoveで処理するので、ここではペン/マウスのみ
 	if (e.pointerType === 'touch') return;
+
+	// 右クリック（button=2）またはペン消しゴム端（button=5）: 一時的に消しゴムモードで描画
+	if (e.button === 2 || e.button === 5) {
+		e.preventDefault();
+		isPointerDown = true;
+		isRightButtonEraser = true;
+		savedToolBeforeRightClick = props.engine.getState().currentTool;
+		props.engine.setState({ currentTool: 'eraser' });
+		hasHardwarePressure = false;
+		lastHwPressure = 0.5;
+		const { x, y } = getCanvasCoords(e.clientX, e.clientY);
+		const pressure = getEffectivePressure(e, x, y);
+		props.engine.beginStroke(x, y, pressure);
+		return;
+	}
 	if (e.button !== 0) return;
 	isPointerDown = true;
+	isRightButtonEraser = false;
 	hasHardwarePressure = false;
 	lastHwPressure = 0.5;
 
@@ -397,6 +418,12 @@ function onPointerUp(e: PointerEvent) {
 	const stroke = props.engine.endStroke();
 	if (stroke) {
 		emit('strokeEnd', stroke);
+	}
+	// 右クリック消しゴムモードを解除して元のツールに復元
+	if (isRightButtonEraser && savedToolBeforeRightClick != null) {
+		props.engine.setState({ currentTool: savedToolBeforeRightClick as any });
+		savedToolBeforeRightClick = null;
+		isRightButtonEraser = false;
 	}
 	lastTime = 0;
 	strokePointCount = 0;
