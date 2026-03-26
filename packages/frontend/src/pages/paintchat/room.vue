@@ -39,10 +39,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 				:myConsent="myPublishConsent"
 				:partnerConsent="partnerPublishConsent"
 				:isPublished="isPublished"
+				:currentLayer="currentLayerRef"
+				:layerOpacities="layerOpacitiesRef"
 				@toolChange="onToolChange"
 				@colorChange="onColorChange"
 				@widthChange="onWidthChange"
 				@opacityChange="onOpacityChange"
+				@layerChange="onLayerChange"
+				@layerOpacityChange="onLayerOpacityChange"
 				@undo="onUndo"
 				@zoomIn="canvasCompRef?.zoomIn()"
 				@zoomOut="canvasCompRef?.zoomOut()"
@@ -84,13 +88,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 		:roomId="props.roomId"
 		:participants="roomInfo.participants"
 	/>
-	<XPublish
-		v-if="roomInfo"
-		ref="publishRef"
-		:roomId="props.roomId"
-		:canPublish="strokeCount > 0"
-		@getCanvasImage="onGetCanvasImage"
-	/>
 </MkStickyContainer>
 </template>
 
@@ -111,7 +108,7 @@ import { downloadWithSteganography } from './room.steganography.js';
 import XCanvas from './room.canvas.vue';
 import XToolbar from './room.toolbar.vue';
 import XChat from './room.chat.vue';
-import XPublish from './room.publish.vue';
+// XPublishは廃止（投稿フローはroom.vue内で直接処理）
 
 const props = defineProps<{
 	roomId: string;
@@ -125,8 +122,11 @@ const canvasCompRef = ref<InstanceType<typeof XCanvas> | null>(null);
 const toolbarRef = ref<InstanceType<typeof XToolbar> | null>(null);
 let isEyedropperMode = false;
 const chatRef = ref<InstanceType<typeof XChat> | null>(null);
-const publishRef = ref<InstanceType<typeof XPublish> | null>(null);
 const strokeCount = ref(0);
+
+// レイヤー状態（canvasEngineと同期）
+const currentLayerRef = ref(0);
+const layerOpacitiesRef = ref([1.0, 1.0, 1.0]);
 
 // 投稿許可の状態管理
 const partnerPublishConsent = ref(false);
@@ -200,26 +200,19 @@ paintChat.on('canvasCleared', () => {
 	canvasEngine.value?.clear();
 });
 
-// 投稿同意フローのイベント
-paintChat.on('publishRequested', () => {
-	publishRef.value?.onPublishRequested();
-});
-paintChat.on('publishAgreed', () => {
-	// 相手が投稿を許可した
-	partnerPublishConsent.value = true;
-	publishRef.value?.onPublishAgreed();
-});
-paintChat.on('publishRejected', () => {
-	// 相手が投稿許可を取り消した
-	partnerPublishConsent.value = false;
-	publishRef.value?.onPublishRejected();
-});
-paintChat.on('published', () => {
-	isPublished.value = true;
-	publishRef.value?.onPublished();
+// 投稿同意状態の更新（WebSocket経由で相手の同意状態を受信）
+paintChat.on('publishConsentUpdate', (data) => {
+	if (data.participantId !== roomInfo.value?.myParticipantId) {
+		partnerPublishConsent.value = data.consent;
+	}
 });
 
-// 相手の退出通知（明示的な退出）。プレゼンスをofflineにするだけでダイアログは出さない。
+// 投稿完了通知
+paintChat.on('published', () => {
+	isPublished.value = true;
+});
+
+// 相手の退出通知（明示的な退出）
 paintChat.on('partnerLeft', () => {
 	partnerPresence.value = 'offline';
 });
@@ -236,12 +229,18 @@ paintChat.on('presenceUpdate', (data) => {
 	if (data.participantId !== roomInfo.value?.myParticipantId) {
 		partnerPresence.value = data.status;
 	}
+	// 入退室メッセージはバックエンドがDB保存+WebSocket配信するため、ここでは追加しない
 });
 
 // --- キャンバスイベントハンドラ ---
 function onStrokeEnd(stroke: StrokeData) {
 	paintChat.sendStroke(stroke);
 	strokeCount.value++;
+	// ペンで描画完了した時のみカラーヒストリーに追加+保存
+	if (stroke.tool === 'pen') {
+		toolbarRef.value?.addToHistory(stroke.color);
+		saveColorPreferences();
+	}
 }
 
 function onProgress(points: any[]) {
@@ -274,32 +273,63 @@ function onToggleChat() {
 function onEyedrop(color: string) {
 	toolbarRef.value?.setColorFromEyedropper(color);
 	canvasEngine.value?.setState({ currentColor: color });
+	saveColorPreferences();
+}
+
+// 色設定をDBに保存する（デバウンス付き、色変更のたびに呼ばれる）
+let saveColorsTimer: number | undefined;
+function saveColorPreferences() {
+	if (saveColorsTimer) window.clearTimeout(saveColorsTimer);
+	saveColorsTimer = window.setTimeout(() => {
+		const prefs = toolbarRef.value?.getColorPreferences();
+		if (!prefs) return;
+		misskeyApi('paint-chat/save-colors' as any, {
+			roomId: props.roomId,
+			currentColor: prefs.currentColor,
+			colorHistory: prefs.colorHistory,
+			penWidth: prefs.penWidth,
+			eraserWidth: prefs.eraserWidth,
+		} as any).catch(() => { /* 保存失敗は無視 */ });
+	}, 2000);
 }
 
 function onColorChange(color: string) {
 	canvasEngine.value?.setState({ currentColor: color });
+	saveColorPreferences();
 }
 
 function onWidthChange(width: number) {
 	canvasEngine.value?.setState({ currentWidth: width });
+	saveColorPreferences();
 }
 
 function onOpacityChange(opacity: number) {
 	canvasEngine.value?.setState({ currentOpacity: opacity });
 }
 
+function onLayerChange(layer: number) {
+	canvasEngine.value?.setCurrentLayer(layer);
+	currentLayerRef.value = layer;
+}
+
+function onLayerOpacityChange(layer: number, opacity: number) {
+	canvasEngine.value?.setLayerOpacity(layer, opacity);
+	const newOpacities = [...layerOpacitiesRef.value];
+	newOpacities[layer] = opacity;
+	layerOpacitiesRef.value = newOpacities;
+}
+
 function onUndo() {
 	const strokeId = canvasEngine.value?.undo();
 	if (strokeId) {
-		paintChat.sendUndo();
+		paintChat.sendUndo(strokeId);
 	}
 }
 
 function onDownloadAll() {
-	const canvas = window.document.querySelector('canvas');
-	if (canvas) {
-		downloadWithSteganography(canvas, props.roomId, `paintchat-${props.roomId}.png`);
-	}
+	if (!canvasEngine.value) return;
+	const dataUrl = canvasEngine.value.toDataURL('image/png');
+	downloadFromDataUrl(dataUrl, `paintchat-${props.roomId}.png`);
 }
 
 // 自分のストロークのみダウンロード（ステガノグラフィ付き: FR-037）
@@ -346,35 +376,39 @@ async function onPublishMyArt() {
 	}
 }
 
-// 投稿同意フローからキャンバス画像を要求された時のハンドラ
-function onGetCanvasImage() {
-	if (canvasEngine.value) {
-		const dataUrl = canvasEngine.value.toDataURL('image/png');
-		publishRef.value?.receiveCanvasImage(dataUrl);
-	}
-}
-
 // 投稿許可の自分の状態
 const myPublishConsent = ref(false);
 
-// 投稿許可トグル: サーバー応答後にUI状態を更新（UI/サーバー状態の不整合を防止）
-async function onPublishConsent(consent: boolean) {
-	try {
-		if (consent) {
-			await misskeyApi('paint-chat/publish/agree' as any, { roomId: props.roomId } as any);
-		} else {
-			await misskeyApi('paint-chat/publish/reject' as any, { roomId: props.roomId } as any);
-		}
-		// サーバー応答成功後にUI状態を更新
-		myPublishConsent.value = consent;
-	} catch {
-		// 失敗時はUI状態を変更しない（サーバーとの整合性を維持）
-	}
+// 投稿許可トグル: WebSocket経由で相手に通知するだけ（agree APIは呼ばない）
+function onPublishConsent(consent: boolean) {
+	myPublishConsent.value = consent;
+	paintChat.sendPublishConsent(consent);
 }
 
-// 投稿リクエスト（ツールバーの投稿パネルから呼ばれる。両者許可済みの場合のみ実行可能。）
+// 合作投稿（ツールバーの投稿パネルから呼ばれる。両者許可済みの場合のみ実行可能。）
+// コメント添付なし。キャンバス画像を直接bot投稿する。
 async function onPublishRequest() {
-	publishRef.value?.onPublishRequested();
+	if (!canvasEngine.value) return;
+
+	const confirm = await os.confirm({
+		type: 'question',
+		text: '合作をbot経由で投稿しますか？',
+	});
+	if (confirm.canceled) return;
+
+	const imageDataUrl = canvasEngine.value.toDataURL('image/png');
+
+	try {
+		await misskeyApi('paint-chat/publish/message' as any, {
+			roomId: props.roomId,
+			message: '',
+			imageBase64: imageDataUrl,
+		} as any);
+		isPublished.value = true;
+		await os.alert({ type: 'success', text: '投稿しました。' });
+	} catch {
+		await os.alert({ type: 'error', text: '投稿に失敗しました。' });
+	}
 }
 
 // 通報処理
@@ -445,6 +479,12 @@ onMounted(async () => {
 
 		roomInfo.value = res;
 
+		// 保存された色設定を復元（ツールバーのマウント後にnextTickで適用）
+		if (res.colorPreferences) {
+			await nextTick();
+			toolbarRef.value?.restoreColors(res.colorPreferences);
+		}
+
 		// キャンバスエンジン初期化
 		canvasEngine.value = createCanvasEngine(res.myParticipantId);
 
@@ -477,16 +517,29 @@ onMounted(async () => {
 });
 
 // プレゼンス判定: ページが表示されているかつこの部屋のルートにいるかどうか
+// 入退室メッセージはバックエンドがDB保存+WebSocket配信する
+let myLastPresence: 'online' | 'offline' = 'online';
+
 function onVisibilityChange() {
 	const isOnRoomPage = window.location.pathname.includes(`/paintchat/${props.roomId}`);
-	if (window.document.hidden || !isOnRoomPage) {
-		paintChat.sendPresence('offline');
-	} else {
-		paintChat.sendPresence('online');
+	const newStatus = (window.document.hidden || !isOnRoomPage) ? 'offline' as const : 'online' as const;
+	if (newStatus !== myLastPresence) {
+		myLastPresence = newStatus;
+		paintChat.sendPresence(newStatus);
 	}
 }
 
+// ページ離脱確認: ブラウザのタブ閉じ・リロード時にネイティブダイアログを表示
+function onBeforeUnload(e: BeforeUnloadEvent) {
+	if (!cleaned) {
+		e.preventDefault();
+	}
+}
+
+window.addEventListener('beforeunload', onBeforeUnload);
+
 onUnmounted(() => {
+	window.removeEventListener('beforeunload', onBeforeUnload);
 	// ページ離脱時にもリソースを完全破棄
 	cleanup();
 });

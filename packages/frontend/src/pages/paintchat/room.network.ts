@@ -35,6 +35,7 @@ export function usePaintChatConnection(roomId: string) {
 		presenceUpdate: [] as Array<(data: { participantId: string; status: PresenceStatus }) => void>,
 		partnerLeft: [] as Array<(data: Record<string, never>) => void>,
 		partnerReconnected: [] as Array<(data: Record<string, never>) => void>,
+		publishConsentUpdate: [] as Array<(data: { participantId: string; consent: boolean }) => void>,
 		publishRequested: [] as Array<(data: { participantId: string }) => void>,
 		publishRejected: [] as Array<(data: Record<string, never>) => void>,
 		publishAgreed: [] as Array<(data: Record<string, never>) => void>,
@@ -174,12 +175,16 @@ export function usePaintChatConnection(roomId: string) {
 		channelSend('clearCanvas', {});
 	}
 
-	function sendUndo() {
-		channelSend('undoStroke', {});
+	function sendUndo(strokeId?: string) {
+		channelSend('undoStroke', { strokeId: strokeId ?? '' });
 	}
 
 	function sendPresence(status: PresenceStatus) {
 		channelSend('presence', { status });
+	}
+
+	function sendPublishConsent(consent: boolean) {
+		channelSend('publishConsent', { consent });
 	}
 
 	// ヘルスチェック開始
@@ -207,5 +212,6 @@ export function usePaintChatConnection(roomId: string) {
 		sendClearCanvas,
 		sendUndo,
 		sendPresence,
+		sendPublishConsent,
 	};
 }
