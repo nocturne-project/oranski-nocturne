@@ -86,12 +86,14 @@ function renderStrokeForMyBuffer(ctx: CanvasRenderingContext2D, stroke: StrokeDa
 	}
 }
 
-// Catmull-Romで補間したポイント列を生成する（renderStroke/プレビューで共用）
+// Catmull-Romで補間した後、等距離リサンプリングで円スタンプ間の隙間を防ぐ
+// maxSpacing: 隣接ポイント間の最大距離（これ以下に保つことで円が必ず重なる）
 function interpolatePoints(points: PressurePoint[]): PressurePoint[] {
-	const interpolated: PressurePoint[] = [];
+	// Step 1: Catmull-Rom補間で基本的なスムージング
+	const coarse: PressurePoint[] = [];
 	if (points.length === 2) {
 		for (let t = 0; t <= 1; t += 0.25) {
-			interpolated.push({
+			coarse.push({
 				x: points[0].x + (points[1].x - points[0].x) * t,
 				y: points[0].y + (points[1].y - points[0].y) * t,
 				pressure: points[0].pressure + (points[1].pressure - points[0].pressure) * t,
@@ -105,11 +107,38 @@ function interpolatePoints(points: PressurePoint[]): PressurePoint[] {
 			const p2 = points[Math.min(points.length - 1, i + 1)];
 			const p3 = points[Math.min(points.length - 1, i + 2)];
 			for (let step = 0; step <= steps; step++) {
-				interpolated.push(catmullRomPoint(p0, p1, p2, p3, step / steps));
+				coarse.push(catmullRomPoint(p0, p1, p2, p3, step / steps));
 			}
 		}
 	}
-	return interpolated;
+	if (coarse.length < 2) return coarse;
+
+	// Step 2: 等距離リサンプリング（隣接ポイント間距離を最大1.5pxに制限）
+	// 円スタンプが必ず重なるように密にポイントを配置する
+	const MAX_SPACING = 1.5;
+	const resampled: PressurePoint[] = [coarse[0]];
+	for (let i = 1; i < coarse.length; i++) {
+		const prev = coarse[i - 1];
+		const curr = coarse[i];
+		const dx = curr.x - prev.x;
+		const dy = curr.y - prev.y;
+		const dist = Math.sqrt(dx * dx + dy * dy);
+		if (dist <= MAX_SPACING) {
+			resampled.push(curr);
+		} else {
+			// 間を補間して密にする
+			const subdivisions = Math.ceil(dist / MAX_SPACING);
+			for (let j = 1; j <= subdivisions; j++) {
+				const t = j / subdivisions;
+				resampled.push({
+					x: prev.x + dx * t,
+					y: prev.y + dy * t,
+					pressure: prev.pressure + (curr.pressure - prev.pressure) * t,
+				});
+			}
+		}
+	}
+	return resampled;
 }
 
 // 可変幅ストロークを円スタンプ方式で描画する
@@ -416,19 +445,28 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 		}
 		ctx.globalAlpha = 1.0;
 
-		// 3. 描画中プレビュー（fill-based方式。数珠つなぎ防止。）
+		// 3. 描画中プレビュー（高速1パスstroke方式。確定時にfill-based円スタンプで綺麗に再描画される）
 		if (state.isDrawing && state.currentPoints.length >= 2) {
-			const previewStroke: StrokeData = {
-				id: '',
-				participantId: myParticipantId,
-				points: state.currentPoints,
-				color: state.currentColor,
-				width: state.currentWidth,
-				opacity: state.currentOpacity,
-				tool: state.currentTool,
-				layer: currentLayer,
-			};
-			renderStroke(ctx, previewStroke, tmpCanvas, tmpCtx);
+			ctx.save();
+			ctx.lineCap = 'round';
+			ctx.lineJoin = 'round';
+			if (state.currentTool === 'eraser') {
+				ctx.globalCompositeOperation = 'destination-out';
+			} else {
+				ctx.globalCompositeOperation = 'source-over';
+				ctx.strokeStyle = state.currentColor;
+				ctx.globalAlpha = state.currentOpacity;
+			}
+			const pts = state.currentPoints;
+			const avgP = (pts[0].pressure + pts[pts.length - 1].pressure) / 2;
+			ctx.lineWidth = Math.max(0.5, state.currentWidth * avgP);
+			ctx.beginPath();
+			ctx.moveTo(pts[0].x, pts[0].y);
+			for (let i = 1; i < pts.length; i++) {
+				ctx.lineTo(pts[i].x, pts[i].y);
+			}
+			ctx.stroke();
+			ctx.restore();
 		}
 
 		// 4. リモートの進行中描画（最上層に表示）
@@ -528,14 +566,30 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 			const p = pressureEnabled ? pressure : 1.0;
 			state.currentPoints.push({ x, y, pressure: p });
 
-			// プレビューはredrawAllで描画（fill-based方式で数珠つなぎ防止）
-			// requestAnimationFrameでスロットリングし、毎ポイントでの再描画を避ける
-			if (!pendingRedraw) {
-				pendingRedraw = true;
-				window.requestAnimationFrame(() => {
-					pendingRedraw = false;
-					redrawAll();
-				});
+			// 高速差分プレビュー: 直近2ポイントをメインcanvasに直接描画
+			// 確定時（endStroke→redrawAll）にfill-based円スタンプで綺麗に再描画される
+			if (ctx && state.currentPoints.length >= 2) {
+				const pts = state.currentPoints;
+				const i = pts.length - 1;
+				const p0 = pts[i - 1];
+				const p1 = pts[i];
+				ctx.save();
+				ctx.lineCap = 'round';
+				ctx.lineJoin = 'round';
+				if (state.currentTool === 'eraser') {
+					ctx.globalCompositeOperation = 'destination-out';
+				} else {
+					ctx.globalCompositeOperation = 'source-over';
+					ctx.strokeStyle = state.currentColor;
+					ctx.globalAlpha = state.currentOpacity;
+				}
+				const avgP = (p0.pressure + p1.pressure) / 2;
+				ctx.lineWidth = Math.max(0.5, state.currentWidth * avgP);
+				ctx.beginPath();
+				ctx.moveTo(p0.x, p0.y);
+				ctx.lineTo(p1.x, p1.y);
+				ctx.stroke();
+				ctx.restore();
 			}
 		},
 
