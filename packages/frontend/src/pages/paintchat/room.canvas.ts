@@ -155,20 +155,23 @@ function drawVariableWidthStroke(ctx: CanvasRenderingContext2D, interpolated: Pr
 	}
 	ctx.globalAlpha = 1.0;
 
-	// 筆圧のスムージング（前後5ポイントの加重平均で滑らかに）
-	const SMOOTH_WINDOW = 5;
+	// 非対称エンベロープ方式の筆圧スムージング
+	// 細くなる方向（筆圧低下）: 即座に反応
+	// 太くなる方向（筆圧増加）: ゆっくり追従（ペンを離していないのに太く戻る「バウンスバック」を防止）
 	const smoothedPressures: number[] = [];
+	let envPressure = interpolated[0].pressure;
+	const ATTACK_RATE = 0.08; // 太くなる速度（小さいほどゆっくり）
+	const RELEASE_RATE = 0.6; // 細くなる速度（大きいほど即座）
 	for (let i = 0; i < interpolated.length; i++) {
-		let sum = 0;
-		let wSum = 0;
-		for (let j = -SMOOTH_WINDOW; j <= SMOOTH_WINDOW; j++) {
-			const idx = i + j;
-			if (idx < 0 || idx >= interpolated.length) continue;
-			const w = 1 / (1 + Math.abs(j));
-			sum += interpolated[idx].pressure * w;
-			wSum += w;
+		const raw = interpolated[i].pressure;
+		if (raw > envPressure) {
+			// 太くなる方向: ゆっくり追従
+			envPressure += (raw - envPressure) * ATTACK_RATE;
+		} else {
+			// 細くなる方向: 速く追従
+			envPressure += (raw - envPressure) * RELEASE_RATE;
 		}
-		smoothedPressures.push(sum / wSum);
+		smoothedPressures.push(envPressure);
 	}
 
 	// セグメント別stroke: 各セグメントで筆圧に応じたlineWidth
