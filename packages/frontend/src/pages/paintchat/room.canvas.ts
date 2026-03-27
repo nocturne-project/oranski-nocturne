@@ -141,49 +141,48 @@ function interpolatePoints(points: PressurePoint[]): PressurePoint[] {
 	return resampled;
 }
 
-// 可変幅ストロークを円スタンプ方式で描画する
-// 各補間ポイントに筆圧に応じた半径の円をfillする。隣接円が重なることで滑らかな線になる。
-// stroke()も輪郭パスも使わないため、数珠つなぎ・自己交差のいずれも発生しない。
+// 可変幅ストロークをオフスクリーンバッファ上でstroke()方式で描画する
+// opacity 1.0の同色stroke()重なりは視覚的に見えないため、セグメント別lineWidthが使える
+// 必ずオフスクリーンバッファ（opacity 1.0）上で呼ぶこと。直接描画するとボツボツになる。
 function drawVariableWidthStroke(ctx: CanvasRenderingContext2D, interpolated: PressurePoint[], width: number, color: string, isEraser: boolean): void {
+	ctx.lineCap = 'round';
+	ctx.lineJoin = 'round';
 	if (isEraser) {
 		ctx.globalCompositeOperation = 'destination-out';
-		ctx.fillStyle = 'black';
 	} else {
 		ctx.globalCompositeOperation = 'source-over';
-		ctx.fillStyle = color;
+		ctx.strokeStyle = color;
 	}
 	ctx.globalAlpha = 1.0;
 
-	// 筆圧radiiのスムージング（前後5ポイントの加重平均で滑らかに）
-	const rawRadii: number[] = [];
-	for (let i = 0; i < interpolated.length; i++) {
-		rawRadii.push(Math.max(0.25, (width * interpolated[i].pressure) / 2));
-	}
+	// 筆圧のスムージング（前後5ポイントの加重平均で滑らかに）
 	const SMOOTH_WINDOW = 5;
-	const radii: number[] = [];
-	for (let i = 0; i < rawRadii.length; i++) {
+	const smoothedPressures: number[] = [];
+	for (let i = 0; i < interpolated.length; i++) {
 		let sum = 0;
 		let wSum = 0;
 		for (let j = -SMOOTH_WINDOW; j <= SMOOTH_WINDOW; j++) {
 			const idx = i + j;
-			if (idx < 0 || idx >= rawRadii.length) continue;
+			if (idx < 0 || idx >= interpolated.length) continue;
 			const w = 1 / (1 + Math.abs(j));
-			sum += rawRadii[idx] * w;
+			sum += interpolated[idx].pressure * w;
 			wSum += w;
 		}
-		radii.push(sum / wSum);
+		smoothedPressures.push(sum / wSum);
 	}
 
-	// 各ポイントに円をスタンプ。隣接する円が重なって滑らかな線になる。
-	// 1つのPathにまとめてfillすることで描画コールを1回に削減。
-	ctx.beginPath();
-	for (let i = 0; i < interpolated.length; i++) {
-		const p = interpolated[i];
-		const r = radii[i];
-		ctx.moveTo(p.x + r, p.y);
-		ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+	// セグメント別stroke: 各セグメントで筆圧に応じたlineWidth
+	// オフスクリーンバッファ上(opacity 1.0)なので、lineCap:roundの重なりは見えない
+	for (let i = 0; i < interpolated.length - 1; i++) {
+		const p0 = interpolated[i];
+		const p1 = interpolated[i + 1];
+		const pressure = (smoothedPressures[i] + smoothedPressures[i + 1]) / 2;
+		ctx.lineWidth = Math.max(0.5, width * pressure);
+		ctx.beginPath();
+		ctx.moveTo(p0.x, p0.y);
+		ctx.lineTo(p1.x, p1.y);
+		ctx.stroke();
 	}
-	ctx.fill();
 }
 
 // オフスクリーンバッファ方式でストロークを描画する
@@ -218,22 +217,19 @@ function renderStroke(ctx: CanvasRenderingContext2D, stroke: StrokeData, bufferC
 	const interpolated = interpolatePoints(points);
 	if (interpolated.length < 2) return;
 
-	// 消しゴムはdestination-outで直接描画（オフスクリーンバッファ不要）
-	if (stroke.tool === 'eraser') {
-		ctx.save();
-		drawVariableWidthStroke(ctx, interpolated, stroke.width, stroke.color, true);
-		ctx.restore();
-		return;
-	}
-
-	// ペン: 全opacityでオフスクリーンバッファ方式を使用
-	// opacity 1.0でもセグメント別strokeのlineCap:round重なりでボツボツが出るため
+	// 全ストローク（ペン・消しゴム共通）をオフスクリーンバッファ経由で描画
+	// opacity 1.0のバッファ上でstroke()すると、同色重なりが見えないため滑らかになる
 	if (bufferCanvas && bufferCtx) {
 		bufferCtx.clearRect(0, 0, bufferCanvas.width, bufferCanvas.height);
 		drawVariableWidthStroke(bufferCtx, interpolated, stroke.width, stroke.color, false);
 		ctx.save();
-		ctx.globalCompositeOperation = 'source-over';
-		ctx.globalAlpha = stroke.opacity;
+		if (stroke.tool === 'eraser') {
+			ctx.globalCompositeOperation = 'destination-out';
+			ctx.globalAlpha = 1.0;
+		} else {
+			ctx.globalCompositeOperation = 'source-over';
+			ctx.globalAlpha = stroke.opacity;
+		}
 		ctx.drawImage(bufferCanvas, 0, 0);
 		ctx.restore();
 	} else {
@@ -244,8 +240,13 @@ function renderStroke(ctx: CanvasRenderingContext2D, stroke: StrokeData, bufferC
 		const tctx = tc.getContext('2d')!;
 		drawVariableWidthStroke(tctx, interpolated, stroke.width, stroke.color, false);
 		ctx.save();
-		ctx.globalCompositeOperation = 'source-over';
-		ctx.globalAlpha = stroke.opacity;
+		if (stroke.tool === 'eraser') {
+			ctx.globalCompositeOperation = 'destination-out';
+			ctx.globalAlpha = 1.0;
+		} else {
+			ctx.globalCompositeOperation = 'source-over';
+			ctx.globalAlpha = stroke.opacity;
+		}
 		ctx.drawImage(tc, 0, 0);
 		ctx.restore();
 	}
