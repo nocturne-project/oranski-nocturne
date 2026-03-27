@@ -121,6 +121,8 @@ let lastTime = 0;
 let strokePointCount = 0;
 let lastPressure = 0.15;
 
+// 筆圧シミュレーション（マウス/筆圧非対応デバイス用）
+// 変動幅を狭く（0.35-0.5）、スムージングを強くしてボツボツを防止
 function simulatePressure(x: number, y: number): number {
 	const now = Date.now();
 	const dt = now - lastTime;
@@ -130,9 +132,8 @@ function simulatePressure(x: number, y: number): number {
 		lastX = x;
 		lastY = y;
 		lastTime = now;
-		// 書き始めは非常に細く
-		lastPressure = 0.15;
-		return 0.15;
+		lastPressure = 0.3;
+		return 0.3;
 	}
 	const dx = x - lastX;
 	const dy = y - lastY;
@@ -141,19 +142,19 @@ function simulatePressure(x: number, y: number): number {
 	lastY = y;
 	lastTime = now;
 
-	// ベース筆圧: 速度ベース（速いほど細く）、上限を抑える
-	let targetPressure = Math.max(0.15, Math.min(0.6, 0.5 - speed * 0.2));
+	// 変動幅を狭くしてlineWidth急変によるボツボツを抑制（0.35-0.5）
+	let targetPressure = Math.max(0.35, Math.min(0.5, 0.48 - speed * 0.08));
 
 	// 書き始め（最初の5ポイント）はゆっくりフェードイン
 	if (strokePointCount <= 5) {
-		targetPressure *= strokePointCount / 5;
+		targetPressure = 0.3 + (targetPressure - 0.3) * (strokePointCount / 5);
 	}
 
-	// 急激な筆圧変化を抑えてスムーズにする（補間）
-	const smoothing = 0.3;
+	// スムージング強化（0.3→0.15）: 急激な筆圧変化を更に抑える
+	const smoothing = 0.15;
 	lastPressure = lastPressure + (targetPressure - lastPressure) * smoothing;
 
-	return Math.max(0.1, lastPressure);
+	return Math.max(0.3, lastPressure);
 }
 
 // --- タッチイベント ---
@@ -372,8 +373,19 @@ function onPointerDown(e: PointerEvent) {
 	}
 
 	const { x, y } = getCanvasCoords(e.clientX, e.clientY);
-	const pressure = getEffectivePressure(e, x, y);
-	props.engine.beginStroke(x, y, pressure);
+
+	// マウスの場合: ストローク開始遅延（ドット防止）
+	if (e.pointerType === 'mouse') {
+		pendingStrokeStart = { x, y };
+		strokeStarted = false;
+		isSmoothingInitialized = false;
+		lastTime = 0;
+		strokePointCount = 0;
+	} else {
+		// ペン（スタイラス）の場合: 即座に開始
+		const pressure = getEffectivePressure(e, x, y);
+		props.engine.beginStroke(x, y, pressure);
+	}
 }
 
 function onPointerMove(e: PointerEvent) {
@@ -390,6 +402,21 @@ function onPointerMove(e: PointerEvent) {
 	const { x, y } = getCanvasCoords(e.clientX, e.clientY);
 
 	if (isPointerDown) {
+		// マウスのストローク開始遅延チェック（ドット防止）
+		if (pendingStrokeStart && e.pointerType === 'mouse') {
+			const dx = x - pendingStrokeStart.x;
+			const dy = y - pendingStrokeStart.y;
+			if (Math.sqrt(dx * dx + dy * dy) < STROKE_START_THRESHOLD) return;
+			const startCoords = pendingStrokeStart;
+			pendingStrokeStart = null;
+			strokeStarted = true;
+			smoothedX = startCoords.x;
+			smoothedY = startCoords.y;
+			isSmoothingInitialized = true;
+			const startPressure = getEffectivePressure(e, startCoords.x, startCoords.y);
+			props.engine.beginStroke(startCoords.x, startCoords.y, startPressure);
+		}
+
 		// 手ブレ補正
 		if (isSmoothingInitialized) {
 			smoothedX = smoothedX + (x - smoothedX) * (1 - SMOOTHING_FACTOR);
@@ -415,10 +442,14 @@ function onPointerUp(e: PointerEvent) {
 	if (e.pointerType === 'touch') return;
 	if (!isPointerDown) return;
 	isPointerDown = false;
-	const stroke = props.engine.endStroke();
-	if (stroke) {
-		emit('strokeEnd', stroke);
+	pendingStrokeStart = null;
+	if (strokeStarted || e.pointerType !== 'mouse') {
+		const stroke = props.engine.endStroke();
+		if (stroke) {
+			emit('strokeEnd', stroke);
+		}
 	}
+	strokeStarted = false;
 	// 右クリック消しゴムモードを解除して元のツールに復元
 	if (isRightButtonEraser && savedToolBeforeRightClick != null) {
 		props.engine.setState({ currentTool: savedToolBeforeRightClick as any });

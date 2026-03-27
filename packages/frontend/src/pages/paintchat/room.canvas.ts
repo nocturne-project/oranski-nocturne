@@ -125,11 +125,21 @@ function drawVariableWidthStroke(ctx: CanvasRenderingContext2D, interpolated: Pr
 	}
 	ctx.globalAlpha = 1.0;
 
+	// 隣接セグメント間のlineWidth急変を防ぐスムージング
+	let prevWidth = Math.max(0.5, width * interpolated[0].pressure);
+	const WIDTH_SMOOTH = 0.3; // lineWidth変化の最大割合（前セグメントの30%まで）
+
 	for (let i = 0; i < interpolated.length - 1; i++) {
 		const p0 = interpolated[i];
 		const p1 = interpolated[i + 1];
 		const pressure = (p0.pressure + p1.pressure) / 2;
-		ctx.lineWidth = Math.max(0.5, width * pressure);
+		let targetWidth = Math.max(0.5, width * pressure);
+		// 急激な太さ変化を制限（ボツボツ防止）
+		const maxDelta = prevWidth * WIDTH_SMOOTH;
+		if (targetWidth > prevWidth + maxDelta) targetWidth = prevWidth + maxDelta;
+		if (targetWidth < prevWidth - maxDelta) targetWidth = prevWidth - maxDelta;
+		ctx.lineWidth = targetWidth;
+		prevWidth = targetWidth;
 		ctx.beginPath();
 		ctx.moveTo(p0.x, p0.y);
 		ctx.lineTo(p1.x, p1.y);
@@ -567,13 +577,11 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 				if (myCtx) renderStroke(myCtx, stroke);
 			}
 
-			// アンドゥ上限を超えたらバックグラウンドでマージ（FR-024/FR-025）
+			// アンドゥ上限を超えたらマージ（FR-024/FR-025）
+			// 同期実行: 非同期だとtoDataURL時にマージ未完了で出力がずれる
 			const myStrokes = strokes.filter(s => s.participantId === myParticipantId);
 			if (myStrokes.length > MAX_UNDO) {
-				// requestAnimationFrameでバックグラウンド実行し、描画操作を妨げない
-				window.requestAnimationFrame(() => {
-					doMergeOldStrokes();
-				});
+				doMergeOldStrokes();
 			}
 
 			// 完全な再描画（スムージング適用）
@@ -692,8 +700,10 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 		},
 
 		toDataURL(type = 'image/png'): string {
-			// 全レイヤーを透明度1.0で合成して出力（作業中のレイヤー透明度は反映しない）
+			// 出力前にレイヤーcanvasを最新状態に再描画（pending mergeやプレビューの影響を排除）
 			if (!canvas || !ctx) return '';
+			redrawAll();
+			// 全レイヤーを透明度1.0で合成して出力（作業中のレイヤー透明度は反映しない）
 			const exportCanvas = window.document.createElement('canvas');
 			exportCanvas.width = canvas.width;
 			exportCanvas.height = canvas.height;
@@ -710,6 +720,8 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 		},
 
 		toMyStrokesDataURL(): string {
+			// 出力前にmyStrokesバッファを最新状態に再構築
+			rebuildMyStrokesBuffer();
 			// 自分のストロークを全レイヤー合成して出力（白背景、opacity 1.0）
 			if (!canvas) return '';
 			const exportCanvas = window.document.createElement('canvas');
