@@ -179,15 +179,16 @@ function renderStroke(ctx: CanvasRenderingContext2D, stroke: StrokeData, bufferC
 	const interpolated = interpolatePoints(points);
 	if (interpolated.length < 2) return;
 
-	// 消しゴムまたはopacity 1.0の場合: 一時canvasは不要、直接描画
-	if (stroke.tool === 'eraser' || stroke.opacity >= 1.0) {
+	// 消しゴムはdestination-outで直接描画（オフスクリーンバッファ不要）
+	if (stroke.tool === 'eraser') {
 		ctx.save();
-		drawVariableWidthStroke(ctx, interpolated, stroke.width, stroke.color, stroke.tool === 'eraser');
+		drawVariableWidthStroke(ctx, interpolated, stroke.width, stroke.color, true);
 		ctx.restore();
 		return;
 	}
 
-	// 半透明ペン: オフスクリーンバッファ方式（事前作成canvasを使い回し）
+	// ペン: 全opacityでオフスクリーンバッファ方式を使用
+	// opacity 1.0でもセグメント別strokeのlineCap:round重なりでボツボツが出るため
 	if (bufferCanvas && bufferCtx) {
 		bufferCtx.clearRect(0, 0, bufferCanvas.width, bufferCanvas.height);
 		drawVariableWidthStroke(bufferCtx, interpolated, stroke.width, stroke.color, false);
