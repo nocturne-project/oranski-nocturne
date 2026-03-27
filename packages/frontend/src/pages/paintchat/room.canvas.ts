@@ -112,9 +112,9 @@ function interpolatePoints(points: PressurePoint[]): PressurePoint[] {
 	return interpolated;
 }
 
-// 可変幅ストロークをfill-based方式で描画する（数珠つなぎアーティファクト防止）
-// 各ポイントで法線方向にwidth/2だけオフセットし、左右の輪郭線を構築してfill
-// stroke()を使わないため、lineCap:roundのドット問題が発生しない
+// 可変幅ストロークを円スタンプ方式で描画する
+// 各補間ポイントに筆圧に応じた半径の円をfillする。隣接円が重なることで滑らかな線になる。
+// stroke()も輪郭パスも使わないため、数珠つなぎ・自己交差のいずれも発生しない。
 function drawVariableWidthStroke(ctx: CanvasRenderingContext2D, interpolated: PressurePoint[], width: number, color: string, isEraser: boolean): void {
 	if (isEraser) {
 		ctx.globalCompositeOperation = 'destination-out';
@@ -125,85 +125,35 @@ function drawVariableWidthStroke(ctx: CanvasRenderingContext2D, interpolated: Pr
 	}
 	ctx.globalAlpha = 1.0;
 
-	// 各ポイントの半径を計算し、ガウシアンスムージングで滑らかにする
-	// 手ブレ補正済みの綺麗なパス上に、滑らかな筆圧情報を適用する
+	// 筆圧radiiのスムージング（前後5ポイントの加重平均で滑らかに）
 	const rawRadii: number[] = [];
 	for (let i = 0; i < interpolated.length; i++) {
 		rawRadii.push(Math.max(0.25, (width * interpolated[i].pressure) / 2));
 	}
-
-	// 半径のスムージング（前後5ポイントの加重平均）
 	const SMOOTH_WINDOW = 5;
 	const radii: number[] = [];
 	for (let i = 0; i < rawRadii.length; i++) {
 		let sum = 0;
-		let weightSum = 0;
+		let wSum = 0;
 		for (let j = -SMOOTH_WINDOW; j <= SMOOTH_WINDOW; j++) {
 			const idx = i + j;
 			if (idx < 0 || idx >= rawRadii.length) continue;
-			const w = 1 / (1 + Math.abs(j)); // 距離に反比例する重み
+			const w = 1 / (1 + Math.abs(j));
 			sum += rawRadii[idx] * w;
-			weightSum += w;
+			wSum += w;
 		}
-		radii.push(sum / weightSum);
+		radii.push(sum / wSum);
 	}
 
-	// 各ポイントの法線ベクトルを計算
-	const leftX: number[] = [];
-	const leftY: number[] = [];
-	const rightX: number[] = [];
-	const rightY: number[] = [];
-
-	for (let i = 0; i < interpolated.length; i++) {
-		let dx: number, dy: number;
-		if (i === 0) {
-			dx = interpolated[1].x - interpolated[0].x;
-			dy = interpolated[1].y - interpolated[0].y;
-		} else if (i === interpolated.length - 1) {
-			dx = interpolated[i].x - interpolated[i - 1].x;
-			dy = interpolated[i].y - interpolated[i - 1].y;
-		} else {
-			dx = interpolated[i + 1].x - interpolated[i - 1].x;
-			dy = interpolated[i + 1].y - interpolated[i - 1].y;
-		}
-		const len = Math.sqrt(dx * dx + dy * dy) || 1;
-		// 法線（進行方向に対して垂直）
-		const nx = -dy / len;
-		const ny = dx / len;
-		const r = radii[i];
-		leftX.push(interpolated[i].x + nx * r);
-		leftY.push(interpolated[i].y + ny * r);
-		rightX.push(interpolated[i].x - nx * r);
-		rightY.push(interpolated[i].y - ny * r);
-	}
-
-	// 左輪郭→右輪郭（逆順）でclosedパスを構築してfill
+	// 各ポイントに円をスタンプ。隣接する円が重なって滑らかな線になる。
+	// 1つのPathにまとめてfillすることで描画コールを1回に削減。
 	ctx.beginPath();
-	ctx.moveTo(leftX[0], leftY[0]);
-	for (let i = 1; i < leftX.length; i++) {
-		ctx.lineTo(leftX[i], leftY[i]);
+	for (let i = 0; i < interpolated.length; i++) {
+		const p = interpolated[i];
+		const r = radii[i];
+		ctx.moveTo(p.x + r, p.y);
+		ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
 	}
-	// 先端の丸み（半円）
-	const lastPt = interpolated[interpolated.length - 1];
-	const lastR = radii[radii.length - 1];
-	const lastDx = interpolated.length >= 2 ? lastPt.x - interpolated[interpolated.length - 2].x : 1;
-	const lastDy = interpolated.length >= 2 ? lastPt.y - interpolated[interpolated.length - 2].y : 0;
-	const lastAngle = Math.atan2(lastDy, lastDx);
-	ctx.arc(lastPt.x, lastPt.y, lastR, lastAngle - Math.PI / 2, lastAngle + Math.PI / 2);
-
-	// 右輪郭（逆順）
-	for (let i = rightX.length - 1; i >= 0; i--) {
-		ctx.lineTo(rightX[i], rightY[i]);
-	}
-	// 始点の丸み（半円）
-	const firstPt = interpolated[0];
-	const firstR = radii[0];
-	const firstDx = interpolated.length >= 2 ? interpolated[1].x - firstPt.x : 1;
-	const firstDy = interpolated.length >= 2 ? interpolated[1].y - firstPt.y : 0;
-	const firstAngle = Math.atan2(firstDy, firstDx);
-	ctx.arc(firstPt.x, firstPt.y, firstR, firstAngle + Math.PI / 2, firstAngle + Math.PI * 3 / 2);
-
-	ctx.closePath();
 	ctx.fill();
 }
 
