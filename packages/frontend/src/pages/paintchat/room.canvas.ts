@@ -113,9 +113,9 @@ function interpolatePoints(points: PressurePoint[]): PressurePoint[] {
 	}
 	if (coarse.length < 2) return coarse;
 
-	// Step 2: 等距離リサンプリング（隣接ポイント間距離を最大1.5pxに制限）
-	// 円スタンプが必ず重なるように密にポイントを配置する
-	const MAX_SPACING = 1.5;
+	// Step 2: 等距離リサンプリング（隣接ポイント間距離を最大0.5pxに制限）
+	// ピクセル単位で密に配置し、円スタンプの隙間を完全に排除する
+	const MAX_SPACING = 0.5;
 	const resampled: PressurePoint[] = [coarse[0]];
 	for (let i = 1; i < coarse.length; i++) {
 		const prev = coarse[i - 1];

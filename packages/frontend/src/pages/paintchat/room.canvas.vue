@@ -121,8 +121,8 @@ let lastTime = 0;
 let strokePointCount = 0;
 let lastPressure = 0.15;
 
-// 筆圧シミュレーション（マウス/筆圧非対応デバイス用）
-// 変動幅を狭く（0.35-0.5）、スムージングを強くしてボツボツを防止
+// 筆圧シミュレーション（マウス/筆圧非対応デバイス/指描き用）
+// 速度ベース: 速く描くと細く、ゆっくり描くと太く
 function simulatePressure(x: number, y: number): number {
 	const now = Date.now();
 	const dt = now - lastTime;
@@ -132,8 +132,8 @@ function simulatePressure(x: number, y: number): number {
 		lastX = x;
 		lastY = y;
 		lastTime = now;
-		lastPressure = 0.3;
-		return 0.3;
+		lastPressure = 0.15;
+		return 0.15;
 	}
 	const dx = x - lastX;
 	const dy = y - lastY;
@@ -142,19 +142,19 @@ function simulatePressure(x: number, y: number): number {
 	lastY = y;
 	lastTime = now;
 
-	// 変動幅を狭くしてlineWidth急変によるボツボツを抑制（0.35-0.5）
-	let targetPressure = Math.max(0.35, Math.min(0.5, 0.48 - speed * 0.08));
+	// 速度ベース筆圧（速いほど細く）
+	let targetPressure = Math.max(0.15, Math.min(0.6, 0.5 - speed * 0.2));
 
 	// 書き始め（最初の5ポイント）はゆっくりフェードイン
 	if (strokePointCount <= 5) {
-		targetPressure = 0.3 + (targetPressure - 0.3) * (strokePointCount / 5);
+		targetPressure *= strokePointCount / 5;
 	}
 
-	// スムージング強化（0.3→0.15）: 急激な筆圧変化を更に抑える
-	const smoothing = 0.15;
+	// スムージング
+	const smoothing = 0.3;
 	lastPressure = lastPressure + (targetPressure - lastPressure) * smoothing;
 
-	return Math.max(0.3, lastPressure);
+	return Math.max(0.1, lastPressure);
 }
 
 // --- タッチイベント ---
