@@ -62,5 +62,5 @@ export class PaintChatParticipant {
 		nullable: true,
 		default: null,
 	})
-	public colorPreferences: { currentColor: string; colorHistory: string[]; penWidth?: number; eraserWidth?: number } | null;
+	public colorPreferences: { currentColor: string; colorHistory: string[]; penWidth?: number; eraserWidth?: number; pressureEnabled?: boolean } | null;
 }

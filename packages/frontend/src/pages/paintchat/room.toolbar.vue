@@ -152,6 +152,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 	<!-- 太さ + 透明度 -->
 	<template v-if="activePanel === 'width'">
+		<div :class="$style.pressureToggle">
+			<label :class="$style.toggleLabel">
+				<input type="checkbox" :checked="pressureEnabled" @change="onPressureToggle">
+				<span :class="$style.toggleText">筆圧 {{ pressureEnabled ? 'ON' : 'OFF' }}</span>
+			</label>
+		</div>
 		<div :class="$style.widthSection">
 			<span :class="$style.sectionLabel">太さ</span>
 			<div :class="$style.widthGrid">
@@ -274,6 +280,7 @@ const emit = defineEmits<{
 	(e: 'publishRequest'): void;
 	(e: 'report'): void;
 	(e: 'leave'): void;
+	(e: 'pressureChange', enabled: boolean): void;
 }>();
 
 const props = defineProps<{
@@ -303,6 +310,7 @@ const eraserWidth = ref(20);
 const currentColor = ref('#000000');
 const currentWidth = ref(5);
 const currentOpacity = ref(1.0);
+const pressureEnabled = ref(true);
 const activePanel = ref<'color' | 'width' | 'layer' | 'download' | 'publish' | null>(null);
 
 // カラーヒストリー（最近使った色、最大10件、重複なし）
@@ -398,6 +406,12 @@ function onOpacityChange(e: Event) {
 	emit('opacityChange', value);
 }
 
+// 筆圧ON/OFFトグル
+function onPressureToggle(e: Event) {
+	pressureEnabled.value = (e.target as HTMLInputElement).checked;
+	emit('pressureChange', pressureEnabled.value);
+}
+
 function togglePanel(panel: 'color' | 'width' | 'layer' | 'download' | 'publish') {
 	activePanel.value = activePanel.value === panel ? null : panel;
 }
@@ -419,7 +433,7 @@ function onLayerOpacityChange(e: Event) {
 }
 
 // 保存されたツール設定を復元する（リロード時にroom.vueから呼ばれる）
-function restoreColors(prefs: { currentColor: string; colorHistory: string[]; penWidth?: number; eraserWidth?: number }) {
+function restoreColors(prefs: { currentColor: string; colorHistory: string[]; penWidth?: number; eraserWidth?: number; pressureEnabled?: boolean }) {
 	currentColor.value = prefs.currentColor;
 	colorHistory.value = prefs.colorHistory.slice(0, 10);
 	emit('colorChange', prefs.currentColor);
@@ -437,6 +451,10 @@ function restoreColors(prefs: { currentColor: string; colorHistory: string[]; pe
 			emit('widthChange', prefs.eraserWidth);
 		}
 	}
+	if (prefs.pressureEnabled != null) {
+		pressureEnabled.value = prefs.pressureEnabled;
+		emit('pressureChange', prefs.pressureEnabled);
+	}
 }
 
 // 現在のツール設定を取得する（保存用）
@@ -446,6 +464,7 @@ function getColorPreferences() {
 		colorHistory: colorHistory.value,
 		penWidth: penWidth.value,
 		eraserWidth: eraserWidth.value,
+		pressureEnabled: pressureEnabled.value,
 	};
 }
 
@@ -634,6 +653,25 @@ defineExpose({ setColorFromEyedropper, addToHistory, restoreColors, getColorPref
 .colorSelected {
 	border-color: var(--accent) !important;
 	box-shadow: 0 0 0 2px var(--accent);
+}
+
+// 筆圧ON/OFFトグル
+.pressureToggle {
+	margin-bottom: 10px;
+	padding: 0 2px;
+}
+
+.toggleLabel {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	cursor: pointer;
+	font-size: 13px;
+	color: var(--fg);
+}
+
+.toggleText {
+	font-weight: 500;
 }
 
 // 太さセクション

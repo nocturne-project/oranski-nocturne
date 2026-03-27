@@ -25,6 +25,7 @@ export interface CanvasEngine {
 	// 描画状態
 	getState(): DrawingState;
 	setState(partial: Partial<DrawingState>): void;
+	setPressureEnabled(enabled: boolean): void;
 	// レイヤー操作
 	getCurrentLayer(): number;
 	setCurrentLayer(layer: number): void;
@@ -202,6 +203,9 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 	let myStrokesCanvas: HTMLCanvasElement | null = null;
 	let myStrokesCtx: CanvasRenderingContext2D | null = null;
 	let myMergedImageData: ImageData | null = null;
+
+	// 筆圧ON/OFF（OFFの場合、全ポイントの筆圧を1.0固定にする）
+	let pressureEnabled = true;
 
 	// ストローク履歴（アンドゥ対象、全レイヤー共通）
 	const strokes: StrokeData[] = [];
@@ -437,6 +441,10 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 			Object.assign(state, partial);
 		},
 
+		setPressureEnabled(enabled: boolean) {
+			pressureEnabled = enabled;
+		},
+
 		getCurrentLayer() {
 			return currentLayer;
 		},
@@ -461,12 +469,14 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 
 		beginStroke(x: number, y: number, pressure: number) {
 			state.isDrawing = true;
-			state.currentPoints = [{ x, y, pressure }];
+			const p = pressureEnabled ? pressure : 1.0;
+			state.currentPoints = [{ x, y, pressure: p }];
 		},
 
 		moveStroke(x: number, y: number, pressure: number) {
 			if (!state.isDrawing) return;
-			state.currentPoints.push({ x, y, pressure });
+			const p = pressureEnabled ? pressure : 1.0;
+			state.currentPoints.push({ x, y, pressure: p });
 
 			// リアルタイムプレビュー: 最後の数ポイントを連続パスで描画（隙間なし）
 			if (ctx && state.currentPoints.length >= 2) {

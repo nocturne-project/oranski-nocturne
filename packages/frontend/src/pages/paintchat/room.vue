@@ -45,6 +45,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				@colorChange="onColorChange"
 				@widthChange="onWidthChange"
 				@opacityChange="onOpacityChange"
+				@pressureChange="onPressureChange"
 				@layerChange="onLayerChange"
 				@layerOpacityChange="onLayerOpacityChange"
 				@undo="onUndo"
@@ -289,6 +290,7 @@ function saveColorPreferences() {
 			colorHistory: prefs.colorHistory,
 			penWidth: prefs.penWidth,
 			eraserWidth: prefs.eraserWidth,
+			pressureEnabled: prefs.pressureEnabled,
 		} as any).catch(() => { /* 保存失敗は無視 */ });
 	}, 2000);
 }
@@ -305,6 +307,11 @@ function onWidthChange(width: number) {
 
 function onOpacityChange(opacity: number) {
 	canvasEngine.value?.setState({ currentOpacity: opacity });
+}
+
+function onPressureChange(enabled: boolean) {
+	canvasEngine.value?.setPressureEnabled(enabled);
+	saveColorPreferences();
 }
 
 function onLayerChange(layer: number) {

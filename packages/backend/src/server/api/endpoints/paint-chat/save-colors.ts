@@ -38,6 +38,7 @@ export const paramDef = {
 		},
 		penWidth: { type: 'number', minimum: 1, maximum: 400 },
 		eraserWidth: { type: 'number', minimum: 1, maximum: 400 },
+		pressureEnabled: { type: 'boolean' },
 	},
 	required: ['roomId', 'currentColor', 'colorHistory'],
 } as const;
@@ -61,6 +62,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				colorHistory: ps.colorHistory,
 				...(ps.penWidth != null ? { penWidth: ps.penWidth } : {}),
 				...(ps.eraserWidth != null ? { eraserWidth: ps.eraserWidth } : {}),
+				...(ps.pressureEnabled != null ? { pressureEnabled: ps.pressureEnabled } : {}),
 			};
 
 			await this.paintChatParticipantsRepository.update(
