@@ -86,37 +86,10 @@ function renderStrokeForMyBuffer(ctx: CanvasRenderingContext2D, stroke: StrokeDa
 	}
 }
 
-function renderStroke(ctx: CanvasRenderingContext2D, stroke: StrokeData): void {
-	const points = stroke.points;
-	if (points.length === 0) return;
-
-	ctx.save();
-	ctx.lineCap = 'round';
-	ctx.lineJoin = 'round';
-
-	if (stroke.tool === 'eraser') {
-		ctx.globalCompositeOperation = 'destination-out';
-	} else {
-		ctx.globalCompositeOperation = 'source-over';
-		ctx.strokeStyle = stroke.color;
-		ctx.globalAlpha = stroke.opacity;
-	}
-
-	if (points.length === 1) {
-		ctx.beginPath();
-		const r = Math.max(1, stroke.width * points[0].pressure / 2);
-		ctx.arc(points[0].x, points[0].y, r, 0, Math.PI * 2);
-		ctx.fillStyle = stroke.tool === 'eraser' ? 'black' : stroke.color;
-		ctx.globalAlpha = stroke.tool === 'eraser' ? 1 : stroke.opacity;
-		ctx.fill();
-		ctx.restore();
-		return;
-	}
-
-	// Catmull-Romで補間した全ポイントを生成
+// Catmull-Romで補間したポイント列を生成する（renderStroke/プレビューで共用）
+function interpolatePoints(points: PressurePoint[]): PressurePoint[] {
 	const interpolated: PressurePoint[] = [];
 	if (points.length === 2) {
-		// 2点: 間を4分割
 		for (let t = 0; t <= 1; t += 0.25) {
 			interpolated.push({
 				x: points[0].x + (points[1].x - points[0].x) * t,
@@ -124,8 +97,7 @@ function renderStroke(ctx: CanvasRenderingContext2D, stroke: StrokeData): void {
 				pressure: points[0].pressure + (points[1].pressure - points[0].pressure) * t,
 			});
 		}
-	} else {
-		// 3点以上: Catmull-Romスプライン補間
+	} else if (points.length >= 3) {
 		const steps = 10;
 		for (let i = 0; i < points.length - 1; i++) {
 			const p0 = points[Math.max(0, i - 1)];
@@ -137,45 +109,96 @@ function renderStroke(ctx: CanvasRenderingContext2D, stroke: StrokeData): void {
 			}
 		}
 	}
+	return interpolated;
+}
 
-	if (interpolated.length < 2) {
+// 可変幅ストロークをopacity 1.0で描画する（一時canvasまたは直接描画用）
+// セグメント別strokeだが、opacity 1.0なので透明度累積問題が発生しない
+function drawVariableWidthStroke(ctx: CanvasRenderingContext2D, interpolated: PressurePoint[], width: number, color: string, isEraser: boolean): void {
+	ctx.lineCap = 'round';
+	ctx.lineJoin = 'round';
+	if (isEraser) {
+		ctx.globalCompositeOperation = 'destination-out';
+	} else {
+		ctx.globalCompositeOperation = 'source-over';
+		ctx.strokeStyle = color;
+	}
+	ctx.globalAlpha = 1.0;
+
+	for (let i = 0; i < interpolated.length - 1; i++) {
+		const p0 = interpolated[i];
+		const p1 = interpolated[i + 1];
+		const pressure = (p0.pressure + p1.pressure) / 2;
+		ctx.lineWidth = Math.max(0.5, width * pressure);
+		ctx.beginPath();
+		ctx.moveTo(p0.x, p0.y);
+		ctx.lineTo(p1.x, p1.y);
+		ctx.stroke();
+	}
+}
+
+// オフスクリーンバッファ方式でストロークを描画する
+// 1. 一時canvasにopacity 1.0で可変幅ストロークを描画
+// 2. 対象canvasにglobalAlpha=stroke.opacityで合成
+// これにより筆圧による太さ変化を維持しつつ、半透明ストローク内の重なりボツボツを完全に排除
+// bufferCanvas/bufferCtxは事前作成した一時canvasを使い回す（GC負荷削減）
+function renderStroke(ctx: CanvasRenderingContext2D, stroke: StrokeData, bufferCanvas?: HTMLCanvasElement | null, bufferCtx?: CanvasRenderingContext2D | null): void {
+	const points = stroke.points;
+	if (points.length === 0) return;
+
+	// 1点のみ: 円を描画
+	if (points.length === 1) {
+		ctx.save();
+		const r = Math.max(1, stroke.width * points[0].pressure / 2);
+		if (stroke.tool === 'eraser') {
+			ctx.globalCompositeOperation = 'destination-out';
+			ctx.globalAlpha = 1;
+			ctx.fillStyle = 'black';
+		} else {
+			ctx.globalCompositeOperation = 'source-over';
+			ctx.globalAlpha = stroke.opacity;
+			ctx.fillStyle = stroke.color;
+		}
+		ctx.beginPath();
+		ctx.arc(points[0].x, points[0].y, r, 0, Math.PI * 2);
+		ctx.fill();
 		ctx.restore();
 		return;
 	}
 
-	// 筆圧変化を筆圧グループに分割し、各グループを1本のパスで描画
-	// グループ内の筆圧差が小さければ1パスにまとめることで透明度累積（ボツボツ）を防ぐ
-	const PRESSURE_THRESHOLD = 0.15; // グループ分割の筆圧差閾値
-	let groupStart = 0;
+	const interpolated = interpolatePoints(points);
+	if (interpolated.length < 2) return;
 
-	while (groupStart < interpolated.length - 1) {
-		// このグループの筆圧範囲を決定
-		let groupEnd = groupStart + 1;
-		const basePressure = interpolated[groupStart].pressure;
-		while (groupEnd < interpolated.length &&
-			Math.abs(interpolated[groupEnd].pressure - basePressure) < PRESSURE_THRESHOLD) {
-			groupEnd++;
-		}
-
-		// グループ内の平均筆圧でlineWidth設定
-		let pressureSum = 0;
-		for (let i = groupStart; i < groupEnd; i++) pressureSum += interpolated[i].pressure;
-		const avgPressure = pressureSum / (groupEnd - groupStart);
-		ctx.lineWidth = Math.max(0.5, stroke.width * avgPressure);
-
-		// 1本のパスで描画（透明度累積なし）
-		ctx.beginPath();
-		ctx.moveTo(interpolated[groupStart].x, interpolated[groupStart].y);
-		for (let i = groupStart + 1; i < groupEnd; i++) {
-			ctx.lineTo(interpolated[i].x, interpolated[i].y);
-		}
-		ctx.stroke();
-
-		// 次のグループは1ポイント重複させて隙間を防ぐ
-		groupStart = Math.max(groupStart + 1, groupEnd - 1);
+	// 消しゴムまたはopacity 1.0の場合: 一時canvasは不要、直接描画
+	if (stroke.tool === 'eraser' || stroke.opacity >= 1.0) {
+		ctx.save();
+		drawVariableWidthStroke(ctx, interpolated, stroke.width, stroke.color, stroke.tool === 'eraser');
+		ctx.restore();
+		return;
 	}
 
-	ctx.restore();
+	// 半透明ペン: オフスクリーンバッファ方式（事前作成canvasを使い回し）
+	if (bufferCanvas && bufferCtx) {
+		bufferCtx.clearRect(0, 0, bufferCanvas.width, bufferCanvas.height);
+		drawVariableWidthStroke(bufferCtx, interpolated, stroke.width, stroke.color, false);
+		ctx.save();
+		ctx.globalCompositeOperation = 'source-over';
+		ctx.globalAlpha = stroke.opacity;
+		ctx.drawImage(bufferCanvas, 0, 0);
+		ctx.restore();
+	} else {
+		// フォールバック: 一時canvas作成（init前やmyStrokesバッファ等）
+		const tc = window.document.createElement('canvas');
+		tc.width = ctx.canvas.width;
+		tc.height = ctx.canvas.height;
+		const tctx = tc.getContext('2d')!;
+		drawVariableWidthStroke(tctx, interpolated, stroke.width, stroke.color, false);
+		ctx.save();
+		ctx.globalCompositeOperation = 'source-over';
+		ctx.globalAlpha = stroke.opacity;
+		ctx.drawImage(tc, 0, 0);
+		ctx.restore();
+	}
 }
 
 // キャンバスエンジンの生成（レイヤー対応）
@@ -203,6 +226,10 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 	let myStrokesCanvas: HTMLCanvasElement | null = null;
 	let myStrokesCtx: CanvasRenderingContext2D | null = null;
 	let myMergedImageData: ImageData | null = null;
+
+	// 半透明ストローク用の一時canvas（使い回してGC負荷を削減）
+	let tmpCanvas: HTMLCanvasElement | null = null;
+	let tmpCtx: CanvasRenderingContext2D | null = null;
 
 	// 筆圧ON/OFF（OFFの場合、全ポイントの筆圧を1.0固定にする）
 	let pressureEnabled = true;
@@ -344,10 +371,10 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 				lctx.putImageData(mergedImagePerLayer[layer]!, 0, 0);
 			}
 
-			// このレイヤーの残りストロークを描画
+			// このレイヤーの残りストロークを描画（一時canvasを使い回し）
 			for (const stroke of strokes) {
 				if ((stroke.layer ?? 0) === layer) {
-					renderStroke(lctx, stroke);
+					renderStroke(lctx, stroke, tmpCanvas, tmpCtx);
 				}
 			}
 		}
@@ -365,7 +392,7 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 		}
 		ctx.globalAlpha = 1.0;
 
-		// 3. 描画中プレビュー（メインcanvasに直接描画。パフォーマンス優先。）
+		// 3. 描画中プレビュー（高速直接描画。オフスクリーンバッファ不使用でパフォーマンス優先）
 		if (state.isDrawing && state.currentPoints.length >= 2) {
 			ctx.save();
 			ctx.lineCap = 'round';
@@ -377,11 +404,13 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 				ctx.strokeStyle = state.currentColor;
 				ctx.globalAlpha = state.currentOpacity;
 			}
+			const pts = state.currentPoints;
+			const avgP = (pts[0].pressure + pts[pts.length - 1].pressure) / 2;
+			ctx.lineWidth = Math.max(0.5, state.currentWidth * avgP);
 			ctx.beginPath();
-			ctx.lineWidth = state.currentWidth * (state.currentPoints[0].pressure || 0.5);
-			ctx.moveTo(state.currentPoints[0].x, state.currentPoints[0].y);
-			for (let i = 1; i < state.currentPoints.length; i++) {
-				ctx.lineTo(state.currentPoints[i].x, state.currentPoints[i].y);
+			ctx.moveTo(pts[0].x, pts[0].y);
+			for (let i = 1; i < pts.length; i++) {
+				ctx.lineTo(pts[i].x, pts[i].y);
 			}
 			ctx.stroke();
 			ctx.restore();
@@ -431,6 +460,12 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 			// 後方互換用（restoreStrokesの旧マージ画像復元等）
 			myStrokesCanvas = myLayerCanvases[0];
 			myStrokesCtx = myLayerCtxs[0];
+
+			// 半透明ストローク用の一時canvasを事前作成（毎フレーム作成を避ける）
+			tmpCanvas = window.document.createElement('canvas');
+			tmpCanvas.width = canvas.width;
+			tmpCanvas.height = canvas.height;
+			tmpCtx = tmpCanvas.getContext('2d')!;
 		},
 
 		getState() {
@@ -478,16 +513,15 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 			const p = pressureEnabled ? pressure : 1.0;
 			state.currentPoints.push({ x, y, pressure: p });
 
-			// リアルタイムプレビュー: 最後の数ポイントを連続パスで描画（隙間なし）
+			// リアルタイムプレビュー: 直近2ポイントをメインcanvasに直接描画（高速、オフスクリーンバッファ不使用）
 			if (ctx && state.currentPoints.length >= 2) {
 				const pts = state.currentPoints;
-				// 直近の最大8ポイントを連続パスで描画
-				const startIdx = Math.max(0, pts.length - 8);
-
+				const i = pts.length - 1;
+				const p0 = pts[i - 1];
+				const p1 = pts[i];
 				ctx.save();
 				ctx.lineCap = 'round';
 				ctx.lineJoin = 'round';
-
 				if (state.currentTool === 'eraser') {
 					ctx.globalCompositeOperation = 'destination-out';
 				} else {
@@ -495,23 +529,11 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 					ctx.strokeStyle = state.currentColor;
 					ctx.globalAlpha = state.currentOpacity;
 				}
-
-				// 筆圧の平均でlineWidthを設定（連続パスなので統一する必要がある）
-				let pressureSum = 0;
-				for (let i = startIdx; i < pts.length; i++) {
-					pressureSum += pts[i].pressure;
-				}
-				const avgPressure = pressureSum / (pts.length - startIdx);
-				ctx.lineWidth = Math.max(0.5, state.currentWidth * avgPressure);
-
+				const avgP = (p0.pressure + p1.pressure) / 2;
+				ctx.lineWidth = Math.max(0.5, state.currentWidth * avgP);
 				ctx.beginPath();
-				ctx.moveTo(pts[startIdx].x, pts[startIdx].y);
-				for (let i = startIdx + 1; i < pts.length - 1; i++) {
-					const midX = (pts[i].x + pts[i + 1].x) / 2;
-					const midY = (pts[i].y + pts[i + 1].y) / 2;
-					ctx.quadraticCurveTo(pts[i].x, pts[i].y, midX, midY);
-				}
-				ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+				ctx.moveTo(p0.x, p0.y);
+				ctx.lineTo(p1.x, p1.y);
 				ctx.stroke();
 				ctx.restore();
 			}
@@ -718,6 +740,8 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 			myStrokesCanvas = null;
 			myStrokesCtx = null;
 			myMergedImageData = null;
+			tmpCanvas = null;
+			tmpCtx = null;
 			strokes.length = 0;
 			remoteProgress.clear();
 		},
