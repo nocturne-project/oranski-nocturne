@@ -125,10 +125,27 @@ function drawVariableWidthStroke(ctx: CanvasRenderingContext2D, interpolated: Pr
 	}
 	ctx.globalAlpha = 1.0;
 
-	// 各ポイントの半径（筆圧による可変幅）を計算
-	const radii: number[] = [];
+	// 各ポイントの半径を計算し、ガウシアンスムージングで滑らかにする
+	// 手ブレ補正済みの綺麗なパス上に、滑らかな筆圧情報を適用する
+	const rawRadii: number[] = [];
 	for (let i = 0; i < interpolated.length; i++) {
-		radii.push(Math.max(0.25, (width * interpolated[i].pressure) / 2));
+		rawRadii.push(Math.max(0.25, (width * interpolated[i].pressure) / 2));
+	}
+
+	// 半径のスムージング（前後5ポイントの加重平均）
+	const SMOOTH_WINDOW = 5;
+	const radii: number[] = [];
+	for (let i = 0; i < rawRadii.length; i++) {
+		let sum = 0;
+		let weightSum = 0;
+		for (let j = -SMOOTH_WINDOW; j <= SMOOTH_WINDOW; j++) {
+			const idx = i + j;
+			if (idx < 0 || idx >= rawRadii.length) continue;
+			const w = 1 / (1 + Math.abs(j)); // 距離に反比例する重み
+			sum += rawRadii[idx] * w;
+			weightSum += w;
+		}
+		radii.push(sum / weightSum);
 	}
 
 	// 各ポイントの法線ベクトルを計算
@@ -284,6 +301,9 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 	// 半透明ストローク用の一時canvas（使い回してGC負荷を削減）
 	let tmpCanvas: HTMLCanvasElement | null = null;
 	let tmpCtx: CanvasRenderingContext2D | null = null;
+
+	// プレビュー描画のスロットリング用フラグ
+	let pendingRedraw = false;
 
 	// 筆圧ON/OFF（OFFの場合、全ポイントの筆圧を1.0固定にする）
 	let pressureEnabled = true;
@@ -446,28 +466,19 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 		}
 		ctx.globalAlpha = 1.0;
 
-		// 3. 描画中プレビュー（高速直接描画。オフスクリーンバッファ不使用でパフォーマンス優先）
+		// 3. 描画中プレビュー（fill-based方式。数珠つなぎ防止。）
 		if (state.isDrawing && state.currentPoints.length >= 2) {
-			ctx.save();
-			ctx.lineCap = 'round';
-			ctx.lineJoin = 'round';
-			if (state.currentTool === 'eraser') {
-				ctx.globalCompositeOperation = 'destination-out';
-			} else {
-				ctx.globalCompositeOperation = 'source-over';
-				ctx.strokeStyle = state.currentColor;
-				ctx.globalAlpha = state.currentOpacity;
-			}
-			const pts = state.currentPoints;
-			const avgP = (pts[0].pressure + pts[pts.length - 1].pressure) / 2;
-			ctx.lineWidth = Math.max(0.5, state.currentWidth * avgP);
-			ctx.beginPath();
-			ctx.moveTo(pts[0].x, pts[0].y);
-			for (let i = 1; i < pts.length; i++) {
-				ctx.lineTo(pts[i].x, pts[i].y);
-			}
-			ctx.stroke();
-			ctx.restore();
+			const previewStroke: StrokeData = {
+				id: '',
+				participantId: myParticipantId,
+				points: state.currentPoints,
+				color: state.currentColor,
+				width: state.currentWidth,
+				opacity: state.currentOpacity,
+				tool: state.currentTool,
+				layer: currentLayer,
+			};
+			renderStroke(ctx, previewStroke, tmpCanvas, tmpCtx);
 		}
 
 		// 4. リモートの進行中描画（最上層に表示）
@@ -567,29 +578,14 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 			const p = pressureEnabled ? pressure : 1.0;
 			state.currentPoints.push({ x, y, pressure: p });
 
-			// リアルタイムプレビュー: 直近2ポイントをメインcanvasに直接描画（高速、オフスクリーンバッファ不使用）
-			if (ctx && state.currentPoints.length >= 2) {
-				const pts = state.currentPoints;
-				const i = pts.length - 1;
-				const p0 = pts[i - 1];
-				const p1 = pts[i];
-				ctx.save();
-				ctx.lineCap = 'round';
-				ctx.lineJoin = 'round';
-				if (state.currentTool === 'eraser') {
-					ctx.globalCompositeOperation = 'destination-out';
-				} else {
-					ctx.globalCompositeOperation = 'source-over';
-					ctx.strokeStyle = state.currentColor;
-					ctx.globalAlpha = state.currentOpacity;
-				}
-				const avgP = (p0.pressure + p1.pressure) / 2;
-				ctx.lineWidth = Math.max(0.5, state.currentWidth * avgP);
-				ctx.beginPath();
-				ctx.moveTo(p0.x, p0.y);
-				ctx.lineTo(p1.x, p1.y);
-				ctx.stroke();
-				ctx.restore();
+			// プレビューはredrawAllで描画（fill-based方式で数珠つなぎ防止）
+			// requestAnimationFrameでスロットリングし、毎ポイントでの再描画を避ける
+			if (!pendingRedraw) {
+				pendingRedraw = true;
+				window.requestAnimationFrame(() => {
+					pendingRedraw = false;
+					redrawAll();
+				});
 			}
 		},
 
