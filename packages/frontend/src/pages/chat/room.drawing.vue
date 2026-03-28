@@ -354,6 +354,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 			}"
 			@mousedown="startDrawing"
 			@contextmenu.prevent="onContextMenu"
+			@touchstart="handleContainerTouchStart"
+			@touchmove="handleContainerTouchMove"
+			@touchend="handleContainerTouchEnd"
 		></canvas>
 		<!-- 旧レイヤーキャンバス（CanvasEngine移行後は非表示） -->
 		<canvas
@@ -1356,6 +1359,12 @@ function connectToChatRoomChannel() {
 
 // ツール設定
 function setTool(tool: 'pen' | 'eraser' | 'eyedropper') {
+	// 移動モードを解除
+	if (isMoveMode.value) {
+		isMoveMode.value = false;
+		if (engineCanvasEl.value) engineCanvasEl.value.style.cursor = 'crosshair';
+	}
+
 	// ツール切り替え時に現在の描画を強制終了
 	if (isDrawing.value) {
 		stopDrawing();
@@ -3493,8 +3502,9 @@ function handleTouchStart(e: TouchEvent) {
 		panStart.value = { x: centerX, y: centerY };
 
 		// ズーム中心点を論理座標系に変換
-		if (canvasEl.value) {
-			const canvasRect = canvasEl.value.getBoundingClientRect();
+		const zoomCanvas = engineCanvasEl.value || canvasEl.value;
+		if (zoomCanvas) {
+			const canvasRect = zoomCanvas.getBoundingClientRect();
 
 			// canvas要素内の相対座標
 			const canvasRelativeX = centerX - canvasRect.left;
@@ -3884,29 +3894,8 @@ function performRasterization() {
 
 // 改良されたアンドゥ機能
 function performAdvancedUndo() {
-	if (strokeHistory.value.length === 0) {
-		console.warn('🎨 [WARN] No strokes to undo');
-		return;
-	}
-
-	// 最後のストロークを削除
-	const removedStroke = strokeHistory.value.pop();
-
-	// キャンバスを再描画
-	redrawCanvasFromHistory();
-
-	// サーバーに通知
-	if (connection.value) {
-		try {
-			connection.value.send('undoStroke', {
-				userId: $i.id,
-				timestamp: Date.now(),
-				strokeId: removedStroke?.timestamp,
-			});
-		} catch (error) {
-			console.warn('🎨 [WARN] Failed to send undo notification:', error);
-		}
-	}
+	// CanvasEngine経由のアンドゥ（2本指ダブルタップ用）
+	undo();
 }
 
 // 履歴からキャンバスを再描画
