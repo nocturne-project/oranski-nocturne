@@ -428,7 +428,24 @@ SPDX-License-Identifier: AGPL-3.0-only
 				transition: (isPanning || isZooming) ? 'none' : 'transform 0.2s ease'
 			}"
 		></canvas>
-		<!-- レイヤーキャンバス（レイヤー3が一番下、レイヤー1が一番上） -->
+		<!-- CanvasEngine用メインキャンバス（paintchat式: 内部でレイヤー管理） -->
+		<canvas
+			ref="engineCanvasEl"
+			:class="[$style.canvas, $style.layerCanvas]"
+			:width="canvasWidth"
+			:height="canvasHeight"
+			:style="{
+				width: displayWidth + 'px',
+				height: displayHeight + 'px',
+				transform: `translate(-50%, -50%) translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
+				transformOrigin: 'center',
+				transition: (isPanning || isZooming) ? 'none' : 'transform 0.2s ease',
+				zIndex: MAX_LAYERS + 1,
+				pointerEvents: 'auto'
+			}"
+			@mousedown="startDrawing"
+		></canvas>
+		<!-- 旧レイヤーキャンバス（CanvasEngine移行後は非表示） -->
 		<canvas
 			v-for="layerIndex in [2, 1, 0]"
 			:key="`layer-${layerIndex}`"
@@ -443,10 +460,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 				transformOrigin: 'center',
 				transition: (isPanning || isZooming) ? 'none' : 'transform 0.2s ease',
 				zIndex: MAX_LAYERS - layerIndex,
-				opacity: layerVisible[layerIndex] ? layerOpacity[layerIndex] : 0,
-				pointerEvents: layerIndex === currentLayer ? 'auto' : 'none'
+				opacity: 0,
+				pointerEvents: 'none'
 			}"
-			@mousedown="startDrawing"
 		></canvas>
 
 		<!-- ウォーターマーク（並べて表示） -->
@@ -586,6 +602,8 @@ const drawingId = computed(() => {
 
 // paintchat式CanvasEngineインスタンス
 const canvasEngine = ref<CanvasEngine | null>(null);
+// CanvasEngine用のcanvas要素
+const engineCanvasEl = ref<HTMLCanvasElement>();
 
 // キャンバス関連
 const canvasEl = ref<HTMLCanvasElement>();
@@ -938,7 +956,7 @@ const chatOverlay = ref<{
 } | null>(null);
 
 // 現在の描画パス
-let currentPath: Array<{ x: number; y: number }> = [];
+let currentPath: PressurePoint[] = [];
 
 // 設定保存用デバウンスタイマー
 let saveSettingsTimer: number | null = null;
@@ -1080,10 +1098,10 @@ onMounted(async () => {
 	// 現在のレイヤーのコンテキストを設定
 	ctx = layerContexts.value[currentLayer.value];
 
-	// paintchat式CanvasEngineの初期化
-	if (canvasEl.value) {
+	// paintchat式CanvasEngineの初期化（engineCanvasElはDPR非適用の論理サイズcanvas）
+	if (engineCanvasEl.value) {
 		const engine = createCanvasEngine($i.id);
-		engine.init(canvasEl.value);
+		engine.init(engineCanvasEl.value);
 		canvasEngine.value = engine;
 	}
 
@@ -1286,15 +1304,45 @@ function connectToChatRoomChannel() {
 		});
 	}
 
-	// お絵かき関連イベント
+	// お絵かき関連イベント（CanvasEngine経由で描画）
 	connection.value.on('drawingStroke', (data: any) => {
 		recordCommLog('receive', 'drawingStroke', data);
-		drawRemoteStroke(data);
+		if (data.userId === $i.id) return;
+		if (canvasEngine.value) {
+			// リモートストロークをCanvasEngineに渡して描画
+			const remoteStroke = {
+				id: data.id || `remote-${Date.now()}`,
+				participantId: data.userId,
+				userId: data.userId,
+				userName: data.userName || '',
+				points: (data.points || []).map((p: any) => ({
+					x: p.x, y: p.y, pressure: p.pressure ?? 1.0,
+				})),
+				color: data.color,
+				width: data.strokeWidth,
+				strokeWidth: data.strokeWidth,
+				opacity: data.opacity,
+				tool: data.tool,
+				layer: data.layer ?? 0,
+				timestamp: Date.now(),
+			};
+			canvasEngine.value.drawRemoteStroke(remoteStroke as any);
+		} else {
+			drawRemoteStroke(data);
+		}
 	});
 
 	connection.value.on('drawingProgress', (data: any) => {
 		recordCommLog('receive', 'drawingProgress', data);
-		drawRemoteProgress(data);
+		if (data.userId === $i.id) return;
+		if (canvasEngine.value) {
+			const points = (data.points || []).map((p: any) => ({
+				x: p.x, y: p.y, pressure: p.pressure ?? 1.0,
+			}));
+			canvasEngine.value.drawRemoteProgress(data.userId, points);
+		} else {
+			drawRemoteProgress(data);
+		}
 	});
 
 	connection.value.on('cursorMove', (data: any) => {
@@ -1304,12 +1352,20 @@ function connectToChatRoomChannel() {
 
 	connection.value.on('clearCanvas', () => {
 		recordCommLog('receive', 'clearCanvas', {});
-		clearCanvasLocal();
+		if (canvasEngine.value) {
+			canvasEngine.value.clear();
+		} else {
+			clearCanvasLocal();
+		}
 	});
 
 	connection.value.on('undoStroke', (data: any) => {
 		recordCommLog('receive', 'undoStroke', data);
-		handleRemoteUndo(data);
+		if (canvasEngine.value && data.strokeId) {
+			canvasEngine.value.applyRemoteUndo(data.strokeId);
+		} else {
+			handleRemoteUndo(data);
+		}
 	});
 
 	connection.value.on('redoStroke', (data: any) => {
@@ -1348,13 +1404,16 @@ function setTool(tool: 'pen' | 'eraser' | 'eyedropper') {
 		strokeWidth.value = toolStrokeWidths.value[tool];
 	}
 
-	// 設定を自動保存
+	// CanvasEngineに状態を同期
+	if (canvasEngine.value) {
+		canvasEngine.value.setState({ currentTool: tool as any, currentWidth: strokeWidth.value });
+	}
+
 	saveUserSettings();
 }
 
 function setColor(color: string, index?: number) {
 	currentColor.value = color;
-	// インデックスが指定されている場合は保存
 	if (index !== undefined) {
 		currentColorIndex.value = index;
 	}
@@ -1362,7 +1421,11 @@ function setColor(color: string, index?: number) {
 		currentTool.value = 'pen';
 	}
 
-	// 設定を自動保存
+	// CanvasEngineに色を同期
+	if (canvasEngine.value) {
+		canvasEngine.value.setState({ currentColor: color, currentTool: currentTool.value as any });
+	}
+
 	saveUserSettings();
 }
 
@@ -1398,26 +1461,26 @@ function openColorPicker() {
 
 function setOpacity(opacity: number) {
 	currentOpacity.value = opacity;
-
-	// 設定を自動保存
+	if (canvasEngine.value) {
+		canvasEngine.value.setState({ currentOpacity: opacity });
+	}
 	saveUserSettings();
 }
 
 function setStrokeWidth(width: number) {
 	strokeWidth.value = width;
-
-	// 現在のツールの線の太さを記憶
 	if (currentTool.value === 'pen' || currentTool.value === 'eraser') {
 		toolStrokeWidths.value[currentTool.value] = width;
 	}
-
-	// 設定を自動保存
+	if (canvasEngine.value) {
+		canvasEngine.value.setState({ currentWidth: width });
+	}
 	saveUserSettings();
 }
 
-// 描画開始
+// 描画開始（CanvasEngine経由）
 function startDrawing(event: MouseEvent | TouchEvent) {
-	if (!ctx) return;
+	if (!canvasEngine.value) return;
 
 	// スペースキーが押されている場合はパンモード
 	if (isSpaceKeyPressed.value && event instanceof MouseEvent) {
@@ -1429,43 +1492,37 @@ function startDrawing(event: MouseEvent | TouchEvent) {
 		return;
 	}
 
-	isDrawing.value = true;
-
 	// マウス補正状態をリセット
 	lastTime = 0;
 	velocityHistory.length = 0;
 	pointBuffer.length = 0;
 
 	const point = getEventPoint(event);
-	const pressure = calculatePressure(); // 初期筆圧を計算
-	const pressurePoint: PressurePoint = { x: point.x, y: point.y, pressure };
-	currentPath = [pressurePoint];
-
-	// 軌跡ログを記録
-	let clientX: number, clientY: number;
-	if (event instanceof MouseEvent) {
-		clientX = event.clientX;
-		clientY = event.clientY;
-		recordTraceLog('mousedown', clientX, clientY, point.x, point.y);
-	} else if (event.touches.length > 0) {
-		clientX = event.touches[0].clientX;
-		clientY = event.touches[0].clientY;
-		recordTraceLog('touchstart', clientX, clientY, point.x, point.y);
-	}
+	const pressure = calculatePressure();
 
 	if (currentTool.value === 'eyedropper') {
 		eyedropColor(point);
 		return;
 	}
 
-	// 描画開始点を設定
-	ctx.beginPath();
-	ctx.moveTo(point.x, point.y);
+	// CanvasEngineの描画状態を同期
+	canvasEngine.value.setState({
+		currentTool: currentTool.value as any,
+		currentColor: currentColor.value,
+		currentWidth: strokeWidth.value,
+		currentOpacity: currentOpacity.value,
+	});
+	canvasEngine.value.setCurrentLayer(currentLayer.value);
+
+	// CanvasEngine経由でストローク開始
+	canvasEngine.value.beginStroke(point.x, point.y, pressure);
+	isDrawing.value = true;
+	currentPath = [{ x: point.x, y: point.y, pressure }];
 }
 
-// 描画中
+// 描画中（CanvasEngine経由）
 function draw(event: MouseEvent | TouchEvent) {
-	if (!ctx) return;
+	if (!canvasEngine.value) return;
 
 	// スペースキーでのパン中
 	if (isPanningWithSpace.value && event instanceof MouseEvent) {
@@ -1483,39 +1540,23 @@ function draw(event: MouseEvent | TouchEvent) {
 
 	const point = getEventPoint(event);
 
-	// 軌跡ログを記録
-	let clientX: number, clientY: number;
-	if (event instanceof MouseEvent) {
-		clientX = event.clientX;
-		clientY = event.clientY;
-		if (isDrawing.value) {
-			recordTraceLog('mousemove', clientX, clientY, point.x, point.y);
-		}
-	} else if (event.touches.length > 0) {
-		clientX = event.touches[0].clientX;
-		clientY = event.touches[0].clientY;
-		if (isDrawing.value) {
-			recordTraceLog('touchmove', clientX, clientY, point.x, point.y);
-		}
-	}
-
 	// カーソル位置を他のユーザーに送信
 	sendCursorPosition(point);
 
 	if (!isDrawing.value || currentTool.value === 'eyedropper') return;
 
-	const pressure = calculatePressure(); // 現在の筆圧を計算
+	const pressure = calculatePressure();
 	const pressurePoint: PressurePoint = { x: point.x, y: point.y, pressure };
 	currentPath.push(pressurePoint);
 
-	// ローカル描画
-	drawLine(point);
+	// CanvasEngine経由でストローク進行（スムージング・プレビュー描画込み）
+	canvasEngine.value.moveStroke(point.x, point.y, pressure);
 
 	// リアルタイム描画進行状況を他のユーザーに送信
 	sendDrawingProgress();
 }
 
-// 描画終了
+// 描画終了（CanvasEngine経由）
 function stopDrawing() {
 	// スペースキーでのパン終了
 	if (isPanningWithSpace.value) {
@@ -1528,27 +1569,31 @@ function stopDrawing() {
 		return;
 	}
 
-	if (!isDrawing.value || currentPath.length === 0) return;
+	if (!isDrawing.value || !canvasEngine.value) return;
 
 	isDrawing.value = false;
 
-	// リアルタイム描画で既に描画済みなので、ここでの再描画は不要
-	// 再描画すると線が重なって太くなってしまう
+	// CanvasEngine経由でストローク確定（スムージング・スプライン適用）
+	const stroke = canvasEngine.value.endStroke();
 
-	// ストローク履歴に追加
-	const strokeData = {
-		points: [...currentPath],
-		tool: currentTool.value,
-		color: currentColor.value,
-		strokeWidth: strokeWidth.value,
-		opacity: currentOpacity.value,
-		timestamp: Date.now(),
-	};
+	if (stroke) {
+		// userNameをセット
+		stroke.userName = $i.name || $i.username;
 
-	addStrokeToHistory(strokeData);
+		// ストローク履歴に追加
+		addStrokeToHistory({
+			points: stroke.points,
+			tool: stroke.tool,
+			color: stroke.color,
+			strokeWidth: stroke.width,
+			opacity: stroke.opacity,
+			timestamp: stroke.timestamp,
+		});
 
-	// 描画データを他のユーザーに送信
-	sendDrawingStroke();
+		// 描画データを他のユーザーに送信
+		sendDrawingStroke();
+	}
+
 	currentPath = [];
 }
 
@@ -1670,8 +1715,8 @@ function getAccurateCoordinates(canvas: HTMLCanvasElement, clientX: number, clie
 
 // イベントから座標を取得
 function getEventPoint(event: MouseEvent | TouchEvent): { x: number; y: number } {
-	// 現在のアクティブレイヤーのcanvas要素を取得
-	const canvas = layerCanvases.value[currentLayer.value];
+	// CanvasEngine用のcanvas要素を優先、なければ旧レイヤーcanvasを使用
+	const canvas = engineCanvasEl.value || layerCanvases.value[currentLayer.value];
 
 	let clientX: number, clientY: number;
 	if (event instanceof MouseEvent) {
@@ -2439,7 +2484,12 @@ async function clearCanvas() {
  *    - 現在のレイヤーのコンテキストを再設定
  */
 function clearCanvasLocal() {
-	// 全レイヤーのキャンバスをクリア
+	// CanvasEngineのクリア
+	if (canvasEngine.value) {
+		canvasEngine.value.clear();
+	}
+
+	// 旧レイヤーのキャンバスもクリア
 	for (let i = 0; i < MAX_LAYERS; i++) {
 		const layerCtx = layerContexts.value[i];
 		if (layerCtx) {
@@ -2732,9 +2782,20 @@ function drawStrokeDirectly(targetCtx: CanvasRenderingContext2D, stroke: any) {
  * - strokeHistoryも同期して更新
  */
 function undo() {
+	// CanvasEngine経由のアンドゥ
+	if (canvasEngine.value) {
+		const strokeId = canvasEngine.value.undo();
+		if (strokeId && connection.value) {
+			const data = { layer: currentLayer.value, strokeId, userId: $i?.id, userName: $i?.username };
+			connection.value.send('undoStroke', data);
+			recordCommLog('send', 'undoStroke', data);
+		}
+		return;
+	}
+
+	// 旧システムのフォールバック
 	const targetLayer = currentLayer.value;
 
-	// 現在のレイヤーから自分の最後のストロークを見つける
 	const myStrokeIndex = layerStrokeHistory.value[targetLayer]
 		.map((s, i) => ({ stroke: s, index: i }))
 		.filter(item => item.stroke.userId === $i.id)
@@ -2998,10 +3059,13 @@ function switchLayer(layerIndex: number) {
 	// 新しいレイヤーに切り替え
 	currentLayer.value = layerIndex;
 	ctx = layerContexts.value[layerIndex];
-	// canvasElも更新（イベントリスナーやカーソルスタイル変更用）
 	canvasEl.value = layerCanvases.value[layerIndex];
 
-	// 設定を自動保存
+	// CanvasEngineにレイヤー切替を通知
+	if (canvasEngine.value) {
+		canvasEngine.value.setCurrentLayer(layerIndex);
+	}
+
 	saveUserSettings();
 }
 
@@ -3681,6 +3745,12 @@ async function loadCanvasData() {
 			redoStack.value = [];
 			otherActiveStrokes.value.clear();
 
+			// CanvasEngineでストローク復元
+			if (canvasEngine.value && strokes.length > 0) {
+				await canvasEngine.value.restoreStrokes(strokes);
+			}
+
+			// 旧レイヤーcanvasにも描画（フォールバック）
 			for (const stroke of strokes) {
 				renderStrokeOnLayer(stroke);
 			}
@@ -3902,7 +3972,7 @@ function adjustCanvasForMobile() {
 <style lang="scss" module>
 .root {
 	display: flex;
-	flex-direction: column;
+	flex-direction: row;
 	height: calc(100vh - 100px);
 	max-height: calc(100vh - 100px);
 	overflow: hidden;
@@ -3968,13 +4038,16 @@ function adjustCanvasForMobile() {
 
 .toolbar {
 	display: flex;
-	align-items: center;
-	gap: 16px;
-	padding: 12px 16px;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 8px;
+	padding: 8px;
 	background: var(--MI_THEME-bg);
-	border-bottom: 1px solid var(--MI_THEME-divider);
-	flex-wrap: wrap;
-	overflow-x: auto;
+	border-right: 1px solid var(--MI_THEME-divider);
+	width: 52px;
+	min-width: 52px;
+	overflow-y: auto;
+	overflow-x: hidden;
 	scrollbar-width: none;
 	-ms-overflow-style: none;
 
@@ -4080,6 +4153,7 @@ function adjustCanvasForMobile() {
 
 .toolGroup {
 	display: flex;
+	flex-direction: column;
 	gap: 4px;
 }
 
@@ -4107,14 +4181,14 @@ function adjustCanvasForMobile() {
 }
 
 .colorPalette {
-	display: flex;
-	gap: 4px;
-	flex-wrap: wrap;
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 2px;
 }
 
 .colorButton {
-	width: 24px;
-	height: 24px;
+	width: 16px;
+	height: 16px;
 	border: 2px solid var(--MI_THEME-divider);
 	border-radius: 4px;
 	cursor: pointer;
@@ -4155,8 +4229,9 @@ function adjustCanvasForMobile() {
 
 .strokeWidthGroup {
 	display: flex;
+	flex-direction: column;
 	align-items: center;
-	gap: 6px;
+	gap: 2px;
 }
 
 .strokeWidthButton {
@@ -4193,13 +4268,16 @@ function adjustCanvasForMobile() {
 
 .opacityGroup {
 	display: flex;
+	flex-direction: column;
 	align-items: center;
-	gap: 6px;
+	gap: 2px;
 }
 
 .label {
-	font-size: 12px;
+	font-size: 10px;
 	color: var(--MI_THEME-fg);
+	text-align: center;
+	white-space: nowrap;
 }
 
 .opacityButton {
