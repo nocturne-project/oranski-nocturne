@@ -178,6 +178,8 @@ function onTouchStart(e: TouchEvent) {
 	}
 
 	if (e.touches.length !== 1) return;
+	// Apple Pencil（stylus）はPointerEvent経路で処理するため、touch経路ではスキップ
+	if ((e.touches[0] as any).touchType === 'stylus') return;
 	e.preventDefault();
 	const touch = e.touches[0];
 
@@ -240,6 +242,8 @@ function onTouchMove(e: TouchEvent) {
 		isPinching = true;
 		return;
 	}
+	// Apple Pencil（stylus）はPointerEvent経路で処理
+	if ((e.touches[0] as any).touchType === 'stylus') return;
 	e.preventDefault();
 	const touch = e.touches[0];
 
