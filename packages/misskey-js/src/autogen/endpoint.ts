@@ -830,6 +830,8 @@ import type {
 	PagesShowResponse,
 	PagesUnlikeRequest,
 	PagesUpdateRequest,
+	PaintChatCanvasRequest,
+	PaintChatCanvasResponse,
 	PaintChatDiceRequest,
 	PaintChatDiceResponse,
 	PaintChatJoinResponse,
@@ -844,12 +846,15 @@ import type {
 	PaintChatPublishAgreeResponse,
 	PaintChatPublishMessageRequest,
 	PaintChatPublishMessageResponse,
+	PaintChatPublishMyArtRequest,
+	PaintChatPublishMyArtResponse,
 	PaintChatPublishRejectRequest,
 	PaintChatPublishRejectResponse,
 	PaintChatReportRequest,
 	PaintChatReportResponse,
 	PaintChatRoomRequest,
 	PaintChatRoomResponse,
+	PaintChatSaveColorsRequest,
 	PaintChatSettingsResponse,
 	PaintChatSoloResponse,
 	PaintChatTopicRequest,
@@ -1482,6 +1487,7 @@ export type Endpoints = {
 	'pages/show': { req: PagesShowRequest; res: PagesShowResponse };
 	'pages/unlike': { req: PagesUnlikeRequest; res: EmptyResponse };
 	'pages/update': { req: PagesUpdateRequest; res: EmptyResponse };
+	'paint-chat/canvas': { req: PaintChatCanvasRequest; res: PaintChatCanvasResponse };
 	'paint-chat/dice': { req: PaintChatDiceRequest; res: PaintChatDiceResponse };
 	'paint-chat/join': { req: EmptyRequest; res: PaintChatJoinResponse };
 	'paint-chat/leave': { req: PaintChatLeaveRequest; res: PaintChatLeaveResponse };
@@ -1490,9 +1496,11 @@ export type Endpoints = {
 	'paint-chat/messages': { req: PaintChatMessagesRequest; res: PaintChatMessagesResponse };
 	'paint-chat/publish/agree': { req: PaintChatPublishAgreeRequest; res: PaintChatPublishAgreeResponse };
 	'paint-chat/publish/message': { req: PaintChatPublishMessageRequest; res: PaintChatPublishMessageResponse };
+	'paint-chat/publish/my-art': { req: PaintChatPublishMyArtRequest; res: PaintChatPublishMyArtResponse };
 	'paint-chat/publish/reject': { req: PaintChatPublishRejectRequest; res: PaintChatPublishRejectResponse };
 	'paint-chat/report': { req: PaintChatReportRequest; res: PaintChatReportResponse };
 	'paint-chat/room': { req: PaintChatRoomRequest; res: PaintChatRoomResponse };
+	'paint-chat/save-colors': { req: PaintChatSaveColorsRequest; res: EmptyResponse };
 	'paint-chat/settings': { req: EmptyRequest; res: PaintChatSettingsResponse };
 	'paint-chat/solo': { req: EmptyRequest; res: PaintChatSoloResponse };
 	'paint-chat/topic': { req: PaintChatTopicRequest; res: PaintChatTopicResponse };

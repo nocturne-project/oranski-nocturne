@@ -2773,6 +2773,8 @@ declare namespace entities {
         PagesShowResponse,
         PagesUnlikeRequest,
         PagesUpdateRequest,
+        PaintChatCanvasRequest,
+        PaintChatCanvasResponse,
         PaintChatDiceRequest,
         PaintChatDiceResponse,
         PaintChatJoinResponse,
@@ -2787,12 +2789,15 @@ declare namespace entities {
         PaintChatPublishAgreeResponse,
         PaintChatPublishMessageRequest,
         PaintChatPublishMessageResponse,
+        PaintChatPublishMyArtRequest,
+        PaintChatPublishMyArtResponse,
         PaintChatPublishRejectRequest,
         PaintChatPublishRejectResponse,
         PaintChatReportRequest,
         PaintChatReportResponse,
         PaintChatRoomRequest,
         PaintChatRoomResponse,
+        PaintChatSaveColorsRequest,
         PaintChatSettingsResponse,
         PaintChatSoloResponse,
         PaintChatTopicRequest,
@@ -4719,6 +4724,12 @@ type PagesUnlikeRequest = operations['pages___unlike']['requestBody']['content']
 type PagesUpdateRequest = operations['pages___update']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
+type PaintChatCanvasRequest = operations['paint-chat___canvas']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type PaintChatCanvasResponse = operations['paint-chat___canvas']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
 type PaintChatDiceRequest = operations['paint-chat___dice']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
@@ -4761,6 +4772,12 @@ type PaintChatPublishMessageRequest = operations['paint-chat___publish___message
 type PaintChatPublishMessageResponse = operations['paint-chat___publish___message']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
+type PaintChatPublishMyArtRequest = operations['paint-chat___publish___my-art']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type PaintChatPublishMyArtResponse = operations['paint-chat___publish___my-art']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
 type PaintChatPublishRejectRequest = operations['paint-chat___publish___reject']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
@@ -4777,6 +4794,9 @@ type PaintChatRoomRequest = operations['paint-chat___room']['requestBody']['cont
 
 // @public (undocumented)
 type PaintChatRoomResponse = operations['paint-chat___room']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type PaintChatSaveColorsRequest = operations['paint-chat___save-colors']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
 type PaintChatSettingsResponse = operations['paint-chat___settings']['responses']['200']['content']['application/json'];
