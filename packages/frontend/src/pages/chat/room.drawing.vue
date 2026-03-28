@@ -43,12 +43,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<i :class="isToolbarOpen ? 'ti ti-x' : 'ti ti-tools'"></i>
 	</button>
 
-	<!-- ツールバー -->
+	<!-- paintchat式左サイドバーツールバー -->
 	<div :class="[$style.toolbar, { [$style.toolbarMobile]: isTouchDevice, [$style.toolbarMobileOpen]: isTouchDevice && isToolbarOpen }]">
+		<!-- ツール選択 -->
 		<div :class="$style.toolGroup">
 			<button
 				:class="[$style.toolButton, { [$style.active]: currentTool === 'pen' }]"
-				title="鉛筆"
+				title="ペン"
 				@click="setTool('pen')"
 			>
 				<i class="ti ti-pencil"></i>
@@ -65,11 +66,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 				title="スポイト"
 				@click="setTool('eyedropper')"
 			>
-				<span style="font-size: 16px;">🎨</span>
+				<i class="ti ti-color-picker"></i>
 			</button>
 		</div>
 
-		<!-- カラーパレット -->
+		<!-- カラーパレット（30色 2列グリッド） -->
 		<div :class="$style.colorPalette">
 			<button
 				v-for="(color, index) in colors"
@@ -80,30 +81,30 @@ SPDX-License-Identifier: AGPL-3.0-only
 			></button>
 			<button
 				:class="$style.colorPickerButton"
-				title="カラーピッカーを開く"
+				title="カラーピッカー"
 				@click="openColorPicker"
 			>
 				<i class="ti ti-palette"></i>
 			</button>
 		</div>
 
-		<!-- 線の太さ調整 -->
+		<!-- 太さ選択 -->
 		<div :class="$style.strokeWidthGroup">
-			<span :class="$style.label">太さ:</span>
+			<span :class="$style.label">太さ</span>
 			<button
 				v-for="width in strokeWidthLevels"
 				:key="width"
 				:class="[$style.strokeWidthButton, { [$style.active]: strokeWidth === width }]"
-				:title="`線の太さ: ${width}px`"
+				:title="`${width}px`"
 				@click="setStrokeWidth(width)"
 			>
 				<div :class="$style.strokePreview" :style="{ width: `${Math.min(width * 2, 12)}px`, height: `${Math.min(width * 2, 12)}px` }"></div>
 			</button>
 		</div>
 
-		<!-- 透明度調整 -->
+		<!-- 透明度選択 -->
 		<div :class="$style.opacityGroup">
-			<span :class="$style.label">透明度:</span>
+			<span :class="$style.label">透明度</span>
 			<button
 				v-for="opacity in opacityLevels"
 				:key="opacity"
@@ -114,207 +115,77 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</button>
 		</div>
 
-		<!-- 拡大縮小グループ -->
-		<div v-if="isTouchDevice" :class="$style.zoomGroup">
-			<span :class="$style.label">倍率:</span>
-			<span :class="$style.zoomDisplay">{{ Math.round(zoomLevel * 100) }}% ({{ Math.round(displayWidth * zoomLevel) }}×{{ Math.round(displayHeight * zoomLevel) }})</span>
-			<button :class="$style.zoomButton" title="縮小 (-)" @click="zoomOut">
-				<i class="ti ti-zoom-out"></i>
-			</button>
-			<button :class="$style.zoomResetButton" title="倍率をリセット" @click="resetZoom">
-				<i class="ti ti-zoom-reset"></i>
-			</button>
-			<button :class="$style.zoomButton" title="拡大 (+)" @click="zoomIn">
-				<i class="ti ti-zoom-in"></i>
-			</button>
-			<button :class="$style.debugButton" title="デバッグ情報" @click="showDebugPanel = !showDebugPanel">
-				<i class="ti ti-bug"></i>
-			</button>
-			<button :class="$style.commLogButton" title="通信ログ出力" @click="exportCommLog">
-				<i class="ti ti-antenna-bars"></i>
-			</button>
-		</div>
-
-		<!-- 手ブレ補正設定（モバイル版） -->
-		<div v-if="isTouchDevice" :class="$style.touchCorrectionGroup">
-			<span :class="$style.label">手ブレ補正:</span>
+		<!-- アンドゥ -->
+		<div :class="$style.toolGroup">
 			<button
-				:class="[$style.correctionButton, { [$style.active]: handShakeCorrection.enabled.value }]"
-				title="手ブレスムージング"
-				@click="handShakeCorrection.enabled.value = !handShakeCorrection.enabled.value"
-			>
-				<i class="ti ti-wand"></i>
-			</button>
-			<div v-if="handShakeCorrection.enabled.value" :class="$style.correctionLevelGroup">
-				<span :class="$style.levelLabel">Lv:</span>
-				<button
-					v-for="level in correctionLevels"
-					:key="level.level"
-					:class="[$style.levelButton, { [$style.active]: handShakeCorrection.level.value === level.level }]"
-					:title="`補正レベル ${level.level} (${level.name})`"
-					@click="handShakeCorrection.level.value = level.level"
-				>
-					{{ level.level }}
-				</button>
-			</div>
-		</div>
-
-		<!-- レイヤー切り替え（モバイル版） -->
-		<div v-if="isTouchDevice" :class="$style.layerGroup">
-			<span :class="$style.label">レイヤー:</span>
-			<button
-				v-for="layer in MAX_LAYERS"
-				:key="layer"
-				:class="[$style.layerButton, { [$style.active]: currentLayer === layer - 1 }]"
-				@click="switchLayer(layer - 1)"
-			>
-				{{ layer }}
-			</button>
-			<button :class="$style.layerMenuButton" title="レイヤーメニュー" @click="showLayerMenu">
-				<i class="ti ti-dots-vertical"></i>
-			</button>
-		</div>
-
-		<!-- ウォーターマークボタン（モバイル版） -->
-		<div v-if="isTouchDevice" :class="$style.watermarkGroup">
-			<button
-				:class="[$style.actionButton, { [$style.active]: showWatermark }]"
-				title="ウォーターマーク"
-				@click="showWatermark = !showWatermark"
-			>
-				<i class="ti ti-photo-shield"></i>
-				<span>WM</span>
-			</button>
-		</div>
-
-		<!-- Undo/Redoボタン -->
-		<div :class="$style.undoRedoGroup">
-			<button
-				:class="[$style.undoButton, { [$style.disabled]: !canUndo }]"
+				:class="[$style.toolButton, { [$style.disabled]: !canUndo }]"
 				:disabled="!canUndo"
 				title="戻す (Ctrl+Z)"
 				@click="undo"
 			>
 				<i class="ti ti-arrow-back-up"></i>
-				<span v-if="!isTouchDevice">戻す</span>
-			</button>
-			<button
-				:class="[$style.redoButton, { [$style.disabled]: !canRedo }]"
-				:disabled="!canRedo"
-				title="やり直す (Ctrl+Y)"
-				@click="redo"
-			>
-				<i class="ti ti-arrow-forward-up"></i>
-				<span v-if="!isTouchDevice">やり直す</span>
 			</button>
 		</div>
 
-		<!-- ズームグループ（PC版） -->
-		<div v-if="!isTouchDevice" :class="$style.zoomGroup">
-			<span :class="$style.label">倍率:</span>
-			<span :class="$style.zoomDisplay">{{ Math.round(zoomLevel * 100) }}%</span>
-			<button :class="$style.zoomButton" title="縮小 (-)" @click="zoomOut">
-				<i class="ti ti-zoom-out"></i>
-			</button>
-			<button :class="$style.zoomResetButton" title="倍率をリセット (Ctrl+0)" @click="resetZoom">
-				<i class="ti ti-zoom-reset"></i>
-			</button>
-			<button :class="$style.zoomButton" title="拡大 (+)" @click="zoomIn">
-				<i class="ti ti-zoom-in"></i>
-			</button>
-		</div>
-
-		<!-- レイヤー切り替え（PC版） -->
-		<div v-if="!isTouchDevice" :class="$style.layerGroup">
-			<span :class="$style.label">レイヤー:</span>
+		<!-- レイヤー切替 -->
+		<div :class="$style.toolGroup">
 			<button
 				v-for="layer in MAX_LAYERS"
 				:key="layer"
-				:class="[$style.layerButton, { [$style.active]: currentLayer === layer - 1 }]"
+				:class="[$style.toolButton, { [$style.active]: currentLayer === layer - 1 }]"
+				:title="`L${layer}`"
 				@click="switchLayer(layer - 1)"
 			>
 				{{ layer }}
 			</button>
-			<button :class="$style.layerMenuButton" title="レイヤーメニュー" @click="showLayerMenu">
-				<i class="ti ti-dots-vertical"></i>
+		</div>
+
+		<!-- ズーム -->
+		<div :class="$style.toolGroup">
+			<button :class="$style.toolButton" title="縮小" @click="zoomOut">
+				<i class="ti ti-zoom-out"></i>
+			</button>
+			<button :class="$style.toolButton" title="リセット" @click="resetZoom">
+				<i class="ti ti-zoom-reset"></i>
+			</button>
+			<button :class="$style.toolButton" title="拡大" @click="zoomIn">
+				<i class="ti ti-zoom-in"></i>
 			</button>
 		</div>
 
-		<!-- アクションボタン -->
-		<div :class="$style.actionGroup">
-			<button
-				:class="[$style.actionButton, { [$style.active]: showWatermark }]"
-				title="ウォーターマーク"
-				@click="showWatermark = !showWatermark"
-			>
-				<i class="ti ti-photo-shield"></i>
-				<span v-if="!isTouchDevice">WM</span>
-			</button>
-			<button :class="$style.fullscreenButton" :title="isFullscreen ? '全画面を終了' : '全画面モード'" @click="toggleFullscreen">
-				<i :class="isFullscreen ? 'ti ti-minimize' : 'ti ti-maximize'"></i>
-				<span v-if="!isTouchDevice">{{ isFullscreen ? '終了' : '全画面' }}</span>
-			</button>
-			<button :class="$style.settingsButton" title="キャンバスサイズ変更" @click="showCanvasSizeDialog">
-				<i class="ti ti-adjustments"></i>
-				<span v-if="!isTouchDevice">サイズ</span>
-			</button>
-			<button :class="$style.debugExportButton" title="デバッグログ出力（軌跡記録）" @click="exportDebugLog">
-				<i class="ti ti-file-export"></i>
-				<span v-if="!isTouchDevice">ログ出力</span>
-			</button>
-			<button :class="$style.commLogButton" title="通信ログ出力" @click="exportCommLog">
-				<i class="ti ti-antenna-bars"></i>
-				<span v-if="!isTouchDevice">通信ログ</span>
-			</button>
-			<button :class="$style.saveButton" title="キャンバスをダウンロード" @click="downloadCanvas">
+		<!-- ダウンロード・クリア -->
+		<div :class="$style.toolGroup">
+			<button :class="$style.toolButton" title="ダウンロード" @click="downloadCanvas">
 				<i class="ti ti-download"></i>
-				<span v-if="!isTouchDevice">ダウンロード</span>
 			</button>
-			<button
-				:class="$style.clearButton"
-				title="キャンバスをクリア"
-				@click="clearCanvas"
-			>
+			<button :class="$style.toolButton" title="クリア" @click="clearCanvas">
 				<i class="ti ti-trash"></i>
-				<span v-if="!isTouchDevice">クリア</span>
 			</button>
 		</div>
 
-		<!-- 手ブレ補正設定 -->
-		<div v-if="!isTouchDevice" :class="$style.mouseCorrectionGroup">
-			<span :class="$style.label">手ブレ補正:</span>
-			<button
-				:class="[$style.correctionButton, { [$style.active]: handShakeCorrection.enabled.value }]"
-				title="手ブレスムージング"
-				@click="handShakeCorrection.enabled.value = !handShakeCorrection.enabled.value"
-			>
-				<i class="ti ti-wand"></i>
+		<!-- その他機能（...メニュー） -->
+		<div :class="$style.toolGroup">
+			<button :class="[$style.toolButton, { [$style.active]: showMoreMenu }]" title="その他" @click="showMoreMenu = !showMoreMenu">
+				<i class="ti ti-dots"></i>
 			</button>
-			<div v-if="handShakeCorrection.enabled.value" :class="$style.correctionLevelGroup">
-				<span :class="$style.levelLabel">レベル:</span>
-				<button
-					v-for="level in correctionLevels"
-					:key="level.level"
-					:class="[$style.levelButton, { [$style.active]: handShakeCorrection.level.value === level.level }]"
-					:title="`補正レベル ${level.level} (${level.name})`"
-					@click="handShakeCorrection.level.value = level.level"
-				>
-					{{ level.level }}
-				</button>
-			</div>
-			<button
-				:class="[$style.correctionButton, { [$style.active]: handShakeCorrection.pressureSimulation.value }]"
-				title="筆圧シミュレーション"
-				@click="handShakeCorrection.pressureSimulation.value = !handShakeCorrection.pressureSimulation.value"
-			>
-				<i class="ti ti-brush"></i>
+		</div>
+
+		<!-- ...メニュー展開時 -->
+		<div v-if="showMoreMenu" :class="$style.moreMenu">
+			<button :class="$style.toolButton" title="やり直す" :disabled="!canRedo" @click="redo">
+				<i class="ti ti-arrow-forward-up"></i>
 			</button>
-			<button
-				:class="[$style.correctionButton, { [$style.active]: handShakeCorrection.stabilization.value }]"
-				title="手ぶれ補正"
-				@click="handShakeCorrection.stabilization.value = !handShakeCorrection.stabilization.value"
-			>
-				<i class="ti ti-hand-stop"></i>
+			<button :class="[$style.toolButton, { [$style.active]: showWatermark }]" title="WM" @click="showWatermark = !showWatermark">
+				<i class="ti ti-photo-shield"></i>
+			</button>
+			<button :class="$style.toolButton" :title="isFullscreen ? '全画面終了' : '全画面'" @click="toggleFullscreen">
+				<i :class="isFullscreen ? 'ti ti-minimize' : 'ti ti-maximize'"></i>
+			</button>
+			<button :class="$style.toolButton" title="デバッグ" @click="showDebugPanel = !showDebugPanel">
+				<i class="ti ti-bug"></i>
+			</button>
+			<button :class="$style.toolButton" title="ログ出力" @click="exportDebugLog">
+				<i class="ti ti-file-export"></i>
 			</button>
 		</div>
 	</div>
@@ -691,6 +562,7 @@ const isToolbarOpen = ref(false);
 // デバッグ用状態
 let debugLogCount = 0;
 const showDebugPanel = ref(false);
+const showMoreMenu = ref(false);
 const debugInfo = ref<DebugInfo>({
 	device: {},
 	sizes: {},
@@ -997,8 +869,9 @@ async function loadRoomSettings() {
 		});
 
 		if (settings) {
-			canvasWidth.value = settings.canvasWidth;
-			canvasHeight.value = settings.canvasHeight;
+			// キャンバスサイズは1600x1200固定（paintchat準拠）。サーバー値で上書きしない
+			// canvasWidth.value = settings.canvasWidth;
+			// canvasHeight.value = settings.canvasHeight;
 		}
 	} catch (error) {
 		console.error('❌ [SETTINGS] Failed to load room settings:', error);
@@ -1267,6 +1140,12 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+	// CanvasEngineの破棄
+	if (canvasEngine.value) {
+		canvasEngine.value.dispose();
+		canvasEngine.value = null;
+	}
+
 	if (connection.value) {
 		connection.value.dispose();
 	}
@@ -1552,8 +1431,23 @@ function draw(event: MouseEvent | TouchEvent) {
 	// CanvasEngine経由でストローク進行（スムージング・プレビュー描画込み）
 	canvasEngine.value.moveStroke(point.x, point.y, pressure);
 
-	// リアルタイム描画進行状況を他のユーザーに送信
-	sendDrawingProgress();
+	// CanvasEngineのポイントデータで進捗送信
+	const engineState = canvasEngine.value.getState();
+	if (connection.value && engineState.currentPoints.length > 0) {
+		const now = Date.now();
+		if (now - lastProgressSent >= progressSendInterval) {
+			lastProgressSent = now;
+			const data = {
+				points: engineState.currentPoints.slice(),
+				tool: currentTool.value,
+				color: currentColor.value,
+				strokeWidth: strokeWidth.value,
+				opacity: currentOpacity.value,
+				layer: currentLayer.value,
+			};
+			connection.value.send('drawingProgress', data);
+		}
+	}
 }
 
 // 描画終了（CanvasEngine経由）
@@ -1577,10 +1471,8 @@ function stopDrawing() {
 	const stroke = canvasEngine.value.endStroke();
 
 	if (stroke) {
-		// userNameをセット
 		stroke.userName = $i.name || $i.username;
 
-		// ストローク履歴に追加
 		addStrokeToHistory({
 			points: stroke.points,
 			tool: stroke.tool,
@@ -1590,8 +1482,20 @@ function stopDrawing() {
 			timestamp: stroke.timestamp,
 		});
 
-		// 描画データを他のユーザーに送信
-		sendDrawingStroke();
+		// CanvasEngineのストロークデータを直接WebSocketで送信
+		if (connection.value) {
+			const data = {
+				id: stroke.id,
+				points: stroke.points,
+				tool: stroke.tool,
+				color: stroke.color,
+				strokeWidth: stroke.width,
+				opacity: stroke.opacity,
+				layer: stroke.layer ?? 0,
+			};
+			connection.value.send('drawingStroke', data);
+			recordCommLog('send', 'drawingStroke', data);
+		}
 	}
 
 	currentPath = [];
@@ -2315,23 +2219,31 @@ function eyedropColor(point: { x: number; y: number }) {
  */
 function downloadCanvas() {
 	try {
-		// 合成用の一時キャンバスを作成
+		// CanvasEngine経由でダウンロード（全レイヤー合成済み）
+		if (canvasEngine.value) {
+			const dataUrl = canvasEngine.value.toDataURL('image/png');
+			const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+			const filename = `drawing_${timestamp}.png`;
+			const link = window.document.createElement('a');
+			link.href = dataUrl;
+			link.download = filename;
+			window.document.body.appendChild(link);
+			link.click();
+			window.document.body.removeChild(link);
+			return;
+		}
+
+		// 旧フォールバック
 		const compositeCanvas = window.document.createElement('canvas');
 		compositeCanvas.width = physicalCanvasWidth.value;
 		compositeCanvas.height = physicalCanvasHeight.value;
 		const compositeCtx = compositeCanvas.getContext('2d');
 
-		if (!compositeCtx) {
-			console.error('🎨 [ERROR] Failed to get composite canvas context');
-			return;
-		}
+		if (!compositeCtx) return;
 
-		// 1. 白背景を描画
 		compositeCtx.fillStyle = '#FFFFFF';
 		compositeCtx.fillRect(0, 0, compositeCanvas.width, compositeCanvas.height);
 
-		// 2. 3枚のレイヤーを順番に合成（レイヤー2→1→0の順）
-		// HTMLでのz-index順序と同じ: レイヤー2が下、レイヤー0が上
 		for (let i = MAX_LAYERS - 1; i >= 0; i--) {
 			const layerCanvas = layerCanvases.value[i];
 			if (layerCanvas) {
@@ -2339,7 +2251,6 @@ function downloadCanvas() {
 			}
 		}
 
-		// 3. PNG形式でダウンロード
 		const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
 		const filename = `drawing_${timestamp}.png`;
 
@@ -4155,6 +4066,14 @@ function adjustCanvasForMobile() {
 	display: flex;
 	flex-direction: column;
 	gap: 4px;
+}
+
+.moreMenu {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding-top: 4px;
+	border-top: 1px solid var(--MI_THEME-divider);
 }
 
 .toolButton {
