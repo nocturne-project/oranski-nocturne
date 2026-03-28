@@ -382,9 +382,12 @@ function onPointerDown(e: PointerEvent) {
 		lastTime = 0;
 		strokePointCount = 0;
 	} else {
-		// ペン（スタイラス）の場合: 即座に開始
-		const pressure = getEffectivePressure(e, x, y);
-		props.engine.beginStroke(x, y, pressure);
+		// ペン（スタイラス）の場合もストローク開始遅延（ドット防止）
+		pendingStrokeStart = { x, y };
+		strokeStarted = false;
+		isSmoothingInitialized = false;
+		lastTime = 0;
+		strokePointCount = 0;
 	}
 }
 
@@ -402,8 +405,8 @@ function onPointerMove(e: PointerEvent) {
 	const { x, y } = getCanvasCoords(e.clientX, e.clientY);
 
 	if (isPointerDown) {
-		// マウスのストローク開始遅延チェック（ドット防止）
-		if (pendingStrokeStart && e.pointerType === 'mouse') {
+		// ストローク開始遅延チェック（マウス・ペン共通、ドット防止）
+		if (pendingStrokeStart) {
 			const dx = x - pendingStrokeStart.x;
 			const dy = y - pendingStrokeStart.y;
 			if (Math.sqrt(dx * dx + dy * dy) < STROKE_START_THRESHOLD) return;

@@ -166,13 +166,15 @@ paintChat.onReconnected(async () => {
 	if (!canvasEngine.value) return;
 	try {
 		const canvasData = await misskeyApi('paint-chat/canvas' as any, { roomId: props.roomId } as any) as any;
+		// 再接続時は必ずキャンバスをクリアして再描画（不整合を防止）
+		canvasEngine.value.clear();
 		if (canvasData && (canvasData.strokes?.length > 0 || canvasData.mergedImage)) {
-			// キャンバスをクリアしてから再復元（切断中に追加されたストロークも含む）
-			canvasEngine.value.clear();
 			await canvasEngine.value.restoreStrokes(canvasData.strokes ?? [], canvasData.mergedImage);
 		}
+		canvasEngine.value.redraw();
 	} catch {
-		// 復元失敗は無視
+		// 復元失敗時もredrawで白背景に戻す
+		canvasEngine.value?.redraw();
 	}
 });
 

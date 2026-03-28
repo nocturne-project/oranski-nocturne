@@ -568,6 +568,20 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 		moveStroke(x: number, y: number, pressure: number) {
 			if (!state.isDrawing) return;
 			const p = pressureEnabled ? pressure : 1.0;
+
+			// 誤タップ防止: 前のポイントと極端に離れている場合はストロークを切断
+			if (state.currentPoints.length > 0) {
+				const last = state.currentPoints[state.currentPoints.length - 1];
+				const dx = x - last.x;
+				const dy = y - last.y;
+				const dist = Math.sqrt(dx * dx + dy * dy);
+				if (dist > 200) {
+					// 200px以上離れた点は誤タップとみなし、新しいストロークとして開始
+					state.currentPoints = [{ x, y, pressure: p }];
+					return;
+				}
+			}
+
 			state.currentPoints.push({ x, y, pressure: p });
 
 			// 高速差分プレビュー: 直近2ポイントをメインcanvasに直接描画
