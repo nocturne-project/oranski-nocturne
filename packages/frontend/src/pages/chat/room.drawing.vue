@@ -1007,7 +1007,8 @@ function saveUserSettings() {
 
 	saveSettingsTimer = window.setTimeout(async () => {
 		try {
-			await misskeyApi('drawing/settings/user/update', {
+			// 設定保存（新フィールドを個別に送信、APIバリデーション互換性を確保）
+			const params: Record<string, any> = {
 				canvasId: drawingId.value,
 				currentTool: currentTool.value,
 				currentColor: currentColor.value,
@@ -1016,13 +1017,15 @@ function saveUserSettings() {
 				currentLayer: currentLayer.value,
 				layerVisible: layerVisible.value,
 				layerOpacity: layerOpacity.value,
-				zoomLevel: zoomLevel.value,
+				zoomLevel: Math.max(0.25, Math.min(12.0, zoomLevel.value)),
 				panOffsetX: panOffset.value.x,
 				panOffsetY: panOffset.value.y,
-				colors: colors.value,
 				penStrokeWidth: toolStrokeWidths.value.pen,
 				eraserStrokeWidth: toolStrokeWidths.value.eraser,
-			});
+				pressureEnabled: pressureEnabled.value,
+				colorHistory: colorHistory.value,
+			};
+			await misskeyApi('drawing/settings/user/update', params);
 		} catch (error) {
 			console.error('❌ [SETTINGS] Failed to save user settings:', error);
 		}
