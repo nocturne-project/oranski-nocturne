@@ -1152,26 +1152,33 @@ const headerActions = computed<PageHeaderItem[]>(() => {
 });
 
 definePage(computed(() => {
+	// お絵描きタブの場合はウィジェットペインを非表示にしてキャンバス領域を最大化
+	const isDrawingTab = tab.value === 'drawing';
+
 	if (initialized.value) {
 		if (user.value) {
 			return {
 				userName: user.value,
 				title: user.value.name ?? user.value.username,
 				avatar: user.value,
+				needWideArea: isDrawingTab,
 			};
 		} else if (room.value) {
 			return {
 				title: room.value.name,
 				icon: 'ti ti-users',
+				needWideArea: isDrawingTab,
 			};
 		} else {
 			return {
 				title: i18n.ts.directMessage,
+				needWideArea: isDrawingTab,
 			};
 		}
 	} else {
 		return {
 			title: i18n.ts.directMessage,
+			needWideArea: isDrawingTab,
 		};
 	}
 }));
