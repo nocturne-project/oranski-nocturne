@@ -181,13 +181,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<button :class="$style.panelBtn" @click="downloadCanvas">
 				<i class="ti ti-photo-down"></i> 全体を保存
 			</button>
-			<button :class="$style.panelBtn" @click="clearCanvas">
-				<i class="ti ti-trash"></i> キャンバスをクリア
-			</button>
 		</template>
 
 		<!-- その他パネル（グループチャット固有） -->
 		<template v-if="activeToolPanel === 'more'">
+			<button :class="$style.panelBtn" @click="clearCanvas">
+				<i class="ti ti-trash"></i> キャンバスをクリア
+			</button>
 			<button :class="$style.panelBtn" :disabled="!canRedo" @click="redo">
 				<i class="ti ti-arrow-forward-up"></i> やり直す
 			</button>
