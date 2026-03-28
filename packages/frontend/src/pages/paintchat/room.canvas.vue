@@ -83,8 +83,9 @@ let pendingStrokeStart: { x: number; y: number } | null = null;
 let strokeStarted = false;
 const STROKE_START_THRESHOLD = 3; // ピクセル: この距離以上動いたらストローク開始
 
-// 手ブレ補正: 適応的スムージング（既存お絵かきチャットの方式に近い）
-const SMOOTHING_FACTOR = 0.4; // 大きいほど追従が遅い（0.2=弱い, 0.5=強い）
+// 手ブレ補正: 適応的スムージング（大きいほど追従が遅い。0.2=弱い, 0.5=強い）
+const SMOOTHING_FACTOR = 0.4; // 指描き用（変更禁止: ユーザー承認済み 2026-03-28）
+const PEN_SMOOTHING_FACTOR = 0.55; // Apple Pencil用（指より強めの手ブレ補正）
 const MIN_MOVE_DISTANCE = 1.5; // この距離未満の移動はスキップ（ノイズ除去）
 let smoothedX = 0;
 let smoothedY = 0;
@@ -424,10 +425,11 @@ function onPointerMove(e: PointerEvent) {
 			props.engine.beginStroke(startCoords.x, startCoords.y, startPressure);
 		}
 
-		// 手ブレ補正
+		// 手ブレ補正（ペンは指より強めのスムージング）
+		const sf = e.pointerType === 'pen' ? PEN_SMOOTHING_FACTOR : SMOOTHING_FACTOR;
 		if (isSmoothingInitialized) {
-			smoothedX = smoothedX + (x - smoothedX) * (1 - SMOOTHING_FACTOR);
-			smoothedY = smoothedY + (y - smoothedY) * (1 - SMOOTHING_FACTOR);
+			smoothedX = smoothedX + (x - smoothedX) * (1 - sf);
+			smoothedY = smoothedY + (y - smoothedY) * (1 - sf);
 		} else {
 			smoothedX = x;
 			smoothedY = y;

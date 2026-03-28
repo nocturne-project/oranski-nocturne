@@ -157,21 +157,29 @@ function drawVariableWidthStroke(ctx: CanvasRenderingContext2D, interpolated: Pr
 
 	// 非対称エンベロープ方式の筆圧スムージング
 	// 細くなる方向（筆圧低下）: 即座に反応
-	// 太くなる方向（筆圧増加）: ゆっくり追従（ペンを離していないのに太く戻る「バウンスバック」を防止）
+	// 太くなる方向（筆圧増加）: ゆっくり追従（バウンスバック防止）
 	const smoothedPressures: number[] = [];
-	let envPressure = interpolated[0].pressure;
-	const ATTACK_RATE = 0.08; // 太くなる速度（小さいほどゆっくり）
-	const RELEASE_RATE = 0.6; // 細くなる速度（大きいほど即座）
+	let envPressure = interpolated[0].pressure * 0.3; // 書き始めは細く開始
+	const ATTACK_RATE = 0.08;
+	const RELEASE_RATE = 0.6;
 	for (let i = 0; i < interpolated.length; i++) {
 		const raw = interpolated[i].pressure;
 		if (raw > envPressure) {
-			// 太くなる方向: ゆっくり追従
 			envPressure += (raw - envPressure) * ATTACK_RATE;
 		} else {
-			// 細くなる方向: 速く追従
 			envPressure += (raw - envPressure) * RELEASE_RATE;
 		}
 		smoothedPressures.push(envPressure);
+	}
+
+	// 書き始め/書き終わりのフェードイン/フェードアウト（数珠防止）
+	const FADE_POINTS = Math.min(15, Math.floor(interpolated.length * 0.1));
+	for (let i = 0; i < FADE_POINTS; i++) {
+		smoothedPressures[i] *= (i + 1) / (FADE_POINTS + 1);
+	}
+	for (let i = 0; i < FADE_POINTS; i++) {
+		const idx = interpolated.length - 1 - i;
+		if (idx >= 0) smoothedPressures[idx] *= (i + 1) / (FADE_POINTS + 1);
 	}
 
 	// セグメント別stroke: 各セグメントで筆圧に応じたlineWidth
