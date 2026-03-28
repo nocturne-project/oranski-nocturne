@@ -117,3 +117,5 @@ scripts/deploy.sh
 
 # Claude workspace
 /claude
+CLAUDE.md
+CLAUDE.local.md
