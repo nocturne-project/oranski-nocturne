@@ -1107,12 +1107,18 @@ onMounted(async () => {
 	// ユーザー設定を読み込む
 	await loadUserSettings();
 
-	// CanvasEngineにユーザー設定を同期
+	// CanvasEngineにユーザー設定を同期（loadUserSettingsで復元された値を反映）
 	if (canvasEngine.value) {
+		// ツール別太さから現在のツールの太さを取得
+		const currentWidth = (currentTool.value === 'pen' || currentTool.value === 'eraser')
+			? toolStrokeWidths.value[currentTool.value as 'pen' | 'eraser']
+			: strokeWidth.value;
+		strokeWidth.value = currentWidth;
+
 		canvasEngine.value.setState({
 			currentTool: currentTool.value as any,
 			currentColor: currentColor.value,
-			currentWidth: strokeWidth.value,
+			currentWidth: currentWidth,
 			currentOpacity: currentOpacity.value,
 		});
 		canvasEngine.value.setCurrentLayer(currentLayer.value);
