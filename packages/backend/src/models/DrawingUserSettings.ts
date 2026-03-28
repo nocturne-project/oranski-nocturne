@@ -101,6 +101,31 @@ export class MiDrawingUserSettings {
 	})
 	public colors: string[] | null;
 
+	// paintchat式の追加設定
+	@Column('jsonb', {
+		default: [],
+		comment: 'Color history (max 10 hex colors)',
+	})
+	public colorHistory: string[];
+
+	@Column('boolean', {
+		default: true,
+		comment: 'Pressure sensitivity enabled',
+	})
+	public pressureEnabled: boolean;
+
+	@Column('smallint', {
+		default: 5,
+		comment: 'Pen mode stroke width',
+	})
+	public penStrokeWidth: number;
+
+	@Column('smallint', {
+		default: 20,
+		comment: 'Eraser mode stroke width',
+	})
+	public eraserStrokeWidth: number;
+
 	@Column('timestamp with time zone', {
 		default: () => 'CURRENT_TIMESTAMP',
 	})

@@ -3,170 +3,211 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { Ref } from 'vue';
-import type { PressurePoint, Point, ToolType } from './room.drawing.types.js';
+/**
+ * グループチャットお絵描き - イベントハンドラー
+ * paintchat式に改修: PointerEvent.pressureの取得、速度ベース筆圧シミュレーション、
+ * 書き始めフェードイン（3ポイント）、書き終わりフェードアウト、最小移動距離フィルタ（3px）
+ */
 
-// イベントハンドラー用のComposable
+import type { Ref } from 'vue';
+import type { CanvasEngine, Point, ToolType, PressurePoint } from './room.drawing.types.js';
+import { SMOOTHING_FACTOR, smoothPoint, smoothPressure, PRESSURE_SMOOTHING_FACTOR } from './room.drawing.render.js';
+
+// ストローク開始時の最小移動距離（遅延書き出し。誤タップ防止）
+const STROKE_START_THRESHOLD = 3;
+
+// ハンドラー用Composable（CanvasEngine方式）
 export function useDrawingHandlers(deps: {
-	ctx: Ref<CanvasRenderingContext2D | null>;
+	engine: Ref<CanvasEngine | null>;
 	canvasEl: Ref<HTMLCanvasElement | undefined>;
-	isDrawing: Ref<boolean>;
-	currentPath: Ref<PressurePoint[]>;
 	currentTool: Ref<ToolType>;
-	currentColor: Ref<string>;
-	strokeWidth: Ref<number>;
-	currentOpacity: Ref<number>;
 	isSpaceKeyPressed: Ref<boolean>;
 	isPanningWithSpace: Ref<boolean>;
 	panStart: Ref<Point>;
 	panOffset: Ref<Point>;
-	getEventPoint: (event: MouseEvent | TouchEvent) => Point;
-	calculatePressure: () => number;
-	recordTraceLog: (type: string, screenX: number, screenY: number, canvasX: number, canvasY: number) => void;
+	getEventPoint: (event: MouseEvent | TouchEvent | PointerEvent) => Point;
 	eyedropColor: (point: Point) => void;
-	drawLine: (point: Point) => void;
 	sendCursorPosition: (point: Point) => void;
-	sendDrawingProgress: () => void;
-	sendDrawingStroke: () => void;
-	addStrokeToHistory: (strokeData: any) => void;
-	lastTime: { value: number };
-	velocityHistory: number[];
-	pointBuffer: any[];
+	sendDrawingProgress: (points: PressurePoint[]) => void;
+	sendDrawingStroke: (stroke: any) => void;
+	sendUndoStroke: (strokeId: string) => void;
+	onColorPicked?: (color: string) => void;
 }) {
-	function startDrawing(event: MouseEvent | TouchEvent) {
-		if (!deps.ctx.value) return;
+	// ハードウェア筆圧の検出状態
+	let isHardwarePressure = false;
+	// 前回のスムージング済みポイント（入力時スムージング用）
+	let lastSmoothedPoint: PressurePoint | null = null;
+	// 前回の筆圧値（筆圧スムージング用）
+	let lastSmoothedPressure = 0.5;
+	// 一時消しゴムモード（右クリック/ペン消しゴム端）
+	let temporaryEraserMode = false;
+	let originalTool: ToolType = 'pen';
+	// ストローク待機状態（遅延書き出し用）
+	let pendingStrokeStart: { x: number; y: number; pressure: number } | null = null;
 
-		// スペースキーが押されている場合はパンモード
-		if (deps.isSpaceKeyPressed.value && event instanceof MouseEvent) {
+	// PointerDown: ストローク開始
+	function onPointerDown(e: PointerEvent) {
+		if (!deps.engine.value) return;
+
+		// スペースキーパン
+		if (deps.isSpaceKeyPressed.value) {
 			deps.isPanningWithSpace.value = true;
-			deps.panStart.value = { x: event.clientX, y: event.clientY };
-			if (deps.canvasEl.value) {
-				deps.canvasEl.value.style.cursor = 'grabbing';
-			}
+			deps.panStart.value = { x: e.clientX, y: e.clientY };
+			if (deps.canvasEl.value) deps.canvasEl.value.style.cursor = 'grabbing';
 			return;
 		}
 
-		deps.isDrawing.value = true;
-
-		// マウス補正状態をリセット
-		deps.lastTime.value = 0;
-		deps.velocityHistory.length = 0;
-		deps.pointBuffer.length = 0;
-
-		const point = deps.getEventPoint(event);
-		const pressure = deps.calculatePressure(); // 初期筆圧を計算
-		const pressurePoint: PressurePoint = { x: point.x, y: point.y, pressure };
-		deps.currentPath.value = [pressurePoint];
-
-		// 軌跡ログを記録
-		let clientX: number, clientY: number;
-		if (event instanceof MouseEvent) {
-			clientX = event.clientX;
-			clientY = event.clientY;
-			deps.recordTraceLog('mousedown', clientX, clientY, point.x, point.y);
-		} else if (event.touches.length > 0) {
-			clientX = event.touches[0].clientX;
-			clientY = event.touches[0].clientY;
-			deps.recordTraceLog('touchstart', clientX, clientY, point.x, point.y);
+		// 右クリック/ペン消しゴム端 -> 一時消しゴムモード
+		if (e.button === 2 || e.button === 5) {
+			temporaryEraserMode = true;
+			originalTool = deps.currentTool.value;
+			deps.engine.value.setState({ currentTool: 'eraser' });
+			e.preventDefault();
 		}
 
+		// ハードウェア筆圧検出
+		if (e.pressure > 0 && e.pressure < 1 && e.pointerType !== 'mouse') {
+			isHardwarePressure = true;
+			deps.engine.value.setHardwarePressure(true);
+		} else {
+			isHardwarePressure = false;
+			deps.engine.value.setHardwarePressure(false);
+		}
+
+		const point = deps.getEventPoint(e);
+		const pressure = getEffectivePressure(e);
+
+		// スポイトモード
 		if (deps.currentTool.value === 'eyedropper') {
 			deps.eyedropColor(point);
 			return;
 		}
 
-		// 描画開始点を設定
-		deps.ctx.value.beginPath();
-		deps.ctx.value.moveTo(point.x, point.y);
+		// 遅延書き出し: 最小移動距離を超えるまでストロークを開始しない（誤タップ防止）
+		pendingStrokeStart = { x: point.x, y: point.y, pressure };
+		lastSmoothedPoint = { x: point.x, y: point.y, pressure };
+		lastSmoothedPressure = pressure;
 	}
 
-	function draw(event: MouseEvent | TouchEvent) {
-		if (!deps.ctx.value) return;
+	// PointerMove: ストローク進行
+	function onPointerMove(e: PointerEvent) {
+		if (!deps.engine.value) return;
 
-		// スペースキーでのパン中
-		if (deps.isPanningWithSpace.value && event instanceof MouseEvent) {
-			const deltaX = event.clientX - deps.panStart.value.x;
-			const deltaY = event.clientY - deps.panStart.value.y;
-
+		// スペースキーパン中
+		if (deps.isPanningWithSpace.value) {
+			const deltaX = e.clientX - deps.panStart.value.x;
+			const deltaY = e.clientY - deps.panStart.value.y;
 			deps.panOffset.value = {
 				x: deps.panOffset.value.x + deltaX,
-				y: deps.panOffset.value.y + deltaY
+				y: deps.panOffset.value.y + deltaY,
 			};
-
-			deps.panStart.value = { x: event.clientX, y: event.clientY };
+			deps.panStart.value = { x: e.clientX, y: e.clientY };
 			return;
 		}
 
-		const point = deps.getEventPoint(event);
-
-		// 軌跡ログを記録
-		let clientX: number, clientY: number;
-		if (event instanceof MouseEvent) {
-			clientX = event.clientX;
-			clientY = event.clientY;
-			if (deps.isDrawing.value) {
-				deps.recordTraceLog('mousemove', clientX, clientY, point.x, point.y);
-			}
-		} else if (event.touches.length > 0) {
-			clientX = event.touches[0].clientX;
-			clientY = event.touches[0].clientY;
-			if (deps.isDrawing.value) {
-				deps.recordTraceLog('touchmove', clientX, clientY, point.x, point.y);
-			}
-		}
-
-		// カーソル位置を他のユーザーに送信
+		const point = deps.getEventPoint(e);
 		deps.sendCursorPosition(point);
 
-		if (!deps.isDrawing.value || deps.currentTool.value === 'eyedropper') return;
+		// ストローク待機中: 最小移動距離を超えたら実際にストローク開始
+		if (pendingStrokeStart) {
+			const dx = point.x - pendingStrokeStart.x;
+			const dy = point.y - pendingStrokeStart.y;
+			if (Math.sqrt(dx * dx + dy * dy) < STROKE_START_THRESHOLD) return;
 
-		const pressure = deps.calculatePressure(); // 現在の筆圧を計算
-		const pressurePoint: PressurePoint = { x: point.x, y: point.y, pressure };
-		deps.currentPath.value.push(pressurePoint);
+			// ストローク開始
+			deps.engine.value.beginStroke(pendingStrokeStart.x, pendingStrokeStart.y, pendingStrokeStart.pressure);
+			pendingStrokeStart = null;
+		}
 
-		// ローカル描画
-		deps.drawLine(point);
+		const engineState = deps.engine.value.getState();
+		if (!engineState.isDrawing) return;
 
-		// リアルタイム描画進行状況を他のユーザーに送信
-		deps.sendDrawingProgress();
+		if (deps.currentTool.value === 'eyedropper') return;
+
+		const rawPressure = getEffectivePressure(e);
+
+		// 入力時スムージング（指描き/マウスのみ、Apple Pencilでは適用しない）
+		let smoothedX = point.x;
+		let smoothedY = point.y;
+		let smoothedPressure = rawPressure;
+
+		if (!isHardwarePressure && lastSmoothedPoint) {
+			const sp = smoothPoint(
+				{ x: point.x, y: point.y, pressure: rawPressure },
+				lastSmoothedPoint,
+				SMOOTHING_FACTOR,
+			);
+			smoothedX = sp.x;
+			smoothedY = sp.y;
+		}
+
+		// 筆圧スムージング（全デバイス共通）
+		smoothedPressure = smoothPressure(rawPressure, lastSmoothedPressure, PRESSURE_SMOOTHING_FACTOR);
+		lastSmoothedPressure = smoothedPressure;
+
+		lastSmoothedPoint = { x: smoothedX, y: smoothedY, pressure: smoothedPressure };
+
+		deps.engine.value.moveStroke(smoothedX, smoothedY, smoothedPressure);
+
+		// 描画進行データを送信
+		const currentPoints = deps.engine.value.getState().currentPoints;
+		deps.sendDrawingProgress(currentPoints);
 	}
 
-	function stopDrawing() {
-		// スペースキーでのパン終了
+	// PointerUp: ストローク確定
+	function onPointerUp(_e: PointerEvent) {
+		if (!deps.engine.value) return;
+
+		// スペースキーパン終了
 		if (deps.isPanningWithSpace.value) {
 			deps.isPanningWithSpace.value = false;
-			if (deps.canvasEl.value && deps.isSpaceKeyPressed.value) {
-				deps.canvasEl.value.style.cursor = 'grab';
-			} else if (deps.canvasEl.value) {
-				deps.canvasEl.value.style.cursor = 'crosshair';
+			if (deps.canvasEl.value) {
+				deps.canvasEl.value.style.cursor = deps.isSpaceKeyPressed.value ? 'grab' : 'crosshair';
 			}
 			return;
 		}
 
-		if (!deps.isDrawing.value || deps.currentPath.value.length === 0) return;
+		// 遅延書き出し中にリリースされた場合（短いタップ）: ストロークなしで終了
+		if (pendingStrokeStart) {
+			pendingStrokeStart = null;
+			return;
+		}
 
-		deps.isDrawing.value = false;
+		// ストローク確定
+		const stroke = deps.engine.value.endStroke();
 
-		// ストローク履歴に追加
-		const strokeData = {
-			points: [...deps.currentPath.value],
-			tool: deps.currentTool.value,
-			color: deps.currentColor.value,
-			strokeWidth: deps.strokeWidth.value,
-			opacity: deps.currentOpacity.value,
-			timestamp: Date.now()
-		};
+		// 一時消しゴムモード解除
+		if (temporaryEraserMode) {
+			temporaryEraserMode = false;
+			deps.engine.value.setState({ currentTool: originalTool });
+		}
 
-		deps.addStrokeToHistory(strokeData);
+		if (stroke) {
+			deps.sendDrawingStroke(stroke);
+		}
 
-		// 描画データを他のユーザーに送信
-		deps.sendDrawingStroke();
-		deps.currentPath.value = [];
+		lastSmoothedPoint = null;
+		lastSmoothedPressure = 0.5;
+	}
+
+	// 有効な筆圧を取得（ハードウェア筆圧 or 速度ベースシミュレーション）
+	function getEffectivePressure(e: PointerEvent): number {
+		if (isHardwarePressure && e.pressure > 0 && e.pressure < 1) {
+			return e.pressure;
+		}
+		// マウス/タッチ: デフォルト筆圧
+		return 0.5;
+	}
+
+	// 右クリックメニュー抑制
+	function onContextMenu(e: Event) {
+		e.preventDefault();
 	}
 
 	return {
-		startDrawing,
-		draw,
-		stopDrawing
+		onPointerDown,
+		onPointerMove,
+		onPointerUp,
+		onContextMenu,
 	};
 }

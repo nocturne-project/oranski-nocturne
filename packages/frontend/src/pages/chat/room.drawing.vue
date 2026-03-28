@@ -509,15 +509,13 @@ import DrawingDebugPanel from './room.drawing.debug.vue';
 // 分離したモジュールをインポート
 import { screenToCanvasCoordinates, getActualDrawingArea } from './room.drawing.coordinates.js';
 import {
-	drawSmoothPath,
-	applyHandShakeCorrection,
-	simulatePressureFromVelocity,
+	createCanvasEngine,
 	getUserCursorColor,
 	getContrastColor,
 } from './room.drawing.canvas.js';
 // 新規作成したComposableをインポート
 import { useDrawingHandlers } from './room.drawing.handlers.js';
-import { useDrawingRender } from './room.drawing.render.js';
+// useDrawingRenderはCanvasEngine方式に統合済み
 import { useDrawingLayers } from './room.drawing.layers.js';
 import { useDrawingNetwork } from './room.drawing.network.js';
 // ユーティリティ関数をインポート
@@ -558,6 +556,7 @@ import type {
 	DebugInfo,
 	RealtimeCoords,
 	CorrectionLevel,
+	CanvasEngine,
 } from './room.drawing.types.js';
 import MkAvatar from '@/components/global/MkAvatar.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
@@ -585,13 +584,16 @@ const drawingId = computed(() => {
 	}
 });
 
+// paintchat式CanvasEngineインスタンス
+const canvasEngine = ref<CanvasEngine | null>(null);
+
 // キャンバス関連
 const canvasEl = ref<HTMLCanvasElement>();
 const canvasContainerEl = ref<HTMLDivElement>();
-const canvasWidth = ref(800); // 800x600の標準サイズ（可変）
-const canvasHeight = ref(600);
-const displayWidth = ref(800); // 表示サイズ（固定）
-const displayHeight = ref(600);
+const canvasWidth = ref(1600); // 1600x1200固定（paintchat準拠）
+const canvasHeight = ref(1200);
+const displayWidth = ref(1600); // 表示サイズ
+const displayHeight = ref(1200);
 
 // DPR考慮した物理サイズ（テンプレートバインド用）
 const physicalCanvasWidth = computed(() => {
@@ -699,8 +701,9 @@ const isPanningWithSpace = ref(false); // スペースキーでのパン中
 // ズーム（拡大縮小）状態
 const zoomLevel = ref(1);
 const zoomCenter = ref({ x: 0, y: 0 });
-const minZoom = 0.5;
-const maxZoom = 10.0;
+// ズーム範囲: paintchat互換（0.25x〜12x）
+const minZoom = 0.25;
+const maxZoom = 12;
 const isZooming = ref(false);
 
 // ジェスチャー状態管理
@@ -754,31 +757,21 @@ const progressSendInterval = 50; // 50ms間隔で進行状況を送信
 let canvasRect = ref<DOMRect | null>(null);
 let resizeObserver: ResizeObserver | null = null;
 
-// カラーパレット（濃いめ）
+// カラーパレット（paintchat互換30色パレット）
 const colors = ref([
-	'#000000', // 黒
-	'#FFFFFF', // 白
-	'#E74C3C', // 赤
-	'#27AE60', // 緑
-	'#3498DB', // 青
-	'#F39C12', // オレンジ
-	'#9B59B6', // 紫
-	'#1ABC9C', // ターコイズ
-	'#E67E22', // カロット
-	'#2ECC71', // エメラルド
-	'#5DADE2', // スカイブルー
-	'#F4D03F', // 黄色
-	'#AF7AC5', // アメジスト
-	'#48C9B0', // アクアマリン
-	'#95A5A6', // グレー
-	'#7F8C8D', // ダークグレー
+	'#000000', '#3b3b3b', '#808080', '#c8c8c8', '#ffffff',
+	'#c0392b', '#e74c3c', '#e67e22', '#f39c12', '#f1c40f',
+	'#27ae60', '#2ecc71', '#16a085', '#2980b9', '#3498db',
+	'#8e44ad', '#9b59b6', '#e91e8f', '#fd79a8', '#fdcb6e',
+	'#fab1a0', '#ffeaa7', '#dfe6e9', '#a29bfe', '#74b9ff',
+	'#55efc4', '#81ecec', '#d4a574', '#8d6e63', '#4a3728',
 ]);
 
 // 透明度レベル
 const opacityLevels = [0.2, 0.4, 0.6, 0.8, 1.0];
 
-// 線の太さレベル
-const strokeWidthLevels = [1, 1.5, 2, 10, 50, 100];
+// 線の太さレベル（paintchat互換、最大200px）
+const strokeWidthLevels = [1, 2, 3, 5, 8, 12, 20, 40, 80, 120, 200];
 
 // パフォーマンス管理
 const maxUndoHistory = 20; // アンドゥ履歴の最大数
@@ -1087,6 +1080,13 @@ onMounted(async () => {
 	// 現在のレイヤーのコンテキストを設定
 	ctx = layerContexts.value[currentLayer.value];
 
+	// paintchat式CanvasEngineの初期化
+	if (canvasEl.value) {
+		const engine = createCanvasEngine($i.id);
+		engine.init(canvasEl.value);
+		canvasEngine.value = engine;
+	}
+
 	// タッチデバイス検出
 	isTouchDevice.value = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
@@ -1195,12 +1195,6 @@ onMounted(async () => {
 					layerCanvases.value[currentLayer.value] || null,
 					canvasWidth.value,
 					canvasHeight.value,
-					displayWidth.value,
-					displayHeight.value,
-					panOffset.value,
-					zoomLevel.value,
-					zoomCenter.value,
-					isTouchDevice.value,
 				);
 
 				// ズームレベルを更新
@@ -1214,12 +1208,6 @@ onMounted(async () => {
 					layerCanvases.value[currentLayer.value] || null,
 					canvasWidth.value,
 					canvasHeight.value,
-					displayWidth.value,
-					displayHeight.value,
-					panOffset.value,
-					zoomLevel.value,
-					zoomCenter.value,
-					isTouchDevice.value,
 				);
 
 				// マウス位置が変わらないようにパンオフセットを調整
@@ -1702,15 +1690,9 @@ function getEventPoint(event: MouseEvent | TouchEvent): { x: number; y: number }
 		canvas || null,
 		canvasWidth.value,
 		canvasHeight.value,
-		displayWidth.value,
-		displayHeight.value,
-		panOffset.value,
-		zoomLevel.value,
-		zoomCenter.value,
-		isTouchDevice.value,
 	);
 
-	// キャンバス範囲内にクランプ
+	// キャンバス範囲内にクランプ（screenToCanvasCoordinates内部でもクランプ済み）
 	coordinates.x = Math.max(0, Math.min(canvasWidth.value, coordinates.x));
 	coordinates.y = Math.max(0, Math.min(canvasHeight.value, coordinates.y));
 
@@ -3298,13 +3280,6 @@ function screenToCanvas(clientX: number, clientY: number): Point {
 		canvas || null,
 		canvasWidth.value,
 		canvasHeight.value,
-		displayWidth.value,
-		displayHeight.value,
-		panOffset.value,
-		zoomLevel.value,
-		zoomCenter.value,
-		isTouchDevice.value,
-		debugInfo,
 	);
 }
 

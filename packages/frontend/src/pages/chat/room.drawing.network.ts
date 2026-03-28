@@ -3,138 +3,117 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { Ref } from 'vue';
-import type { PressurePoint, Point, ToolType } from './room.drawing.types.js';
+/**
+ * グループチャットお絵描き - WebSocket通信
+ * paintchat式に改修: drawingStrokeにpressure配列・layerフィールド追加、
+ * カーソル50msレート制限、後方互換性（pressure未定義時は1.0フォールバック）
+ */
 
-// WebSocket通信用のComposable
+import type { Ref } from 'vue';
+import type { PressurePoint, Point, ToolType, StrokeData, RemoteCursor } from './room.drawing.types.js';
+import { getUserCursorColor } from './room.drawing.canvas.js';
+
+// カーソル送信レート制限（50ms）
+const CURSOR_SEND_INTERVAL = 50;
+
+// WebSocket通信Composable（CanvasEngine対応版）
 export function useDrawingNetwork(deps: {
 	connection: Ref<any>;
-	currentPath: Ref<PressurePoint[]>;
 	currentTool: Ref<ToolType>;
 	currentColor: Ref<string>;
 	strokeWidth: Ref<number>;
 	currentOpacity: Ref<number>;
 	currentLayer: Ref<number>;
-	otherCursors: Ref<any[]>;
+	otherCursors: Ref<RemoteCursor[]>;
 	$i: any;
-	recordCommLog: (direction: 'send' | 'receive', type: string, data: any) => void;
-	lastProgressSent: { value: number };
-	progressSendInterval: number;
 }) {
-	// カーソルタイマー管理
+	// カーソルタイマー管理（3秒タイムアウト）
 	const cursorTimers = new Map<string, number>();
+	// カーソル送信レート制限
+	let lastCursorSent = 0;
 
-	// ユーザーごとの色管理
-	const userCursorColors = new Map<string, string>();
-
-	function sendDrawingStroke() {
-		if (deps.currentPath.value.length === 0 || !deps.connection.value) return;
+	// 完了ストロークを送信（paintchat式: pressure配列・layer含む）
+	function sendDrawingStroke(stroke: StrokeData) {
+		if (!deps.connection.value || !stroke) return;
 
 		try {
 			const data = {
-				points: deps.currentPath.value,
-				tool: deps.currentTool.value,
-				color: deps.currentColor.value,
-				strokeWidth: deps.strokeWidth.value,
-				opacity: deps.currentOpacity.value,
-				layer: deps.currentLayer.value
+				id: stroke.id,
+				points: stroke.points,
+				tool: stroke.tool,
+				color: stroke.color,
+				strokeWidth: stroke.width ?? stroke.strokeWidth,
+				opacity: stroke.opacity,
+				layer: stroke.layer ?? 0,
+				// 後方互換: 古い受信側がpressure未定義でも動作するようにする
 			};
 			deps.connection.value.send('drawingStroke', data);
-			deps.recordCommLog('send', 'drawingStroke', data);
 		} catch (error) {
-			console.warn('🎨 [WARN] Failed to send drawing stroke:', error);
+			console.warn('[Drawing] Failed to send stroke:', error);
 		}
 	}
 
-	function sendDrawingProgress() {
-		if (deps.currentPath.value.length === 0 || !deps.connection.value) return;
-
-		const now = Date.now();
-		if (now - deps.lastProgressSent.value < deps.progressSendInterval) return;
-		deps.lastProgressSent.value = now;
+	// 描画進行中データを送信（レート制限付き）
+	function sendDrawingProgress(points: PressurePoint[]) {
+		if (!deps.connection.value || points.length === 0) return;
 
 		try {
 			const data = {
-				points: deps.currentPath.value.slice(),
+				points: points.slice(),
 				tool: deps.currentTool.value,
 				color: deps.currentColor.value,
 				strokeWidth: deps.strokeWidth.value,
 				opacity: deps.currentOpacity.value,
-				isComplete: false,
-				layer: deps.currentLayer.value
+				layer: deps.currentLayer.value,
 			};
 			deps.connection.value.send('drawingProgress', data);
-			deps.recordCommLog('send', 'drawingProgress', data);
 		} catch (error) {
-			console.warn('🎨 [WARN] Failed to send drawing progress:', error);
+			// silent fail for progress
 		}
 	}
 
+	// カーソル位置を送信（50msレート制限）
 	function sendCursorPosition(point: Point) {
 		if (!deps.connection.value) return;
 
+		const now = Date.now();
+		if (now - lastCursorSent < CURSOR_SEND_INTERVAL) return;
+		lastCursorSent = now;
+
 		try {
-			const data = {
-				x: point.x,
-				y: point.y
-			};
-			deps.connection.value.send('cursorMove', data);
-			deps.recordCommLog('send', 'cursorMove', data);
+			deps.connection.value.send('cursorMove', { x: point.x, y: point.y });
 		} catch (error) {
-			console.warn('🎨 [WARN] Failed to send cursor position:', error);
+			// silent fail for cursor
 		}
 	}
 
-	function getUserCursorColor(userId: string): string {
-		if (!userCursorColors.has(userId)) {
-			// ユーザーIDをベースにした一意で鮮やかな色を生成
-			const hue = (userId.charCodeAt(0) + userId.charCodeAt(userId.length - 1)) % 360;
-			const saturation = 70 + (userId.length % 30); // 70-100%
-			const lightness = 45 + (userId.charCodeAt(1) % 20); // 45-65%
-			const color = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-			userCursorColors.set(userId, color);
-		}
-		return userCursorColors.get(userId)!;
-	}
-
-	function getContrastColor(backgroundColor: string): string {
-		// HSL色をRGBに変換して明度を判定
-		const hslMatch = backgroundColor.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
-		if (hslMatch) {
-			const lightness = parseInt(hslMatch[3]);
-			return lightness > 55 ? '#000000' : '#ffffff';
-		}
-		return '#ffffff'; // デフォルトは白
-	}
-
-	function updateOtherCursor(data: any) {
+	// 他ユーザーのカーソルを更新（3秒タイムアウト非表示）
+	function updateOtherCursor(data: { userId: string; userName: string; x: number; y: number }) {
 		if (data.userId === deps.$i.id) return;
 
+		const color = getUserCursorColor(data.userId);
 		const index = deps.otherCursors.value.findIndex(c => c.userId === data.userId);
+
+		const cursorData: RemoteCursor = {
+			userId: data.userId,
+			userName: data.userName,
+			x: data.x,
+			y: data.y,
+			color,
+		};
+
 		if (index >= 0) {
-			deps.otherCursors.value[index] = {
-				userId: data.userId,
-				userName: data.userName,
-				x: data.x,
-				y: data.y,
-				color: getUserCursorColor(data.userId)
-			};
+			deps.otherCursors.value[index] = cursorData;
 		} else {
-			deps.otherCursors.value.push({
-				userId: data.userId,
-				userName: data.userName,
-				x: data.x,
-				y: data.y,
-				color: getUserCursorColor(data.userId)
-			});
+			deps.otherCursors.value.push(cursorData);
 		}
 
-		// 既存のタイマーをクリア
+		// 既存タイマーをクリア
 		if (cursorTimers.has(data.userId)) {
 			window.clearTimeout(cursorTimers.get(data.userId));
 		}
 
-		// 3秒後にカーソルを削除
+		// 3秒後にカーソルを非表示
 		const timer = window.setTimeout(() => {
 			const idx = deps.otherCursors.value.findIndex(c => c.userId === data.userId);
 			if (idx >= 0) {
@@ -146,57 +125,44 @@ export function useDrawingNetwork(deps: {
 		cursorTimers.set(data.userId, timer);
 	}
 
-	function sendUndo() {
+	// アンドゥ送信
+	function sendUndo(strokeId: string) {
 		if (!deps.connection.value) return;
-
 		try {
-			const data = {
-				layer: deps.currentLayer.value
-			};
-			deps.connection.value.send('undo', data);
-			deps.recordCommLog('send', 'undo', data);
+			deps.connection.value.send('undoStroke', {
+				strokeId,
+				layer: deps.currentLayer.value,
+			});
 		} catch (error) {
-			console.warn('🎨 [WARN] Failed to send undo:', error);
+			console.warn('[Drawing] Failed to send undo:', error);
 		}
 	}
 
-	function sendRedo() {
-		if (!deps.connection.value) return;
-
-		try {
-			const data = {
-				layer: deps.currentLayer.value
-			};
-			deps.connection.value.send('redo', data);
-			deps.recordCommLog('send', 'redo', data);
-		} catch (error) {
-			console.warn('🎨 [WARN] Failed to send redo:', error);
-		}
-	}
-
+	// クリア送信
 	function sendClearCanvas() {
 		if (!deps.connection.value) return;
-
 		try {
-			const data = {
-				layer: deps.currentLayer.value
-			};
-			deps.connection.value.send('clearCanvas', data);
-			deps.recordCommLog('send', 'clearCanvas', data);
+			deps.connection.value.send('clearCanvas', {});
 		} catch (error) {
-			console.warn('🎨 [WARN] Failed to send clear canvas:', error);
+			console.warn('[Drawing] Failed to send clear:', error);
 		}
+	}
+
+	// タイマークリーンアップ
+	function dispose() {
+		for (const timer of cursorTimers.values()) {
+			window.clearTimeout(timer);
+		}
+		cursorTimers.clear();
 	}
 
 	return {
 		sendDrawingStroke,
 		sendDrawingProgress,
 		sendCursorPosition,
-		getUserCursorColor,
-		getContrastColor,
 		updateOtherCursor,
 		sendUndo,
-		sendRedo,
-		sendClearCanvas
+		sendClearCanvas,
+		dispose,
 	};
 }

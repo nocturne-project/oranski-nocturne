@@ -15,7 +15,7 @@ const sqlInMemory = await dataSource.driver.createSchemaBuilder().log();
 // （手動命名マイグレーションとTypeORM自動スキーマ同期の差分）
 const customPatterns = [
 	// カスタムテーブル名
-	'noctown_', 'noq_', 'drawing_', 'chat_secret_', 'paint_chat_',
+	'noctown_', 'noq_', 'drawing_', 'chat_secret_', 'paint_chat_', 'chat_room',
 	// カスタムカラム名
 	'noqBotAccountId', 'excludedFromIllustrationHighlight',
 	'chatScope', 'suspendedReason', 'isScheduledPost',

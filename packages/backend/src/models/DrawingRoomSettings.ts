@@ -12,14 +12,14 @@ export class MiDrawingRoomSettings {
 	public id: string;
 
 	@Column('integer', {
-		default: 800,
-		comment: 'Canvas width in pixels',
+		default: 1600,
+		comment: 'Canvas width in pixels (fixed 1600)',
 	})
 	public canvasWidth: number;
 
 	@Column('integer', {
-		default: 600,
-		comment: 'Canvas height in pixels',
+		default: 1200,
+		comment: 'Canvas height in pixels (fixed 1200)',
 	})
 	public canvasHeight: number;
 

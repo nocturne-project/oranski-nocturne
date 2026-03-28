@@ -155,7 +155,8 @@ export class ChatRoomChannel extends Channel {
 				if (!Array.isArray(body.points) || body.points.length === 0 || body.points.length > 500) return; // 進行中は点数制限緩和
 				if (!['pen', 'eraser', 'eyedropper'].includes(body.tool)) return;
 				if (typeof body.color !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(body.color)) return;
-				if (typeof body.strokeWidth !== 'number' || body.strokeWidth < 1 || body.strokeWidth > 100) return;
+				// strokeWidth上限を200に拡大（グループチャット描画アップグレード対応）
+				if (typeof body.strokeWidth !== 'number' || body.strokeWidth < 1 || body.strokeWidth > 200) return;
 				if (typeof body.opacity !== 'number' || body.opacity < 0.1 || body.opacity > 1) return;
 
 				// 進行状況データ作成
@@ -165,8 +166,9 @@ export class ChatRoomChannel extends Channel {
 					userId: this.user.id,
 					userName: this.user.name || this.user.username,
 					points: body.points.map((p: any) => ({
-						x: Math.min(Math.max(Math.round(p.x), 0), 4000),
-						y: Math.min(Math.max(Math.round(p.y), 0), 4000),
+						// 座標範囲をキャンバスサイズ1600x1200に合わせて制限（マージン100px含む）
+						x: Math.min(Math.max(Math.round(p.x), -100), 1700),
+						y: Math.min(Math.max(Math.round(p.y), -100), 1300),
 						pressure: p.pressure !== undefined ? p.pressure : 1.0,
 					})),
 					tool: body.tool,
@@ -189,7 +191,8 @@ export class ChatRoomChannel extends Channel {
 
 				// セキュリティ: カーソル位置の検証（可変キャンバスサイズに対応）
 				if (!body || typeof body.x !== 'number' || typeof body.y !== 'number') return;
-				if (body.x < -100 || body.x > 4100 || body.y < -100 || body.y > 4100) return; // 最大4000x4000 + マージン
+				// 座標範囲をキャンバスサイズ1600x1200に合わせて更新（マージン100px含む）
+				if (body.x < -100 || body.x > 1700 || body.y < -100 || body.y > 1300) return;
 
 				// カーソル位置をルーム内の他のユーザーに配信
 				await this.chatService.broadcastCursorMove(this.roomId, this.user.id, {

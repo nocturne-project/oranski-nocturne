@@ -3,249 +3,91 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { Ref } from 'vue';
-import type { PressurePoint, Point, ToolType } from './room.drawing.types.js';
+/**
+ * グループチャットお絵描き - レンダリング処理
+ * paintchatのCatmull-Romスプライン描画、フェードイン/アウト、連続パスをCanvasEngineに統合済み。
+ * このファイルはCanvasEngine外で使用するユーティリティ関数を提供する。
+ */
 
-// 描画処理用のComposable
-export function useDrawingRender(deps: {
-	ctx: Ref<CanvasRenderingContext2D | null>;
-	canvasWidth: Ref<number>;
-	canvasHeight: Ref<number>;
-	currentPath: Ref<PressurePoint[]>;
-	currentTool: Ref<ToolType>;
-	currentColor: Ref<string>;
-	strokeWidth: Ref<number>;
-	currentOpacity: Ref<number>;
-	otherActiveStrokes: Ref<Map<string, any>>;
-	$i: any;
-	calculatePressure: () => number;
-	simplifyPath: (points: Point[], tolerance: number) => Point[];
-	smoothPoints: (points: Point[], windowSize: number) => Point[];
-	addStrokeToHistory: (strokeData: any) => void;
-}) {
-	function drawSmoothPath(
-		points: Array<{ x: number; y: number; pressure?: number }>,
-		strokeWidth?: number,
-		color?: string,
-		opacity?: number,
-		isEraser: boolean = false
-	) {
-		if (!deps.ctx.value || points.length < 2) return;
+import type { PressurePoint } from './room.drawing.types.js';
 
-		deps.ctx.value.save();
-
-		// パラメータが指定された場合は描画設定を更新
-		const baseStrokeWidth = strokeWidth !== undefined ? strokeWidth : deps.ctx.value.lineWidth;
-		if (color !== undefined) {
-			deps.ctx.value.strokeStyle = color;
-		}
-		if (opacity !== undefined) {
-			deps.ctx.value.globalAlpha = opacity;
-		}
-
-		deps.ctx.value.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
-		deps.ctx.value.lineCap = 'round';
-		deps.ctx.value.lineJoin = 'round';
-		deps.ctx.value.imageSmoothingEnabled = true;
-		deps.ctx.value.imageSmoothingQuality = 'high';
-
-		// 筆圧情報があるかチェック
-		const hasPressure = points.some(p => p.pressure !== undefined);
-
-		if (hasPressure) {
-			// 筆圧対応：各セグメントごとに描画
-			for (let i = 0; i < points.length - 1; i++) {
-				const p1 = points[i];
-				const p2 = points[i + 1];
-				const pressure = p2.pressure || 1.0;
-
-				deps.ctx.value.lineWidth = baseStrokeWidth * pressure;
-				deps.ctx.value.beginPath();
-				deps.ctx.value.moveTo(p1.x, p1.y);
-				deps.ctx.value.lineTo(p2.x, p2.y);
-				deps.ctx.value.stroke();
-			}
-		} else {
-			// 筆圧なし：従来の描画
-			deps.ctx.value.lineWidth = baseStrokeWidth;
-
-			// 1. 移動平均によるスムージング
-			let processedPoints = deps.smoothPoints(points, 3);
-
-			// 2. ダグラス・ピューカー法による最適化（点が多い場合のみ）
-			if (processedPoints.length > 4) {
-				processedPoints = deps.simplifyPath(processedPoints, 0.5);
-			}
-
-			// 3. 高品質ベジェ曲線描画
-			deps.ctx.value.beginPath();
-			deps.ctx.value.moveTo(processedPoints[0].x, processedPoints[0].y);
-
-			if (processedPoints.length === 2) {
-				deps.ctx.value.lineTo(processedPoints[1].x, processedPoints[1].y);
-			} else if (processedPoints.length === 3) {
-				// 3点の場合は2次ベジェ曲線
-				const cp = {
-					x: (processedPoints[0].x + processedPoints[2].x) / 2,
-					y: (processedPoints[0].y + processedPoints[2].y) / 2
-				};
-				deps.ctx.value.quadraticCurveTo(processedPoints[1].x, processedPoints[1].y, cp.x, cp.y);
-				deps.ctx.value.lineTo(processedPoints[2].x, processedPoints[2].y);
-			} else {
-				// 4点以上の場合は改良されたキャットマル・ロム・スプライン
-				for (let i = 0; i < processedPoints.length - 1; i++) {
-					const p0 = processedPoints[Math.max(0, i - 1)];
-					const p1 = processedPoints[i];
-					const p2 = processedPoints[i + 1];
-					const p3 = processedPoints[Math.min(processedPoints.length - 1, i + 2)];
-
-					// より滑らかな制御点計算
-					const tension = 0.25; // 張力パラメータ
-					const cp1x = p1.x + (p2.x - p0.x) * tension;
-					const cp1y = p1.y + (p2.y - p0.y) * tension;
-					const cp2x = p2.x - (p3.x - p1.x) * tension;
-					const cp2y = p2.y - (p3.y - p1.y) * tension;
-
-					// 3次ベジェ曲線で描画
-					deps.ctx.value.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
-				}
-			}
-
-			deps.ctx.value.stroke();
-		}
-
-		deps.ctx.value.restore();
-	}
-
-	function drawLine(point: Point) {
-		if (!deps.ctx.value) return;
-
-		// 筆圧シミュレーション適用
-		const pressure = deps.calculatePressure();
-		const dynamicStrokeWidth = deps.strokeWidth.value * pressure;
-
-		// リアルタイム描画：軽量な線描画
-		deps.ctx.value.save();
-		deps.ctx.value.globalCompositeOperation = deps.currentTool.value === 'eraser' ? 'destination-out' : 'source-over';
-		deps.ctx.value.strokeStyle = deps.currentColor.value;
-		deps.ctx.value.globalAlpha = deps.currentOpacity.value;
-		deps.ctx.value.lineWidth = dynamicStrokeWidth;
-		deps.ctx.value.lineCap = 'round';
-		deps.ctx.value.lineJoin = 'round';
-		deps.ctx.value.imageSmoothingEnabled = true;
-		deps.ctx.value.imageSmoothingQuality = 'high';
-
-		if (deps.currentPath.value.length === 1) {
-			// 単一点の場合は小さな円を描画
-			deps.ctx.value.beginPath();
-			deps.ctx.value.arc(point.x, point.y, dynamicStrokeWidth / 2, 0, Math.PI * 2);
-			deps.ctx.value.fill();
-		} else if (deps.currentPath.value.length >= 2) {
-			// 線描画
-			const prevPoint = deps.currentPath.value[deps.currentPath.value.length - 2];
-			deps.ctx.value.beginPath();
-			deps.ctx.value.moveTo(prevPoint.x, prevPoint.y);
-			deps.ctx.value.lineTo(point.x, point.y);
-			deps.ctx.value.stroke();
-		}
-
-		deps.ctx.value.restore();
-	}
-
-	function drawRemoteStroke(data: any) {
-		if (!deps.ctx.value || data.userId === deps.$i.id) return;
-
-		deps.ctx.value.save();
-		deps.ctx.value.globalCompositeOperation = data.tool === 'eraser' ? 'destination-out' : 'source-over';
-		deps.ctx.value.strokeStyle = data.color;
-		deps.ctx.value.globalAlpha = data.opacity;
-		deps.ctx.value.lineWidth = data.strokeWidth;
-		deps.ctx.value.lineCap = 'round';
-		deps.ctx.value.lineJoin = 'round';
-
-		// 最高品質な滑らかな描画を適用
-		drawSmoothPath(
-			data.points,
-			data.strokeWidth,
-			data.color,
-			data.opacity,
-			data.tool === 'eraser'
-		);
-
-		deps.ctx.value.restore();
-
-		// 進行中の描画があれば完了として削除
-		if (deps.otherActiveStrokes.value.has(data.userId)) {
-			deps.otherActiveStrokes.value.delete(data.userId);
-		}
-
-		// リモートストロークも履歴に追加（自動ラスタライズ管理用）
-		deps.addStrokeToHistory({
-			points: data.points,
-			tool: data.tool,
-			color: data.color,
-			strokeWidth: data.strokeWidth,
-			opacity: data.opacity,
-			timestamp: Date.now(),
-			remote: true // リモートストロークフラグ
-		});
-	}
-
-	function drawRemoteProgress(data: any) {
-		if (!deps.ctx.value || data.userId === deps.$i.id) return;
-
-		console.log('🎨 [DEBUG] Drawing remote progress from user:', data.userId, 'points:', data.points.length);
-
-		// 進行中の描画を更新
-		deps.otherActiveStrokes.value.set(data.userId, {
-			points: data.points,
-			tool: data.tool,
-			color: data.color,
-			strokeWidth: data.strokeWidth,
-			opacity: data.opacity,
-			userId: data.userId
-		});
-
-		// キャンバスを再描画（進行中の描画を含む）
-		redrawWithActiveStrokes();
-	}
-
-	function redrawWithActiveStrokes() {
-		if (!deps.ctx.value) return;
-
-		// 現在のキャンバス状態を保存
-		const imageData = deps.ctx.value.getImageData(0, 0, deps.canvasWidth.value, deps.canvasHeight.value);
-
-		// 進行中の描画を一時的に描画
-		for (const [, strokeData] of deps.otherActiveStrokes.value) {
-			deps.ctx.value.save();
-			deps.ctx.value.globalCompositeOperation = strokeData.tool === 'eraser' ? 'destination-out' : 'source-over';
-			deps.ctx.value.strokeStyle = strokeData.color;
-			deps.ctx.value.globalAlpha = strokeData.opacity * 0.8; // 進行中は少し薄く
-			deps.ctx.value.lineWidth = strokeData.strokeWidth;
-			deps.ctx.value.lineCap = 'round';
-			deps.ctx.value.lineJoin = 'round';
-
-			// 進行中の描画を表示
-			if (strokeData.points && strokeData.points.length > 0) {
-				drawSmoothPath(
-					strokeData.points,
-					strokeData.strokeWidth,
-					strokeData.color,
-					strokeData.opacity * 0.8,
-					strokeData.tool === 'eraser'
-				);
-			}
-
-			deps.ctx.value.restore();
-		}
-	}
-
+// Catmull-Romスプライン補間（CanvasEngine内部と同じアルゴリズム）
+// テストやユーティリティ用にexport
+export function catmullRomPoint(
+	p0: PressurePoint, p1: PressurePoint, p2: PressurePoint, p3: PressurePoint, t: number,
+): PressurePoint {
+	const t2 = t * t;
+	const t3 = t2 * t;
 	return {
-		drawSmoothPath,
-		drawLine,
-		drawRemoteStroke,
-		drawRemoteProgress,
-		redrawWithActiveStrokes
+		x: 0.5 * ((2 * p1.x) + (-p0.x + p2.x) * t + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
+		y: 0.5 * ((2 * p1.y) + (-p0.y + p2.y) * t + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3),
+		pressure: p1.pressure + (p2.pressure - p1.pressure) * t,
 	};
+}
+
+// 速度ベースの筆圧シミュレーション（paintchat準拠）
+// 速い描画 -> 細い線、遅い描画 -> 太い線
+// フェードイン: 最初の5ポイント、範囲: 0.15-0.6
+export function simulatePressure(
+	points: PressurePoint[],
+	index: number,
+): number {
+	if (index === 0 || points.length < 2) return 0.5;
+
+	const prev = points[Math.max(0, index - 1)];
+	const curr = points[index];
+	const dx = curr.x - prev.x;
+	const dy = curr.y - prev.y;
+	const speed = Math.sqrt(dx * dx + dy * dy);
+
+	// 速度 -> 筆圧の変換
+	let pressure = 0.5 - speed * 0.2;
+	pressure = Math.max(0.15, Math.min(0.6, pressure));
+
+	// 最初の5ポイントでフェードイン
+	if (index < 5) {
+		pressure *= (index + 1) / 6;
+	}
+
+	return pressure;
+}
+
+// 入力時のスムージング（SMOOTHING_FACTOR=0.4）
+// 指描き・マウス用。Apple Pencilでは適用しない。
+export const SMOOTHING_FACTOR = 0.4;
+
+export function smoothPoint(
+	current: PressurePoint,
+	previous: PressurePoint,
+	factor: number = SMOOTHING_FACTOR,
+): PressurePoint {
+	return {
+		x: previous.x + (current.x - previous.x) * (1 - factor),
+		y: previous.y + (current.y - previous.y) * (1 - factor),
+		pressure: current.pressure,
+	};
+}
+
+// 筆圧スムージング（factor=0.35）
+export const PRESSURE_SMOOTHING_FACTOR = 0.35;
+
+export function smoothPressure(
+	current: number,
+	previous: number,
+	factor: number = PRESSURE_SMOOTHING_FACTOR,
+): number {
+	return previous + (current - previous) * (1 - factor);
+}
+
+// 最小移動距離フィルタ（1.5px - paintchat準拠）
+export const MIN_MOVE_DISTANCE = 1.5;
+
+export function isMinimumDistance(
+	current: PressurePoint,
+	previous: PressurePoint,
+	minDistance: number = MIN_MOVE_DISTANCE,
+): boolean {
+	const dx = current.x - previous.x;
+	const dy = current.y - previous.y;
+	return Math.sqrt(dx * dx + dy * dy) >= minDistance;
 }
