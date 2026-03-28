@@ -45,8 +45,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 	<!-- paintchat式左サイドバーツールバー（パネル展開方式） -->
 	<div :class="$style.toolbar">
+		<!-- 移動（パン）ツール -->
+		<button :class="[$style.toolButton, { [$style.active]: isMoveMode }]" title="移動" @click="toggleMoveMode">
+			<i class="ti ti-arrows-move"></i>
+		</button>
 		<!-- ペン -->
-		<button :class="[$style.toolButton, { [$style.active]: currentTool === 'pen' }]" title="ペン" @click="setTool('pen')">
+		<button :class="[$style.toolButton, { [$style.active]: !isMoveMode && currentTool === 'pen' }]" title="ペン" @click="setTool('pen')">
 			<i class="ti ti-pencil"></i>
 		</button>
 		<!-- 消しゴム -->
@@ -141,6 +145,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 		<!-- 太さ + 透明度パネル -->
 		<template v-if="activeToolPanel === 'width'">
+			<div :class="$style.pressureToggle">
+				<label :class="$style.toggleLabel">
+					<input type="checkbox" :checked="pressureEnabled" @change="togglePressure">
+					<span>筆圧 {{ pressureEnabled ? 'ON' : 'OFF' }}</span>
+				</label>
+			</div>
 			<div :class="$style.panelLabel">太さ</div>
 			<div :class="$style.widthGrid">
 				<button
@@ -174,12 +184,24 @@ SPDX-License-Identifier: AGPL-3.0-only
 			>
 				レイヤー {{ i }}
 			</button>
+			<div :class="$style.panelLabel">レイヤー透明度: {{ Math.round(layerOpacity[currentLayer] * 100) }}%</div>
+			<input
+				type="range"
+				min="0"
+				max="100"
+				:value="layerOpacity[currentLayer] * 100"
+				:class="$style.opacitySlider"
+				@input="(e: any) => setLayerOpacityValue(currentLayer, Number(e.target.value) / 100)"
+			>
 		</template>
 
 		<!-- ダウンロードパネル -->
 		<template v-if="activeToolPanel === 'download'">
 			<button :class="$style.panelBtn" @click="downloadCanvas">
 				<i class="ti ti-photo-down"></i> 全体を保存
+			</button>
+			<button :class="$style.panelBtn" @click="downloadMyStrokes">
+				<i class="ti ti-user-down"></i> 自分のみ保存
 			</button>
 		</template>
 
@@ -585,6 +607,48 @@ const activeToolPanel = ref<'color' | 'width' | 'layer' | 'download' | 'more' | 
 
 function toggleToolPanel(panel: 'color' | 'width' | 'layer' | 'download' | 'more') {
 	activeToolPanel.value = activeToolPanel.value === panel ? null : panel;
+}
+
+// 移動（パン）ツール
+const isMoveMode = ref(false);
+function toggleMoveMode() {
+	isMoveMode.value = !isMoveMode.value;
+	if (isMoveMode.value) {
+		if (engineCanvasEl.value) engineCanvasEl.value.style.cursor = 'grab';
+	} else {
+		if (engineCanvasEl.value) engineCanvasEl.value.style.cursor = 'crosshair';
+	}
+}
+
+// 筆圧ON/OFF
+const pressureEnabled = ref(true);
+function togglePressure() {
+	pressureEnabled.value = !pressureEnabled.value;
+	if (canvasEngine.value) {
+		canvasEngine.value.setPressureEnabled(pressureEnabled.value);
+	}
+}
+
+// レイヤー透明度変更
+function setLayerOpacityValue(layer: number, opacity: number) {
+	layerOpacity.value[layer] = opacity;
+	if (canvasEngine.value) {
+		canvasEngine.value.setLayerOpacity(layer, opacity);
+	}
+}
+
+// 自分のストロークのみダウンロード
+function downloadMyStrokes() {
+	if (!canvasEngine.value) return;
+	const dataUrl = canvasEngine.value.toMyStrokesDataURL();
+	const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+	const filename = `my-drawing_${timestamp}.png`;
+	const link = window.document.createElement('a');
+	link.href = dataUrl;
+	link.download = filename;
+	window.document.body.appendChild(link);
+	link.click();
+	window.document.body.removeChild(link);
 }
 
 // カラーヒストリー（最近使った色、最大10色、localStorage永続化）
@@ -1396,6 +1460,14 @@ function onContextMenu(e: Event) {
 // 描画開始（CanvasEngine経由）
 function startDrawing(event: MouseEvent | TouchEvent) {
 	if (!canvasEngine.value) return;
+
+	// 移動モード中はパンとして処理
+	if (isMoveMode.value && event instanceof MouseEvent) {
+		isPanningWithSpace.value = true;
+		panStart.value = { x: event.clientX, y: event.clientY };
+		if (engineCanvasEl.value) engineCanvasEl.value.style.cursor = 'grabbing';
+		return;
+	}
 
 	// 右クリック（button=2）で一時消しゴムモード
 	if (event instanceof MouseEvent && event.button === 2) {
@@ -4261,6 +4333,19 @@ function adjustCanvasForMobile() {
 
 .widthLabel {
 	font-size: 10px;
+}
+
+.pressureToggle {
+	margin-bottom: 8px;
+}
+
+.toggleLabel {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 13px;
+	cursor: pointer;
+	color: var(--MI_THEME-fg);
 }
 
 .opacitySlider {
