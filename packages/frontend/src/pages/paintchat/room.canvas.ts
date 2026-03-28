@@ -762,10 +762,10 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 		},
 
 		toDataURL(type = 'image/png'): string {
-			// 出力前にレイヤーcanvasを最新状態に再描画（pending mergeやプレビューの影響を排除）
+			// 出力前にレイヤーcanvasを最新状態に再描画
 			if (!canvas || !ctx) return '';
 			redrawAll();
-			// 全レイヤーを透明度1.0で合成して出力（作業中のレイヤー透明度は反映しない）
+			// 画面表示と同じレイヤー透明度で合成して出力（見た目通りの画像を生成）
 			const exportCanvas = window.document.createElement('canvas');
 			exportCanvas.width = canvas.width;
 			exportCanvas.height = canvas.height;
@@ -775,16 +775,17 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 			for (let layer = MAX_LAYERS - 1; layer >= 0; layer--) {
 				const lc = layerCanvases[layer];
 				if (!lc) continue;
-				ectx.globalAlpha = 1.0;
+				ectx.globalAlpha = layerOpacities[layer];
 				ectx.drawImage(lc, 0, 0);
 			}
+			ectx.globalAlpha = 1.0;
 			return exportCanvas.toDataURL(type);
 		},
 
 		toMyStrokesDataURL(): string {
 			// 出力前にmyStrokesバッファを最新状態に再構築
 			rebuildMyStrokesBuffer();
-			// 自分のストロークを全レイヤー合成して出力（白背景、opacity 1.0）
+			// 自分のストロークを全レイヤー合成して出力（レイヤー透明度を反映）
 			if (!canvas) return '';
 			const exportCanvas = window.document.createElement('canvas');
 			exportCanvas.width = canvas.width;
@@ -795,9 +796,10 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 			for (let layer = MAX_LAYERS - 1; layer >= 0; layer--) {
 				const mc = myLayerCanvases[layer];
 				if (!mc) continue;
-				ectx.globalAlpha = 1.0;
+				ectx.globalAlpha = layerOpacities[layer];
 				ectx.drawImage(mc, 0, 0);
 			}
+			ectx.globalAlpha = 1.0;
 			return exportCanvas.toDataURL('image/png');
 		},
 
