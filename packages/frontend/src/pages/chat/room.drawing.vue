@@ -43,151 +43,154 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<i :class="isToolbarOpen ? 'ti ti-x' : 'ti ti-tools'"></i>
 	</button>
 
-	<!-- paintchat式左サイドバーツールバー -->
-	<div :class="[$style.toolbar, { [$style.toolbarMobile]: isTouchDevice, [$style.toolbarMobileOpen]: isTouchDevice && isToolbarOpen }]">
-		<!-- ツール選択 -->
-		<div :class="$style.toolGroup">
-			<button
-				:class="[$style.toolButton, { [$style.active]: currentTool === 'pen' }]"
-				title="ペン"
-				@click="setTool('pen')"
-			>
-				<i class="ti ti-pencil"></i>
-			</button>
-			<button
-				:class="[$style.toolButton, { [$style.active]: currentTool === 'eraser' }]"
-				title="消しゴム"
-				@click="setTool('eraser')"
-			>
-				<i class="ti ti-eraser"></i>
-			</button>
-			<button
-				:class="[$style.toolButton, { [$style.active]: currentTool === 'eyedropper' }]"
-				title="スポイト"
-				@click="setTool('eyedropper')"
-			>
-				<i class="ti ti-color-picker"></i>
-			</button>
-		</div>
+	<!-- paintchat式左サイドバーツールバー（パネル展開方式） -->
+	<div :class="$style.toolbar">
+		<!-- ペン -->
+		<button :class="[$style.toolButton, { [$style.active]: currentTool === 'pen' }]" title="ペン" @click="setTool('pen')">
+			<i class="ti ti-pencil"></i>
+		</button>
+		<!-- 消しゴム -->
+		<button :class="[$style.toolButton, { [$style.active]: currentTool === 'eraser' }]" title="消しゴム" @click="setTool('eraser')">
+			<i class="ti ti-eraser"></i>
+		</button>
+		<!-- スポイト -->
+		<button :class="[$style.toolButton, { [$style.active]: currentTool === 'eyedropper' }]" title="スポイト" @click="setTool('eyedropper')">
+			<i class="ti ti-color-picker"></i>
+		</button>
 
-		<!-- カラーパレット（30色 2列グリッド） -->
-		<div :class="$style.colorPalette">
-			<button
-				v-for="(color, index) in colors"
-				:key="index"
-				:class="[$style.colorButton, { [$style.activeColor]: currentColor === color }]"
-				:style="{ backgroundColor: color }"
-				@click="setColor(color, index)"
-			></button>
-			<button
-				:class="$style.colorPickerButton"
-				title="カラーピッカー"
-				@click="openColorPicker"
-			>
-				<i class="ti ti-palette"></i>
-			</button>
-		</div>
+		<!-- 色（現在色のドット、クリックでパネル展開） -->
+		<button :class="$style.toolButton" title="色選択" @click="toggleToolPanel('color')">
+			<span :class="$style.colorDot" :style="{ background: currentColor }"></span>
+		</button>
 
-		<!-- 太さ選択 -->
-		<div :class="$style.strokeWidthGroup">
-			<span :class="$style.label">太さ</span>
-			<button
-				v-for="width in strokeWidthLevels"
-				:key="width"
-				:class="[$style.strokeWidthButton, { [$style.active]: strokeWidth === width }]"
-				:title="`${width}px`"
-				@click="setStrokeWidth(width)"
-			>
-				<div :class="$style.strokePreview" :style="{ width: `${Math.min(width * 2, 12)}px`, height: `${Math.min(width * 2, 12)}px` }"></div>
-			</button>
-		</div>
+		<!-- 太さ（クリックでパネル展開） -->
+		<button :class="$style.toolButton" title="太さ / 透明度" @click="toggleToolPanel('width')">
+			<i class="ti ti-line-height"></i>
+		</button>
 
-		<!-- 透明度選択 -->
-		<div :class="$style.opacityGroup">
-			<span :class="$style.label">透明度</span>
-			<button
-				v-for="opacity in opacityLevels"
-				:key="opacity"
-				:class="[$style.opacityButton, { [$style.active]: currentOpacity === opacity }]"
-				@click="setOpacity(opacity)"
-			>
-				{{ Math.round(opacity * 100) }}%
-			</button>
-		</div>
+		<div :class="$style.separator"></div>
+
+		<!-- レイヤー（クリックでパネル展開） -->
+		<button :class="$style.toolButton" title="レイヤー" @click="toggleToolPanel('layer')">
+			<span :class="$style.layerIcon">{{ currentLayer + 1 }}</span>
+		</button>
 
 		<!-- アンドゥ -->
-		<div :class="$style.toolGroup">
-			<button
-				:class="[$style.toolButton, { [$style.disabled]: !canUndo }]"
-				:disabled="!canUndo"
-				title="戻す (Ctrl+Z)"
-				@click="undo"
-			>
-				<i class="ti ti-arrow-back-up"></i>
-			</button>
-		</div>
-
-		<!-- レイヤー切替 -->
-		<div :class="$style.toolGroup">
-			<button
-				v-for="layer in MAX_LAYERS"
-				:key="layer"
-				:class="[$style.toolButton, { [$style.active]: currentLayer === layer - 1 }]"
-				:title="`L${layer}`"
-				@click="switchLayer(layer - 1)"
-			>
-				{{ layer }}
-			</button>
-		</div>
+		<button :class="[$style.toolButton, { [$style.disabled]: !canUndo }]" :disabled="!canUndo" title="戻す" @click="undo">
+			<i class="ti ti-arrow-back-up"></i>
+		</button>
 
 		<!-- ズーム -->
-		<div :class="$style.toolGroup">
-			<button :class="$style.toolButton" title="縮小" @click="zoomOut">
-				<i class="ti ti-zoom-out"></i>
-			</button>
-			<button :class="$style.toolButton" title="リセット" @click="resetZoom">
-				<i class="ti ti-zoom-reset"></i>
-			</button>
-			<button :class="$style.toolButton" title="拡大" @click="zoomIn">
-				<i class="ti ti-zoom-in"></i>
-			</button>
+		<button :class="$style.toolButton" title="縮小" @click="zoomOut"><i class="ti ti-zoom-out"></i></button>
+		<button :class="$style.toolButton" title="拡大" @click="zoomIn"><i class="ti ti-zoom-in"></i></button>
+
+		<div :class="$style.separator"></div>
+
+		<!-- ダウンロード（クリックでパネル展開） -->
+		<button :class="$style.toolButton" title="保存" @click="toggleToolPanel('download')">
+			<i class="ti ti-download"></i>
+		</button>
+
+		<!-- その他（グループチャット固有機能） -->
+		<button :class="[$style.toolButton, { [$style.active]: activeToolPanel === 'more' }]" title="その他" @click="toggleToolPanel('more')">
+			<i class="ti ti-dots"></i>
+		</button>
+	</div>
+
+	<!-- 展開パネル（サイドバーの右隣に表示、paintchat同様） -->
+	<div v-if="activeToolPanel" :class="$style.toolPanel">
+		<div :class="$style.toolPanelHeader">
+			<span v-if="activeToolPanel === 'color'">色選択</span>
+			<span v-else-if="activeToolPanel === 'width'">太さ / 透明度</span>
+			<span v-else-if="activeToolPanel === 'layer'">レイヤー</span>
+			<span v-else-if="activeToolPanel === 'download'">保存</span>
+			<span v-else-if="activeToolPanel === 'more'">その他</span>
+			<button :class="$style.toolPanelClose" @click="activeToolPanel = null">閉じる</button>
 		</div>
 
-		<!-- ダウンロード・クリア -->
-		<div :class="$style.toolGroup">
-			<button :class="$style.toolButton" title="ダウンロード" @click="downloadCanvas">
-				<i class="ti ti-download"></i>
-			</button>
-			<button :class="$style.toolButton" title="クリア" @click="clearCanvas">
-				<i class="ti ti-trash"></i>
-			</button>
-		</div>
+		<!-- カラー選択パネル -->
+		<template v-if="activeToolPanel === 'color'">
+			<div :class="$style.colorPickerRow">
+				<input type="color" :value="currentColor" :class="$style.nativeColorPicker" @input="(e: any) => setColor(e.target.value)">
+				<span :class="$style.colorHex">{{ currentColor }}</span>
+			</div>
+			<div :class="$style.panelLabel">プリセット</div>
+			<div :class="$style.colorGrid">
+				<button
+					v-for="(color, index) in colors"
+					:key="index"
+					:class="[$style.colorCell, { [$style.colorSelected]: currentColor === color }]"
+					:style="{ background: color }"
+					@click="setColor(color, index); activeToolPanel = null"
+				></button>
+			</div>
+		</template>
 
-		<!-- その他機能（...メニュー） -->
-		<div :class="$style.toolGroup">
-			<button :class="[$style.toolButton, { [$style.active]: showMoreMenu }]" title="その他" @click="showMoreMenu = !showMoreMenu">
-				<i class="ti ti-dots"></i>
-			</button>
-		</div>
+		<!-- 太さ + 透明度パネル -->
+		<template v-if="activeToolPanel === 'width'">
+			<div :class="$style.panelLabel">太さ</div>
+			<div :class="$style.widthGrid">
+				<button
+					v-for="w in strokeWidthLevels"
+					:key="w"
+					:class="[$style.widthCell, { [$style.widthSelected]: strokeWidth === w }]"
+					@click="setStrokeWidth(w)"
+				>
+					<span :class="$style.widthCircle" :style="{ width: Math.min(w * 2, 20) + 'px', height: Math.min(w * 2, 20) + 'px' }"></span>
+					<span :class="$style.widthLabel">{{ w }}</span>
+				</button>
+			</div>
+			<div :class="$style.panelLabel">透明度: {{ Math.round(currentOpacity * 100) }}%</div>
+			<input
+				type="range"
+				min="10"
+				max="100"
+				:value="currentOpacity * 100"
+				:class="$style.opacitySlider"
+				@input="(e: any) => setOpacity(Number(e.target.value) / 100)"
+			>
+		</template>
 
-		<!-- ...メニュー展開時 -->
-		<div v-if="showMoreMenu" :class="$style.moreMenu">
-			<button :class="$style.toolButton" title="やり直す" :disabled="!canRedo" @click="redo">
-				<i class="ti ti-arrow-forward-up"></i>
+		<!-- レイヤーパネル -->
+		<template v-if="activeToolPanel === 'layer'">
+			<button
+				v-for="i in MAX_LAYERS"
+				:key="i"
+				:class="[$style.panelBtn, { [$style.panelBtnActive]: currentLayer === i - 1 }]"
+				@click="switchLayer(i - 1)"
+			>
+				レイヤー {{ i }}
 			</button>
-			<button :class="[$style.toolButton, { [$style.active]: showWatermark }]" title="WM" @click="showWatermark = !showWatermark">
-				<i class="ti ti-photo-shield"></i>
+		</template>
+
+		<!-- ダウンロードパネル -->
+		<template v-if="activeToolPanel === 'download'">
+			<button :class="$style.panelBtn" @click="downloadCanvas">
+				<i class="ti ti-photo-down"></i> 全体を保存
 			</button>
-			<button :class="$style.toolButton" :title="isFullscreen ? '全画面終了' : '全画面'" @click="toggleFullscreen">
-				<i :class="isFullscreen ? 'ti ti-minimize' : 'ti ti-maximize'"></i>
+			<button :class="$style.panelBtn" @click="clearCanvas">
+				<i class="ti ti-trash"></i> キャンバスをクリア
 			</button>
-			<button :class="$style.toolButton" title="デバッグ" @click="showDebugPanel = !showDebugPanel">
-				<i class="ti ti-bug"></i>
+		</template>
+
+		<!-- その他パネル（グループチャット固有） -->
+		<template v-if="activeToolPanel === 'more'">
+			<button :class="$style.panelBtn" :disabled="!canRedo" @click="redo">
+				<i class="ti ti-arrow-forward-up"></i> やり直す
 			</button>
-			<button :class="$style.toolButton" title="ログ出力" @click="exportDebugLog">
-				<i class="ti ti-file-export"></i>
+			<button :class="[$style.panelBtn, { [$style.panelBtnActive]: showWatermark }]" @click="showWatermark = !showWatermark">
+				<i class="ti ti-photo-shield"></i> ウォーターマーク
 			</button>
-		</div>
+			<button :class="$style.panelBtn" @click="toggleFullscreen">
+				<i :class="isFullscreen ? 'ti ti-minimize' : 'ti ti-maximize'"></i> {{ isFullscreen ? '全画面終了' : '全画面' }}
+			</button>
+			<button :class="$style.panelBtn" @click="resetZoom">
+				<i class="ti ti-zoom-reset"></i> ズームリセット
+			</button>
+			<button :class="$style.panelBtn" @click="showDebugPanel = !showDebugPanel">
+				<i class="ti ti-bug"></i> デバッグ
+			</button>
+		</template>
 	</div>
 
 	<!-- キャンバス -->
@@ -563,6 +566,11 @@ const isToolbarOpen = ref(false);
 let debugLogCount = 0;
 const showDebugPanel = ref(false);
 const showMoreMenu = ref(false);
+const activeToolPanel = ref<'color' | 'width' | 'layer' | 'download' | 'more' | null>(null);
+
+function toggleToolPanel(panel: 'color' | 'width' | 'layer' | 'download' | 'more') {
+	activeToolPanel.value = activeToolPanel.value === panel ? null : panel;
+}
 const debugInfo = ref<DebugInfo>({
 	device: {},
 	sizes: {},
@@ -4068,12 +4076,173 @@ function adjustCanvasForMobile() {
 	gap: 4px;
 }
 
-.moreMenu {
+.separator {
+	height: 1px;
+	background: var(--MI_THEME-divider);
+	margin: 4px 0;
+}
+
+.colorDot {
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	border: 2px solid var(--MI_THEME-divider);
+}
+
+.layerIcon {
+	font-size: 14px;
+	font-weight: bold;
+}
+
+.toolPanel {
+	position: absolute;
+	left: 52px;
+	top: 0;
+	width: 200px;
+	max-height: 100%;
+	overflow-y: auto;
+	background: var(--MI_THEME-panel);
+	border-right: 1px solid var(--MI_THEME-divider);
+	box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+	z-index: 100;
+	padding: 8px;
+}
+
+.toolPanelHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding-bottom: 8px;
+	border-bottom: 1px solid var(--MI_THEME-divider);
+	margin-bottom: 8px;
+	font-size: 13px;
+	font-weight: bold;
+}
+
+.toolPanelClose {
+	background: none;
+	border: none;
+	color: var(--MI_THEME-fg);
+	cursor: pointer;
+	font-size: 12px;
+	opacity: 0.7;
+
+	&:hover { opacity: 1; }
+}
+
+.colorPickerRow {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+
+.nativeColorPicker {
+	width: 32px;
+	height: 32px;
+	border: none;
+	cursor: pointer;
+	padding: 0;
+}
+
+.colorHex {
+	font-size: 12px;
+	font-family: monospace;
+	color: var(--MI_THEME-fg);
+}
+
+.panelLabel {
+	font-size: 11px;
+	color: var(--MI_THEME-fg);
+	opacity: 0.7;
+	margin: 8px 0 4px;
+}
+
+.colorGrid {
+	display: grid;
+	grid-template-columns: repeat(5, 1fr);
+	gap: 3px;
+}
+
+.colorCell {
+	width: 100%;
+	aspect-ratio: 1;
+	border: 2px solid transparent;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: transform 0.1s;
+
+	&:hover { transform: scale(1.1); }
+}
+
+.colorSelected {
+	border-color: var(--MI_THEME-accent);
+	box-shadow: 0 0 0 1px var(--MI_THEME-accent);
+}
+
+.widthGrid {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 4px;
+}
+
+.widthCell {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
-	padding-top: 4px;
-	border-top: 1px solid var(--MI_THEME-divider);
+	align-items: center;
+	gap: 2px;
+	padding: 4px;
+	border: 1px solid var(--MI_THEME-divider);
+	border-radius: 4px;
+	background: var(--MI_THEME-panel);
+	cursor: pointer;
+
+	&:hover { background: var(--MI_THEME-buttonHoverBg); }
+}
+
+.widthSelected {
+	background: var(--MI_THEME-accent);
+	color: var(--MI_THEME-fgOnAccent);
+	border-color: var(--MI_THEME-accent);
+}
+
+.widthCircle {
+	background: var(--MI_THEME-fg);
+	border-radius: 50%;
+	.widthSelected & { background: var(--MI_THEME-fgOnAccent); }
+}
+
+.widthLabel {
+	font-size: 10px;
+}
+
+.opacitySlider {
+	width: 100%;
+	margin: 4px 0;
+}
+
+.panelBtn {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	padding: 8px;
+	border: 1px solid var(--MI_THEME-divider);
+	border-radius: 6px;
+	background: var(--MI_THEME-panel);
+	color: var(--MI_THEME-fg);
+	cursor: pointer;
+	font-size: 13px;
+	margin-bottom: 4px;
+
+	&:hover { background: var(--MI_THEME-buttonHoverBg); }
+	&:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+.panelBtnActive {
+	background: var(--MI_THEME-accent);
+	color: var(--MI_THEME-fgOnAccent);
+	border-color: var(--MI_THEME-accent);
 }
 
 .toolButton {
