@@ -952,6 +952,17 @@ async function loadUserSettings() {
 			if ((settings as any).colors && Array.isArray((settings as any).colors)) {
 				colors.value = (settings as any).colors;
 			}
+			// ツール別太さを復元
+			if ((settings as any).penStrokeWidth) {
+				toolStrokeWidths.value.pen = (settings as any).penStrokeWidth;
+			}
+			if ((settings as any).eraserStrokeWidth) {
+				toolStrokeWidths.value.eraser = (settings as any).eraserStrokeWidth;
+			}
+			// 現在のツールの太さを復元
+			if (currentTool.value === 'pen' || currentTool.value === 'eraser') {
+				strokeWidth.value = toolStrokeWidths.value[currentTool.value as 'pen' | 'eraser'];
+			}
 		}
 	} catch (error) {
 		console.error('❌ [SETTINGS] Failed to load user settings:', error);
@@ -1008,7 +1019,9 @@ function saveUserSettings() {
 				zoomLevel: zoomLevel.value,
 				panOffsetX: panOffset.value.x,
 				panOffsetY: panOffset.value.y,
-				colors: colors.value, // カラーパレットを保存
+				colors: colors.value,
+				penStrokeWidth: toolStrokeWidths.value.pen,
+				eraserStrokeWidth: toolStrokeWidths.value.eraser,
 			});
 		} catch (error) {
 			console.error('❌ [SETTINGS] Failed to save user settings:', error);
