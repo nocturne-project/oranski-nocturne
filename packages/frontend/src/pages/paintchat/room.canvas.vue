@@ -262,7 +262,8 @@ function onTouchMove(e: TouchEvent) {
 		const dx = touch.clientX - pendingStrokeStart.x;
 		const dy = touch.clientY - pendingStrokeStart.y;
 		if (Math.sqrt(dx * dx + dy * dy) < STROKE_START_THRESHOLD) return; // まだ動いていない
-		// 十分動いたのでストローク開始
+		// 十分動いたのでストローク開始（指描き: ハードウェア筆圧なし）
+		props.engine.setHardwarePressure(false);
 		const startCoords = getCanvasCoords(pendingStrokeStart.x, pendingStrokeStart.y);
 		const startPressure = simulatePressure(startCoords.x, startCoords.y);
 		props.engine.beginStroke(startCoords.x, startCoords.y, startPressure);
@@ -378,6 +379,9 @@ function onPointerDown(e: PointerEvent) {
 	}
 
 	const { x, y } = getCanvasCoords(e.clientX, e.clientY);
+
+	// ハードウェア筆圧フラグ（Apple Pencil等のペンデバイス）
+	props.engine.setHardwarePressure(e.pointerType === 'pen');
 
 	// マウスの場合: ストローク開始遅延（ドット防止）
 	if (e.pointerType === 'mouse') {

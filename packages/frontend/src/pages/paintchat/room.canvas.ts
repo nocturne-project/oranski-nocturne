@@ -32,6 +32,7 @@ export interface CanvasEngine {
 	getLayerOpacity(layer: number): number;
 	setLayerOpacity(layer: number, opacity: number): void;
 	// ストローク操作
+	setHardwarePressure(isHardware: boolean): void;
 	beginStroke(x: number, y: number, pressure: number): void;
 	moveStroke(x: number, y: number, pressure: number): void;
 	endStroke(): StrokeData | null;
@@ -87,13 +88,12 @@ function renderStrokeForMyBuffer(ctx: CanvasRenderingContext2D, stroke: StrokeDa
 }
 
 // 確定描画時にパス全体に歪み補正を適用してから補間・リサンプリングする
-function interpolatePoints(points: PressurePoint[]): PressurePoint[] {
-	// Step 0: パス全体の歪み補正（移動平均フィルタ）
-	// 入力時にはスムージングしないため、ここで完成した軌跡全体を滑らかにする
-	const SMOOTH_PASSES = 3; // 適用回数（多いほど滑らか）
-	const SMOOTH_RADIUS = 4; // 前後4ポイントの加重平均
+// smoothPasses: 移動平均フィルタの適用回数（0=歪み補正なし、指描きは入力時スムージング済みなので0）
+function interpolatePoints(points: PressurePoint[], smoothPasses = 0): PressurePoint[] {
+	// Step 0: パス全体の歪み補正（Apple Pencilなど入力時スムージングなしのデバイス用）
+	const SMOOTH_RADIUS = 3;
 	let smoothed = points.map(p => ({ ...p }));
-	for (let pass = 0; pass < SMOOTH_PASSES; pass++) {
+	for (let pass = 0; pass < smoothPasses; pass++) {
 		const next: PressurePoint[] = [];
 		for (let i = 0; i < smoothed.length; i++) {
 			let sx = 0, sy = 0, wSum = 0;
@@ -245,7 +245,10 @@ function renderStroke(ctx: CanvasRenderingContext2D, stroke: StrokeData, bufferC
 		return;
 	}
 
-	const interpolated = interpolatePoints(points);
+	// Apple Pencil: 入力時スムージングなし→確定時に歪み補正（1パス）
+	// 指描き/マウス: 入力時スムージング済み→歪み補正不要（0パス）
+	const smoothPasses = stroke.isHardwarePressure ? 1 : 0;
+	const interpolated = interpolatePoints(points, smoothPasses);
 	if (interpolated.length < 2) return;
 
 	// 全ストローク（ペン・消しゴム共通）をオフスクリーンバッファ経由で描画
@@ -318,6 +321,7 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 
 	// 筆圧ON/OFF（OFFの場合、全ポイントの筆圧を1.0固定にする）
 	let pressureEnabled = true;
+	let currentStrokeIsHardwarePressure = false;
 
 	// ストローク履歴（アンドゥ対象、全レイヤー共通）
 	const strokes: StrokeData[] = [];
@@ -565,6 +569,10 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 			pressureEnabled = enabled;
 		},
 
+		setHardwarePressure(isHardware: boolean) {
+			currentStrokeIsHardwarePressure = isHardware;
+		},
+
 		getCurrentLayer() {
 			return currentLayer;
 		},
@@ -656,6 +664,7 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 				opacity: state.currentOpacity,
 				tool: state.currentTool,
 				layer: currentLayer,
+				isHardwarePressure: currentStrokeIsHardwarePressure,
 			};
 
 			strokes.push(stroke);

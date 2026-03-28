@@ -26,6 +26,7 @@ export interface StrokeData {
 	opacity: number;
 	tool: ToolType;
 	layer: number; // レイヤー番号（0, 1, 2）。0が最上層、2が最下層
+	isHardwarePressure?: boolean; // ハードウェア筆圧（Apple Pencil等）で描画されたか（ローカルのみ）
 }
 
 // チャットメッセージの種別
