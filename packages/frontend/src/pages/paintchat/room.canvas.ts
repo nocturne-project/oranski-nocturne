@@ -86,26 +86,46 @@ function renderStrokeForMyBuffer(ctx: CanvasRenderingContext2D, stroke: StrokeDa
 	}
 }
 
-// Catmull-Romで補間した後、等距離リサンプリングで円スタンプ間の隙間を防ぐ
-// maxSpacing: 隣接ポイント間の最大距離（これ以下に保つことで円が必ず重なる）
+// 確定描画時にパス全体に歪み補正を適用してから補間・リサンプリングする
 function interpolatePoints(points: PressurePoint[]): PressurePoint[] {
+	// Step 0: パス全体の歪み補正（移動平均フィルタ）
+	// 入力時にはスムージングしないため、ここで完成した軌跡全体を滑らかにする
+	const SMOOTH_PASSES = 3; // 適用回数（多いほど滑らか）
+	const SMOOTH_RADIUS = 4; // 前後4ポイントの加重平均
+	let smoothed = points.map(p => ({ ...p }));
+	for (let pass = 0; pass < SMOOTH_PASSES; pass++) {
+		const next: PressurePoint[] = [];
+		for (let i = 0; i < smoothed.length; i++) {
+			let sx = 0, sy = 0, wSum = 0;
+			for (let j = -SMOOTH_RADIUS; j <= SMOOTH_RADIUS; j++) {
+				const idx = Math.max(0, Math.min(smoothed.length - 1, i + j));
+				const w = 1 / (1 + Math.abs(j));
+				sx += smoothed[idx].x * w;
+				sy += smoothed[idx].y * w;
+				wSum += w;
+			}
+			next.push({ x: sx / wSum, y: sy / wSum, pressure: smoothed[i].pressure });
+		}
+		smoothed = next;
+	}
+
 	// Step 1: Catmull-Rom補間で基本的なスムージング
 	const coarse: PressurePoint[] = [];
-	if (points.length === 2) {
+	if (smoothed.length === 2) {
 		for (let t = 0; t <= 1; t += 0.25) {
 			coarse.push({
-				x: points[0].x + (points[1].x - points[0].x) * t,
-				y: points[0].y + (points[1].y - points[0].y) * t,
-				pressure: points[0].pressure + (points[1].pressure - points[0].pressure) * t,
+				x: smoothed[0].x + (smoothed[1].x - smoothed[0].x) * t,
+				y: smoothed[0].y + (smoothed[1].y - smoothed[0].y) * t,
+				pressure: smoothed[0].pressure + (smoothed[1].pressure - smoothed[0].pressure) * t,
 			});
 		}
-	} else if (points.length >= 3) {
+	} else if (smoothed.length >= 3) {
 		const steps = 10;
-		for (let i = 0; i < points.length - 1; i++) {
-			const p0 = points[Math.max(0, i - 1)];
-			const p1 = points[i];
-			const p2 = points[Math.min(points.length - 1, i + 1)];
-			const p3 = points[Math.min(points.length - 1, i + 2)];
+		for (let i = 0; i < smoothed.length - 1; i++) {
+			const p0 = smoothed[Math.max(0, i - 1)];
+			const p1 = smoothed[i];
+			const p2 = smoothed[Math.min(smoothed.length - 1, i + 1)];
+			const p3 = smoothed[Math.min(smoothed.length - 1, i + 2)];
 			for (let step = 0; step <= steps; step++) {
 				coarse.push(catmullRomPoint(p0, p1, p2, p3, step / steps));
 			}
