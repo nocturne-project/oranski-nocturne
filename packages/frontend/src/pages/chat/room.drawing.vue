@@ -634,13 +634,13 @@ function togglePressure() {
 
 // レイヤー透明度変更
 function setLayerOpacityValue(layer: number, opacity: number) {
-	// 配列を新しい参照で置き換えてリアクティビティを確実にトリガー
 	const newOpacities = [...layerOpacity.value];
 	newOpacities[layer] = opacity;
 	layerOpacity.value = newOpacities;
 	if (canvasEngine.value) {
 		canvasEngine.value.setLayerOpacity(layer, opacity);
 	}
+	saveUserSettings();
 }
 
 // 自分のストロークのみダウンロード
