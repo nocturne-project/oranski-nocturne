@@ -1094,6 +1094,21 @@ onMounted(async () => {
 	// ユーザー設定を読み込む
 	await loadUserSettings();
 
+	// CanvasEngineにユーザー設定を同期
+	if (canvasEngine.value) {
+		canvasEngine.value.setState({
+			currentTool: currentTool.value as any,
+			currentColor: currentColor.value,
+			currentWidth: strokeWidth.value,
+			currentOpacity: currentOpacity.value,
+		});
+		canvasEngine.value.setCurrentLayer(currentLayer.value);
+		canvasEngine.value.setPressureEnabled(pressureEnabled.value);
+		for (let i = 0; i < layerOpacity.value.length; i++) {
+			canvasEngine.value.setLayerOpacity(i, layerOpacity.value[i]);
+		}
+	}
+
 	// 全画面モード用のイベントリスナー
 	window.document.addEventListener('fullscreenchange', handleFullscreenChange);
 
