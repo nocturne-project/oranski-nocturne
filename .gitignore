@@ -114,3 +114,6 @@ assets/roles/role_yakousei.png
 /.specify
 scripts/deploy.sh
 *.bak
+
+# Claude workspace
+/claude
