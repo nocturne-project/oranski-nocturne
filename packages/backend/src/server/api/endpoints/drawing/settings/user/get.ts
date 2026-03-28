@@ -30,6 +30,10 @@ export const meta = {
 			panOffsetX: { type: 'number' },
 			panOffsetY: { type: 'number' },
 			colors: { type: 'array', items: { type: 'string' }, nullable: true },
+			penStrokeWidth: { type: 'number' },
+			eraserStrokeWidth: { type: 'number' },
+			pressureEnabled: { type: 'boolean' },
+			colorHistory: { type: 'array', items: { type: 'string' } },
 		},
 	},
 

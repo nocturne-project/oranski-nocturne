@@ -32,14 +32,18 @@ export const paramDef = {
 		currentTool: { type: 'string', enum: ['pen', 'eraser', 'eyedropper'], nullable: true },
 		currentColor: { type: 'string', pattern: '^#[0-9a-fA-F]{6}$', nullable: true },
 		currentOpacity: { type: 'number', minimum: 0.1, maximum: 1.0, nullable: true },
-		strokeWidth: { type: 'number', minimum: 1, maximum: 100, nullable: true },
+		strokeWidth: { type: 'number', minimum: 1, maximum: 200, nullable: true },
 		currentLayer: { type: 'number', minimum: 0, maximum: 2, nullable: true },
 		layerVisible: { type: 'array', items: { type: 'boolean' }, minItems: 3, maxItems: 3, nullable: true },
 		layerOpacity: { type: 'array', items: { type: 'number', minimum: 0, maximum: 1 }, minItems: 3, maxItems: 3, nullable: true },
-		zoomLevel: { type: 'number', minimum: 0.5, maximum: 10.0, nullable: true },
+		zoomLevel: { type: 'number', minimum: 0.25, maximum: 12.0, nullable: true },
 		panOffsetX: { type: 'number', nullable: true },
 		panOffsetY: { type: 'number', nullable: true },
-		colors: { type: 'array', items: { type: 'string', pattern: '^#[0-9a-fA-F]{6}$' }, minItems: 16, maxItems: 16, nullable: true },
+		colors: { type: 'array', items: { type: 'string', pattern: '^#[0-9a-fA-F]{6}$' }, maxItems: 30, nullable: true },
+		penStrokeWidth: { type: 'number', minimum: 1, maximum: 200, nullable: true },
+		eraserStrokeWidth: { type: 'number', minimum: 1, maximum: 200, nullable: true },
+		pressureEnabled: { type: 'boolean', nullable: true },
+		colorHistory: { type: 'array', items: { type: 'string' }, maxItems: 10, nullable: true },
 	},
 	required: ['canvasId'],
 } as const;
@@ -70,6 +74,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				panOffsetX: ps.panOffsetX ?? undefined,
 				panOffsetY: ps.panOffsetY ?? undefined,
 				colors: ps.colors ?? undefined,
+				penStrokeWidth: ps.penStrokeWidth ?? undefined,
+				eraserStrokeWidth: ps.eraserStrokeWidth ?? undefined,
+				pressureEnabled: ps.pressureEnabled ?? undefined,
+				colorHistory: ps.colorHistory ?? undefined,
 			});
 		});
 	}
