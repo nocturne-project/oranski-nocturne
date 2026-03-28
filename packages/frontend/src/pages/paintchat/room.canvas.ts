@@ -316,9 +316,6 @@ export function createCanvasEngine(myParticipantId: string): CanvasEngine {
 	let tmpCanvas: HTMLCanvasElement | null = null;
 	let tmpCtx: CanvasRenderingContext2D | null = null;
 
-	// プレビュー描画のスロットリング用フラグ
-	let pendingRedraw = false;
-
 	// 筆圧ON/OFF（OFFの場合、全ポイントの筆圧を1.0固定にする）
 	let pressureEnabled = true;
 	let currentStrokeIsHardwarePressure = false;

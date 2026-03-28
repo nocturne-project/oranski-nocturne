@@ -281,6 +281,7 @@ function onEyedrop(color: string) {
 
 // 色設定をDBに保存する（デバウンス付き、色変更のたびに呼ばれる）
 let saveColorsTimer: number | undefined;
+
 function saveColorPreferences() {
 	if (saveColorsTimer) window.clearTimeout(saveColorsTimer);
 	saveColorsTimer = window.setTimeout(() => {

@@ -440,7 +440,6 @@ function onPointerMove(e: PointerEvent) {
 			isSmoothingInitialized = true;
 		}
 
-
 		const pressure = getEffectivePressure(e, smoothedX, smoothedY);
 		props.engine.moveStroke(smoothedX, smoothedY, pressure);
 
