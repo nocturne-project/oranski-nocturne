@@ -46,8 +46,8 @@ services:
     command: >
       sh -c 'redis-server
       --requirepass "$$REDIS_PASSWORD"
-      --maxmemory 512mb
-      --maxmemory-policy allkeys-lru
+      --maxmemory 1536mb
+      --maxmemory-policy volatile-lru
       --save 900 1
       --save 300 10
       --save 60 10000
@@ -60,10 +60,10 @@ services:
     deploy:
       resources:
         limits:
-          # Redis実使用量183MBに対して640MBで十分。allkeys-lruで自動削除
-          memory: 640M
+          # volatile-lru: TTL付きキャッシュのみ追い出し、通知・ハイライトを保護
+          memory: 2G
         reservations:
-          memory: 256M
+          memory: 512M
 
 
 #  mcaptcha:

@@ -39,6 +39,7 @@ import { ChatUserChannel } from '@/server/api/stream/channels/chat-user.js';
 import { ChatRoomChannel } from '@/server/api/stream/channels/chat-room.js';
 import { ReversiChannel } from '@/server/api/stream/channels/reversi.js';
 import { ReversiGameChannel } from '@/server/api/stream/channels/reversi-game.js';
+import { PaintChatChannel } from '@/server/api/stream/channels/paint-chat.js';
 import { NoctownChannel } from '@/server/api/stream/channels/noctown.js';
 
 const MAX_CHANNELS_PER_CONNECTION = 32;
@@ -334,6 +335,7 @@ export default class Connection {
 			case 'chatRoom': return ChatRoomChannel;
 			case 'reversi': return ReversiChannel;
 			case 'reversiGame': return ReversiGameChannel;
+			case 'paintChat': return PaintChatChannel;
 			case 'noctown': return NoctownChannel;
 
 			default:

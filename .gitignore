@@ -111,4 +111,6 @@ assets/roles/role_yakousei.png
 
 # openspec
 /openspec
-/.specifyscripts/deploy.sh
+/.specify
+scripts/deploy.sh
+*.bak

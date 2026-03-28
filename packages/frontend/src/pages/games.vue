@@ -22,6 +22,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<img src="/client-assets/reversi/logo.png" style="display: block; max-width: 100%; max-height: 200px; margin: auto;"/>
 				</MkA>
 			</div>
+			<div class="_panel" :class="$style.link">
+				<MkA to="/paintchat">
+					<div style="display: flex; align-items: center; justify-content: center; height: 200px; font-size: 1.5em; gap: 8px;">
+						<i class="ti ti-brush" style="font-size: 2em;"></i>
+						<span>ランダム絵チャット</span>
+					</div>
+				</MkA>
+			</div>
 		</div>
 	</div>
 </PageWithHeader>

@@ -139,6 +139,13 @@ import { NoqUserSetting } from '@/models/NoqUserSetting.js';
 import { NoqQuestion } from '@/models/NoqQuestion.js';
 import { NoqMutedUser } from '@/models/NoqMutedUser.js';
 import { NoqReportedQuestion } from '@/models/NoqReportedQuestion.js';
+import { PaintChatRoom } from '@/models/PaintChatRoom.js';
+import { PaintChatParticipant } from '@/models/PaintChatParticipant.js';
+import { PaintChatMessage } from '@/models/PaintChatMessage.js';
+import { PaintChatReport } from '@/models/PaintChatReport.js';
+import { PaintChatBlock } from '@/models/PaintChatBlock.js';
+import { PaintChatPublish } from '@/models/PaintChatPublish.js';
+import { PaintChatSetting } from '@/models/PaintChatSetting.js';
 
 pg.types.setTypeParser(20, Number);
 
@@ -356,6 +363,14 @@ export const entities = [
 	NoqQuestion,
 	NoqMutedUser,
 	NoqReportedQuestion,
+	// PaintChat entities
+	PaintChatRoom,
+	PaintChatParticipant,
+	PaintChatMessage,
+	PaintChatReport,
+	PaintChatBlock,
+	PaintChatPublish,
+	PaintChatSetting,
 	...charts,
 ];
 

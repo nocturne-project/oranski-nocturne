@@ -139,5 +139,12 @@ export const DI = {
 	noqQuestionsRepository: Symbol('noqQuestionsRepository'),
 	noqMutedUsersRepository: Symbol('noqMutedUsersRepository'),
 	noqReportedQuestionsRepository: Symbol('noqReportedQuestionsRepository'),
+	paintChatRoomsRepository: Symbol('paintChatRoomsRepository'),
+	paintChatParticipantsRepository: Symbol('paintChatParticipantsRepository'),
+	paintChatMessagesRepository: Symbol('paintChatMessagesRepository'),
+	paintChatReportsRepository: Symbol('paintChatReportsRepository'),
+	paintChatBlocksRepository: Symbol('paintChatBlocksRepository'),
+	paintChatPublishesRepository: Symbol('paintChatPublishesRepository'),
+	paintChatSettingsRepository: Symbol('paintChatSettingsRepository'),
 	//#endregion
 };

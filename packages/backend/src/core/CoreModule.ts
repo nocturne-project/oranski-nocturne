@@ -83,6 +83,10 @@ import { ReversiService } from './ReversiService.js';
 import { NoctownService } from './NoctownService.js';
 import { NoctownTransactionService } from './NoctownTransactionService.js';
 import { NoqestionService } from './NoqestionService.js';
+import { PaintChatService } from './PaintChatService.js';
+import { PaintChatCanvasService } from './PaintChatCanvasService.js';
+import { PaintChatMatchingService } from './PaintChatMatchingService.js';
+import { PaintChatPublishService } from './PaintChatPublishService.js';
 import { PageService } from './PageService.js';
 
 // Noctown misc services
@@ -423,6 +427,10 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		NoctownTransactionService,
 		PageService,
 		NoqestionService,
+		PaintChatService,
+		PaintChatCanvasService,
+		PaintChatMatchingService,
+		PaintChatPublishService,
 
 		// Noctown misc services
 		ShopNpcService,
@@ -759,6 +767,10 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		NoctownTransactionService,
 		PageService,
 		NoqestionService,
+		PaintChatService,
+		PaintChatCanvasService,
+		PaintChatMatchingService,
+		PaintChatPublishService,
 
 		// Noctown misc services
 		ShopNpcService,

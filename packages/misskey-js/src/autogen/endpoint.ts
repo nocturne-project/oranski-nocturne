@@ -91,6 +91,11 @@ import type {
 	AdminNoqSettingsResponse,
 	AdminNoqSettingsUpdateRequest,
 	AdminNoqSettingsUpdateResponse,
+	AdminPaintChatSettingsResponse,
+	AdminPaintChatSettingsUpdateRequest,
+	AdminPaintChatSettingsUpdateResponse,
+	AdminPaintChatStegoExtractRequest,
+	AdminPaintChatStegoExtractResponse,
 	AdminPromoCreateRequest,
 	AdminQueueClearRequest,
 	AdminQueueDeliverDelayedResponse,
@@ -825,6 +830,35 @@ import type {
 	PagesShowResponse,
 	PagesUnlikeRequest,
 	PagesUpdateRequest,
+	PaintChatCanvasRequest,
+	PaintChatCanvasResponse,
+	PaintChatDiceRequest,
+	PaintChatDiceResponse,
+	PaintChatJoinResponse,
+	PaintChatLeaveRequest,
+	PaintChatLeaveResponse,
+	PaintChatLeaveQueueResponse,
+	PaintChatMessageRequest,
+	PaintChatMessageResponse,
+	PaintChatMessagesRequest,
+	PaintChatMessagesResponse,
+	PaintChatPublishAgreeRequest,
+	PaintChatPublishAgreeResponse,
+	PaintChatPublishMessageRequest,
+	PaintChatPublishMessageResponse,
+	PaintChatPublishMyArtRequest,
+	PaintChatPublishMyArtResponse,
+	PaintChatPublishRejectRequest,
+	PaintChatPublishRejectResponse,
+	PaintChatReportRequest,
+	PaintChatReportResponse,
+	PaintChatRoomRequest,
+	PaintChatRoomResponse,
+	PaintChatSaveColorsRequest,
+	PaintChatSettingsResponse,
+	PaintChatSoloResponse,
+	PaintChatTopicRequest,
+	PaintChatTopicResponse,
 	PingResponse,
 	PinnedUsersResponse,
 	PromoReadRequest,
@@ -993,6 +1027,9 @@ export type Endpoints = {
 	'admin/noq/disclose': { req: AdminNoqDiscloseRequest; res: AdminNoqDiscloseResponse };
 	'admin/noq/settings': { req: EmptyRequest; res: AdminNoqSettingsResponse };
 	'admin/noq/settings/update': { req: AdminNoqSettingsUpdateRequest; res: AdminNoqSettingsUpdateResponse };
+	'admin/paint-chat/settings': { req: EmptyRequest; res: AdminPaintChatSettingsResponse };
+	'admin/paint-chat/settings/update': { req: AdminPaintChatSettingsUpdateRequest; res: AdminPaintChatSettingsUpdateResponse };
+	'admin/paint-chat/stego/extract': { req: AdminPaintChatStegoExtractRequest; res: AdminPaintChatStegoExtractResponse };
 	'admin/promo/create': { req: AdminPromoCreateRequest; res: EmptyResponse };
 	'admin/queue/clear': { req: AdminQueueClearRequest; res: EmptyResponse };
 	'admin/queue/deliver-delayed': { req: EmptyRequest; res: AdminQueueDeliverDelayedResponse };
@@ -1450,6 +1487,23 @@ export type Endpoints = {
 	'pages/show': { req: PagesShowRequest; res: PagesShowResponse };
 	'pages/unlike': { req: PagesUnlikeRequest; res: EmptyResponse };
 	'pages/update': { req: PagesUpdateRequest; res: EmptyResponse };
+	'paint-chat/canvas': { req: PaintChatCanvasRequest; res: PaintChatCanvasResponse };
+	'paint-chat/dice': { req: PaintChatDiceRequest; res: PaintChatDiceResponse };
+	'paint-chat/join': { req: EmptyRequest; res: PaintChatJoinResponse };
+	'paint-chat/leave': { req: PaintChatLeaveRequest; res: PaintChatLeaveResponse };
+	'paint-chat/leave-queue': { req: EmptyRequest; res: PaintChatLeaveQueueResponse };
+	'paint-chat/message': { req: PaintChatMessageRequest; res: PaintChatMessageResponse };
+	'paint-chat/messages': { req: PaintChatMessagesRequest; res: PaintChatMessagesResponse };
+	'paint-chat/publish/agree': { req: PaintChatPublishAgreeRequest; res: PaintChatPublishAgreeResponse };
+	'paint-chat/publish/message': { req: PaintChatPublishMessageRequest; res: PaintChatPublishMessageResponse };
+	'paint-chat/publish/my-art': { req: PaintChatPublishMyArtRequest; res: PaintChatPublishMyArtResponse };
+	'paint-chat/publish/reject': { req: PaintChatPublishRejectRequest; res: PaintChatPublishRejectResponse };
+	'paint-chat/report': { req: PaintChatReportRequest; res: PaintChatReportResponse };
+	'paint-chat/room': { req: PaintChatRoomRequest; res: PaintChatRoomResponse };
+	'paint-chat/save-colors': { req: PaintChatSaveColorsRequest; res: EmptyResponse };
+	'paint-chat/settings': { req: EmptyRequest; res: PaintChatSettingsResponse };
+	'paint-chat/solo': { req: EmptyRequest; res: PaintChatSoloResponse };
+	'paint-chat/topic': { req: PaintChatTopicRequest; res: PaintChatTopicResponse };
 	'ping': { req: EmptyRequest; res: PingResponse };
 	'pinned-users': { req: EmptyRequest; res: PinnedUsersResponse };
 	'promo/read': { req: PromoReadRequest; res: EmptyResponse };

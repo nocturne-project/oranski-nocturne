@@ -132,6 +132,13 @@ import {
 	NoqQuestion,
 	NoqMutedUser,
 	NoqReportedQuestion,
+	PaintChatRoom,
+	PaintChatParticipant,
+	PaintChatMessage,
+	PaintChatReport,
+	PaintChatBlock,
+	PaintChatPublish,
+	PaintChatSetting,
 } from './_.js';
 import type { Provider } from '@nestjs/common';
 import type { DataSource } from 'typeorm';
@@ -880,6 +887,48 @@ const $noqReportedQuestionsRepository: Provider = {
 	inject: [DI.db],
 };
 
+const $paintChatRoomsRepository: Provider = {
+	provide: DI.paintChatRoomsRepository,
+	useFactory: (db: DataSource) => db.getRepository(PaintChatRoom).extend(miRepository as MiRepository<PaintChatRoom>),
+	inject: [DI.db],
+};
+
+const $paintChatParticipantsRepository: Provider = {
+	provide: DI.paintChatParticipantsRepository,
+	useFactory: (db: DataSource) => db.getRepository(PaintChatParticipant).extend(miRepository as MiRepository<PaintChatParticipant>),
+	inject: [DI.db],
+};
+
+const $paintChatMessagesRepository: Provider = {
+	provide: DI.paintChatMessagesRepository,
+	useFactory: (db: DataSource) => db.getRepository(PaintChatMessage).extend(miRepository as MiRepository<PaintChatMessage>),
+	inject: [DI.db],
+};
+
+const $paintChatReportsRepository: Provider = {
+	provide: DI.paintChatReportsRepository,
+	useFactory: (db: DataSource) => db.getRepository(PaintChatReport).extend(miRepository as MiRepository<PaintChatReport>),
+	inject: [DI.db],
+};
+
+const $paintChatBlocksRepository: Provider = {
+	provide: DI.paintChatBlocksRepository,
+	useFactory: (db: DataSource) => db.getRepository(PaintChatBlock).extend(miRepository as MiRepository<PaintChatBlock>),
+	inject: [DI.db],
+};
+
+const $paintChatPublishesRepository: Provider = {
+	provide: DI.paintChatPublishesRepository,
+	useFactory: (db: DataSource) => db.getRepository(PaintChatPublish).extend(miRepository as MiRepository<PaintChatPublish>),
+	inject: [DI.db],
+};
+
+const $paintChatSettingsRepository: Provider = {
+	provide: DI.paintChatSettingsRepository,
+	useFactory: (db: DataSource) => db.getRepository(PaintChatSetting).extend(miRepository as MiRepository<PaintChatSetting>),
+	inject: [DI.db],
+};
+
 @Module({
 	imports: [],
 	providers: [
@@ -1007,6 +1056,13 @@ const $noqReportedQuestionsRepository: Provider = {
 		$noqQuestionsRepository,
 		$noqMutedUsersRepository,
 		$noqReportedQuestionsRepository,
+		$paintChatRoomsRepository,
+		$paintChatParticipantsRepository,
+		$paintChatMessagesRepository,
+		$paintChatReportsRepository,
+		$paintChatBlocksRepository,
+		$paintChatPublishesRepository,
+		$paintChatSettingsRepository,
 	],
 	exports: [
 		$usersRepository,
@@ -1133,6 +1189,13 @@ const $noqReportedQuestionsRepository: Provider = {
 		$noqQuestionsRepository,
 		$noqMutedUsersRepository,
 		$noqReportedQuestionsRepository,
+		$paintChatRoomsRepository,
+		$paintChatParticipantsRepository,
+		$paintChatMessagesRepository,
+		$paintChatReportsRepository,
+		$paintChatBlocksRepository,
+		$paintChatPublishesRepository,
+		$paintChatSettingsRepository,
 	],
 })
 export class RepositoryModule {
