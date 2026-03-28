@@ -25,7 +25,7 @@ export interface UserSettings {
 	zoomLevel: number;
 	panOffsetX: number;
 	panOffsetY: number;
-	colors?: string[];
+	// colors は DB に存在しないため除外
 	// グループチャット描画アップグレードで追加されたフィールド
 	colorHistory: string[]; // ユーザーが使用した色の履歴
 	pressureEnabled: boolean; // 筆圧感知の有効/無効
@@ -111,7 +111,6 @@ export class DrawingSettingsService {
 				zoomLevel: settings.zoomLevel,
 				panOffsetX: settings.panOffsetX,
 				panOffsetY: settings.panOffsetY,
-				colors: settings.colors ?? undefined,
 				// 新規フィールド（後方互換: DBに値がない場合はデフォルト値を使用）
 				colorHistory: (settings as any).colorHistory ?? [],
 				pressureEnabled: (settings as any).pressureEnabled ?? true,
@@ -179,9 +178,10 @@ export class DrawingSettingsService {
 			if (settings.panOffsetY !== undefined) {
 				existing.panOffsetY = settings.panOffsetY;
 			}
-			if (settings.colors !== undefined) {
-				existing.colors = settings.colors;
-			}
+			// colors カラムはDBに存在しないためスキップ（エンティティ定義のみ）
+			// if (settings.colors !== undefined) {
+			// 	existing.colors = settings.colors;
+			// }
 			// グループチャット描画アップグレードで追加されたフィールドの保存
 			if (settings.colorHistory !== undefined) {
 				(existing as any).colorHistory = settings.colorHistory;
@@ -214,7 +214,7 @@ export class DrawingSettingsService {
 				zoomLevel: settings.zoomLevel ?? 1.0,
 				panOffsetX: settings.panOffsetX ?? 0,
 				panOffsetY: settings.panOffsetY ?? 0,
-				colors: settings.colors ?? undefined,
+				// colors カラムはDBに存在しないためスキップ
 				// グループチャット描画アップグレードで追加されたフィールド
 				colorHistory: settings.colorHistory ?? [],
 				pressureEnabled: settings.pressureEnabled ?? true,

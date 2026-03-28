@@ -95,11 +95,8 @@ export class MiDrawingUserSettings {
 	})
 	public panOffsetY: number;
 
-	@Column('jsonb', {
-		nullable: true,
-		comment: 'Custom color palette (array of 16 hex colors)',
-	})
-	public colors: string[] | null;
+	// colors カラムはDBテーブルに存在しない（マイグレーション未実施）ため、エンティティ定義から除外
+	// カラーパレットはフロントエンドのローカル状態で管理
 
 	// paintchat式の追加設定
 	@Column('jsonb', {

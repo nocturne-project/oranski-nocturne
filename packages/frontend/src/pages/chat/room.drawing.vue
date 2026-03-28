@@ -1000,6 +1000,9 @@ async function saveRoomSettings() {
 }
 
 // ユーザー設定を保存する（デバウンス付き）
+// 前回保存した設定値（差分検出用）
+let lastSavedSettings: Record<string, any> = {};
+
 function saveUserSettings() {
 	if (saveSettingsTimer !== null) {
 		window.clearTimeout(saveSettingsTimer);
@@ -1007,25 +1010,42 @@ function saveUserSettings() {
 
 	saveSettingsTimer = window.setTimeout(async () => {
 		try {
-			// 設定保存（新フィールドを個別に送信、APIバリデーション互換性を確保）
-			const params: Record<string, any> = {
-				canvasId: drawingId.value,
+			// 現在の全設定値
+			const current: Record<string, any> = {
 				currentTool: currentTool.value,
 				currentColor: currentColor.value,
 				currentOpacity: currentOpacity.value,
 				strokeWidth: strokeWidth.value,
 				currentLayer: currentLayer.value,
-				layerVisible: layerVisible.value,
-				layerOpacity: layerOpacity.value,
+				layerVisible: JSON.stringify(layerVisible.value),
+				layerOpacity: JSON.stringify(layerOpacity.value),
 				zoomLevel: Math.max(0.25, Math.min(12.0, zoomLevel.value)),
 				panOffsetX: panOffset.value.x,
 				panOffsetY: panOffset.value.y,
 				penStrokeWidth: toolStrokeWidths.value.pen,
 				eraserStrokeWidth: toolStrokeWidths.value.eraser,
 				pressureEnabled: pressureEnabled.value,
-				colorHistory: colorHistory.value,
+				colorHistory: JSON.stringify(colorHistory.value),
 			};
-			await misskeyApi('drawing/settings/user/update', params);
+
+			// 差分検出（変更があったフィールドのみ送信、通信量削減）
+			const params: Record<string, any> = { canvasId: drawingId.value };
+			let hasChanges = false;
+			for (const [key, value] of Object.entries(current)) {
+				if (lastSavedSettings[key] !== value) {
+					// JSON文字列化されたフィールドは元の値で送信
+					if (key === 'layerVisible') params[key] = layerVisible.value;
+					else if (key === 'layerOpacity') params[key] = layerOpacity.value;
+					else if (key === 'colorHistory') params[key] = colorHistory.value;
+					else params[key] = value;
+					hasChanges = true;
+				}
+			}
+
+			if (!hasChanges) return;
+
+			await misskeyApi('drawing/settings/user/update', params as any);
+			lastSavedSettings = { ...current };
 		} catch (error) {
 			console.error('❌ [SETTINGS] Failed to save user settings:', error);
 		}
