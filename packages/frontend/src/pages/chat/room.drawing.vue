@@ -32,7 +32,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<div :class="[$style.root, 'drawing-root']">
+<div :class="[$style.root, 'drawing-root']" style="display: flex; flex-direction: row;">
 	<!-- モバイル用ツールバー開閉ボタン -->
 	<button
 		v-if="isTouchDevice"
