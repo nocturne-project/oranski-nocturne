@@ -72,7 +72,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 		<!-- レイヤー（クリックでパネル展開） -->
 		<button :class="$style.toolButton" title="レイヤー" @click="toggleToolPanel('layer')">
-			<span :class="$style.layerIcon">{{ currentLayer + 1 }}</span>
+			<span :class="$style.layerIcon">L{{ currentLayer + 1 }}</span>
 		</button>
 
 		<!-- アンドゥ -->
@@ -124,6 +124,19 @@ SPDX-License-Identifier: AGPL-3.0-only
 					@click="setColor(color, index); activeToolPanel = null"
 				></button>
 			</div>
+			<!-- カラーヒストリー（最近使った色） -->
+			<template v-if="colorHistory.length > 0">
+				<div :class="$style.panelLabel">最近使った色</div>
+				<div :class="$style.colorGrid">
+					<button
+						v-for="(color, idx) in colorHistory"
+						:key="'h-' + idx"
+						:class="[$style.colorCell, { [$style.colorSelected]: currentColor === color }]"
+						:style="{ background: color }"
+						@click="setColor(color); activeToolPanel = null"
+					></button>
+				</div>
+			</template>
 		</template>
 
 		<!-- 太さ + 透明度パネル -->
@@ -318,6 +331,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				pointerEvents: 'auto'
 			}"
 			@mousedown="startDrawing"
+			@contextmenu.prevent="onContextMenu"
 		></canvas>
 		<!-- 旧レイヤーキャンバス（CanvasEngine移行後は非表示） -->
 		<canvas
@@ -429,6 +443,7 @@ import {
 	useUndoRedo,
 	useDrawingUtils,
 	useToolState,
+	useColorHistory,
 } from './room.drawing.composables.js';
 import {
 	useGestures,
@@ -571,6 +586,10 @@ const activeToolPanel = ref<'color' | 'width' | 'layer' | 'download' | 'more' | 
 function toggleToolPanel(panel: 'color' | 'width' | 'layer' | 'download' | 'more') {
 	activeToolPanel.value = activeToolPanel.value === panel ? null : panel;
 }
+
+// カラーヒストリー（最近使った色、最大10色、localStorage永続化）
+const { colorHistory, addColor: addColorToHistory } = useColorHistory();
+
 const debugInfo = ref<DebugInfo>({
 	device: {},
 	sizes: {},
@@ -1365,9 +1384,26 @@ function setStrokeWidth(width: number) {
 	saveUserSettings();
 }
 
+// 右クリック消しゴム状態
+let temporaryEraserMode = false;
+let originalToolBeforeEraser: string = 'pen';
+
+// 右クリックメニュー抑制
+function onContextMenu(e: Event) {
+	e.preventDefault();
+}
+
 // 描画開始（CanvasEngine経由）
 function startDrawing(event: MouseEvent | TouchEvent) {
 	if (!canvasEngine.value) return;
+
+	// 右クリック（button=2）で一時消しゴムモード
+	if (event instanceof MouseEvent && event.button === 2) {
+		temporaryEraserMode = true;
+		originalToolBeforeEraser = currentTool.value;
+		canvasEngine.value.setState({ currentTool: 'eraser' as any });
+		event.preventDefault();
+	}
 
 	// スペースキーが押されている場合はパンモード
 	if (isSpaceKeyPressed.value && event instanceof MouseEvent) {
@@ -1478,8 +1514,19 @@ function stopDrawing() {
 	// CanvasEngine経由でストローク確定（スムージング・スプライン適用）
 	const stroke = canvasEngine.value.endStroke();
 
+	// 一時消しゴムモード解除
+	if (temporaryEraserMode) {
+		temporaryEraserMode = false;
+		canvasEngine.value.setState({ currentTool: originalToolBeforeEraser as any });
+	}
+
 	if (stroke) {
 		stroke.userName = $i.name || $i.username;
+
+		// カラーヒストリーに追加（ペンストロークのみ、消しゴムは除外）
+		if (stroke.tool === 'pen') {
+			addColorToHistory(stroke.color);
+		}
 
 		addStrokeToHistory({
 			points: stroke.points,
@@ -3958,13 +4005,13 @@ function adjustCanvasForMobile() {
 .toolbar {
 	display: flex;
 	flex-direction: column;
-	align-items: stretch;
-	gap: 8px;
-	padding: 8px;
+	align-items: center;
+	gap: 4px;
+	padding: 4px;
 	background: var(--MI_THEME-bg);
 	border-right: 1px solid var(--MI_THEME-divider);
-	width: 52px;
-	min-width: 52px;
+	width: 44px;
+	min-width: 44px;
 	overflow-y: auto;
 	overflow-x: hidden;
 	scrollbar-width: none;
@@ -4096,7 +4143,7 @@ function adjustCanvasForMobile() {
 
 .toolPanel {
 	position: absolute;
-	left: 52px;
+	left: 44px;
 	top: 0;
 	width: 200px;
 	max-height: 100%;
