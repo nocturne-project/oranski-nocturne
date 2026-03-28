@@ -1,4 +1,7 @@
 /*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ *
  * マイグレーション: グループチャットお絵描き機能アップグレード
  *
  * 変更内容:
