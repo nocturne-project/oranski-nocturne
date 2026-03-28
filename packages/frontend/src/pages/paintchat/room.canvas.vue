@@ -85,7 +85,7 @@ const STROKE_START_THRESHOLD = 3; // ピクセル: この距離以上動いた�
 
 // 手ブレ補正: 適応的スムージング（大きいほど追従が遅い。0.2=弱い, 0.5=強い）
 const SMOOTHING_FACTOR = 0.4; // 指描き用（変更禁止: ユーザー承認済み 2026-03-28）
-const PEN_SMOOTHING_FACTOR = 0.65; // Apple Pencil用（指より強めの手ブレ補正）
+const PEN_SMOOTHING_FACTOR = 0.75; // Apple Pencil用（強めの手ブレ補正で滑らかな曲線）
 const MIN_MOVE_DISTANCE = 1.5; // この距離未満の移動はスキップ（ノイズ除去）
 let smoothedX = 0;
 let smoothedY = 0;
