@@ -87,12 +87,9 @@ const STROKE_START_THRESHOLD = 3; // ピクセル: この距離以上動いた�
 const SMOOTHING_FACTOR = 0.4; // 指描き用（変更禁止: ユーザー承認済み 2026-03-28）
 const PEN_SMOOTHING_FACTOR = 0.82; // Apple Pencil用（強いゆがみ補正。入力の18%のみ反映）
 const MIN_MOVE_DISTANCE = 1.5; // この距離未満の移動はスキップ（ノイズ除去、指描き用）
-const PEN_MIN_MOVE_DISTANCE = 4.0; // Apple Pencil用（高頻度イベントを間引いてノイズ軽減）
 let smoothedX = 0;
 let smoothedY = 0;
 let isSmoothingInitialized = false;
-let lastFilteredX: number | null = null;
-let lastFilteredY: number | null = null;
 
 // カーソル移動のスロットル（50ms）
 let lastCursorEmit = 0;
@@ -316,8 +313,6 @@ function onTouchEnd() {
 	}
 	strokeStarted = false;
 	isSmoothingInitialized = false;
-	lastFilteredX = null;
-	lastFilteredY = null;
 	lastTime = 0;
 	strokePointCount = 0;
 }
@@ -389,8 +384,6 @@ function onPointerDown(e: PointerEvent) {
 		pendingStrokeStart = { x, y };
 		strokeStarted = false;
 		isSmoothingInitialized = false;
-	lastFilteredX = null;
-	lastFilteredY = null;
 		lastTime = 0;
 		strokePointCount = 0;
 	} else {
@@ -398,8 +391,6 @@ function onPointerDown(e: PointerEvent) {
 		pendingStrokeStart = { x, y };
 		strokeStarted = false;
 		isSmoothingInitialized = false;
-	lastFilteredX = null;
-	lastFilteredY = null;
 		lastTime = 0;
 		strokePointCount = 0;
 	}
@@ -445,14 +436,6 @@ function onPointerMove(e: PointerEvent) {
 			isSmoothingInitialized = true;
 		}
 
-		// ペン用の最小移動距離フィルタ（Apple Pencilの高頻度イベントを間引き）
-		if (e.pointerType === 'pen') {
-			const mdx = smoothedX - (lastFilteredX ?? smoothedX);
-			const mdy = smoothedY - (lastFilteredY ?? smoothedY);
-			if (Math.sqrt(mdx * mdx + mdy * mdy) < PEN_MIN_MOVE_DISTANCE) return;
-			lastFilteredX = smoothedX;
-			lastFilteredY = smoothedY;
-		}
 
 		const pressure = getEffectivePressure(e, smoothedX, smoothedY);
 		props.engine.moveStroke(smoothedX, smoothedY, pressure);
@@ -488,8 +471,6 @@ function onPointerUp(e: PointerEvent) {
 	strokePointCount = 0;
 	hasHardwarePressure = false;
 	isSmoothingInitialized = false;
-	lastFilteredX = null;
-	lastFilteredY = null;
 }
 
 // --- マウスホイールズーム（カーソル位置基準） ---
