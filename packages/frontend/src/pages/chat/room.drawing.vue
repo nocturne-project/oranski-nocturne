@@ -33,12 +33,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div :class="[$style.root, 'drawing-root']" style="display: flex; flex-direction: row;">
-	<!-- ローディングHUD -->
-	<div v-if="isCanvasLoading" :class="$style.loadingOverlay">
-		<div :class="$style.loadingSpinner"></div>
-		<div :class="$style.loadingText">Loading...</div>
-	</div>
-
 	<!-- paintchat式左サイドバーツールバー（パネル展開方式） -->
 	<div :class="$style.toolbar">
 		<!-- 移動（パン）ツール -->
@@ -233,6 +227,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 		@touchmove="handleContainerTouchMove"
 		@touchend="handleContainerTouchEnd"
 	>
+		<!-- キャンバスローディング -->
+		<div v-if="isCanvasLoading" :class="$style.loadingOverlay">
+			<div :class="$style.loadingSpinner"></div>
+		</div>
+
 		<!-- デバッグパネル -->
 		<div v-if="showDebugPanel" :class="$style.debugPanel">
 			<div :class="$style.debugHeader">
@@ -1021,11 +1020,11 @@ onMounted(async () => {
 	// WebSocket接続（統合）
 	connectToChatRoomChannel();
 
-	// 既存のキャンバスデータを復元
-	await loadCanvasData();
-
-	// ユーザー設定を読み込む
-	await loadUserSettings();
+	// キャンバスデータとユーザー設定を並行読み込み（高速化）
+	await Promise.all([
+		loadCanvasData(),
+		loadUserSettings(),
+	]);
 
 	// CanvasEngineにユーザー設定を同期（loadUserSettingsで復元された値を反映）
 	if (canvasEngine.value) {
@@ -3097,18 +3096,17 @@ function adjustCanvasForMobile() {
 .loadingOverlay {
 	position: absolute;
 	inset: 0;
-	z-index: 9999;
+	z-index: 100;
 	display: flex;
-	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	gap: 12px;
-	background: var(--MI_THEME-panel);
+	background: rgba(255, 255, 255, 0.6);
+	pointer-events: none;
 }
 
 .loadingSpinner {
-	width: 32px;
-	height: 32px;
+	width: 28px;
+	height: 28px;
 	border: 3px solid var(--MI_THEME-divider);
 	border-top-color: var(--MI_THEME-accent);
 	border-radius: 50%;
@@ -3119,12 +3117,6 @@ function adjustCanvasForMobile() {
 	to { transform: rotate(360deg); }
 }
 
-.loadingText {
-	font-size: 13px;
-	color: var(--MI_THEME-fg);
-	opacity: 0.6;
-}
-
 .root {
 	display: flex;
 	flex-direction: row;
@@ -3132,13 +3124,8 @@ function adjustCanvasForMobile() {
 	height: calc(100dvh - 100px);
 	overflow: hidden;
 	background: var(--MI_THEME-panel);
-	margin: 0;
+	margin: -24px 0 0 0;
 	padding: 0;
-
-	// スマホ: _spacerのpadding-topを打ち消し
-	@media (max-width: 700px) {
-		margin: -24px 0 0 0;
-	}
 
 	&:fullscreen {
 		background: #000000;
