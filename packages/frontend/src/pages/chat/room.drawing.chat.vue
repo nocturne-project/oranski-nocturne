@@ -181,6 +181,19 @@ function addMessage(msg: DrawingChatMessage & { fromUserId?: string }) {
 		userNameCache.set(msg.fromUserId, msg.userName);
 	}
 
+	// ユーザー名が取得できなかった場合、APIで取得して後から更新
+	if (!msg.userName && msg.fromUserId) {
+		const userId = msg.fromUserId;
+		const msgId = msg.id;
+		misskeyApi('users/show', { userId } as any).then((user: any) => {
+			const name = user.name || user.username || '';
+			userNameCache.set(userId, name);
+			// 該当メッセージの名前を更新
+			const target = messages.value.find(m => m.id === msgId);
+			if (target) target.userName = name;
+		}).catch(() => { /* ignore */ });
+	}
+
 	messages.value.push(msg);
 
 	// 最大100件保持
