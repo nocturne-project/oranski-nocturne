@@ -400,6 +400,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 		:connection="connection"
 		:myUserId="$i.id"
 		:myUserName="$i.name || $i.username"
+		:roomId="props.roomId"
+		:userId="props.userId"
 	/>
 </div>
 </template>

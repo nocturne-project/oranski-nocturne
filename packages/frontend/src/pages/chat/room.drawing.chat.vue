@@ -52,6 +52,7 @@ paintchatのroom.chat.vueを移植。既存のchatRoomチャネルのメッセ�
 
 <script lang="ts" setup>
 import { ref, nextTick } from 'vue';
+import { misskeyApi } from '@/utility/misskey-api.js';
 
 // メッセージの型（グループチャットのメッセージ形式）
 interface DrawingChatMessage {
@@ -65,6 +66,8 @@ const props = defineProps<{
 	connection: any; // WebSocket connection
 	myUserId: string;
 	myUserName: string;
+	roomId?: string; // ルームチャット
+	userId?: string; // DM
 }>();
 
 const isOpen = ref(false);
@@ -79,15 +82,48 @@ function formatTime(isoString: string): string {
 	return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
 }
 
-// チャットを開く
-function openChat() {
+// チャットを開く（過去メッセージを読み込み）
+async function openChat() {
 	isOpen.value = true;
 	hasUnread.value = false;
+	await loadMessages();
 }
 
 // チャットを閉じる
 function closeChat() {
 	isOpen.value = false;
+}
+
+// 過去メッセージをAPIから読み込み
+async function loadMessages() {
+	try {
+		let apiMessages: any[] = [];
+		if (props.roomId) {
+			apiMessages = await misskeyApi('chat/messages/room-timeline', {
+				roomId: props.roomId,
+				limit: 50,
+			}) as any;
+		} else if (props.userId) {
+			apiMessages = await misskeyApi('chat/messages/user-timeline', {
+				userId: props.userId,
+				limit: 50,
+			}) as any;
+		}
+
+		// APIレスポンスをDrawingChatMessage形式に変換
+		const converted: DrawingChatMessage[] = apiMessages.map((msg: any) => ({
+			id: msg.id,
+			userName: msg.fromUser?.name || msg.fromUser?.username || '???',
+			content: msg.text || '',
+			createdAt: msg.createdAt,
+		})).reverse(); // APIは新しい順なので逆順にする
+
+		messages.value = converted;
+		await nextTick();
+		scrollToBottom();
+	} catch {
+		// 読み込み失敗時は空のまま
+	}
 }
 
 // メッセージを送信（chatRoomチャネル経由）
