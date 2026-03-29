@@ -212,9 +212,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<button :class="$style.panelBtn" @click="resetZoom">
 				<i class="ti ti-zoom-reset"></i> ズームリセット
 			</button>
-			<button :class="$style.panelBtn" @click="showDebugPanel = !showDebugPanel">
-				<i class="ti ti-bug"></i> デバッグ
-			</button>
 		</template>
 	</div>
 
@@ -636,18 +633,49 @@ function setLayerOpacityValue(layer: number, opacity: number) {
 	saveUserSettings();
 }
 
-// 自分のストロークのみダウンロード
-function downloadMyStrokes() {
-	if (!canvasEngine.value) return;
-	const dataUrl = canvasEngine.value.toMyStrokesDataURL();
-	const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-	const filename = `my-drawing_${timestamp}.png`;
+// iOS判定
+function isIOS(): boolean {
+	return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+		(navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+// 画像ダウンロード（iOS: Web Share API共有シート、その他: data URL）
+function downloadImage(dataUrl: string, filename: string) {
+	if (isIOS() && navigator.share != null) {
+		// iOS: Web Share APIでPhotosへの保存を含む共有シートを表示
+		const byteString = atob(dataUrl.split(',')[1]);
+		const mimeString = dataUrl.split(',')[0].split(':')[1].split(';')[0];
+		const ab = new ArrayBuffer(byteString.length);
+		const ia = new Uint8Array(ab);
+		for (let i = 0; i < byteString.length; i++) {
+			ia[i] = byteString.charCodeAt(i);
+		}
+		const blob = new Blob([ab], { type: mimeString });
+		const file = new File([blob], filename, { type: 'image/png' });
+		navigator.share({ files: [file] }).catch(() => {
+			// 共有キャンセル時はdata URLフォールバック
+			downloadViaLink(dataUrl, filename);
+		});
+	} else {
+		downloadViaLink(dataUrl, filename);
+	}
+}
+
+function downloadViaLink(dataUrl: string, filename: string) {
 	const link = window.document.createElement('a');
 	link.href = dataUrl;
 	link.download = filename;
 	window.document.body.appendChild(link);
 	link.click();
 	window.document.body.removeChild(link);
+}
+
+// 自分のストロークのみダウンロード
+function downloadMyStrokes() {
+	if (!canvasEngine.value) return;
+	const dataUrl = canvasEngine.value.toMyStrokesDataURL();
+	const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+	downloadImage(dataUrl, `my-drawing_${timestamp}.png`);
 }
 
 // カラーヒストリー（最近使った色、最大10色、localStorage永続化）
@@ -1598,17 +1626,25 @@ function startDrawing(event: MouseEvent | TouchEvent) {
 function draw(event: MouseEvent | TouchEvent) {
 	if (!canvasEngine.value) return;
 
-	// スペースキーでのパン中
-	if (isPanningWithSpace.value && event instanceof MouseEvent) {
-		const deltaX = event.clientX - panStart.value.x;
-		const deltaY = event.clientY - panStart.value.y;
-
+	// スペースキー/移動ツールでのパン中（マウス・タッチ両対応）
+	if (isPanningWithSpace.value) {
+		let clientX: number, clientY: number;
+		if (event instanceof MouseEvent) {
+			clientX = event.clientX;
+			clientY = event.clientY;
+		} else if (event.touches.length > 0) {
+			clientX = event.touches[0].clientX;
+			clientY = event.touches[0].clientY;
+		} else {
+			return;
+		}
+		const deltaX = clientX - panStart.value.x;
+		const deltaY = clientY - panStart.value.y;
 		panOffset.value = {
 			x: panOffset.value.x + deltaX,
 			y: panOffset.value.y + deltaY,
 		};
-
-		panStart.value = { x: event.clientX, y: event.clientY };
+		panStart.value = { x: clientX, y: clientY };
 		return;
 	}
 
@@ -2429,13 +2465,7 @@ function downloadCanvas() {
 		if (canvasEngine.value) {
 			const dataUrl = canvasEngine.value.toDataURL('image/png');
 			const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-			const filename = `drawing_${timestamp}.png`;
-			const link = window.document.createElement('a');
-			link.href = dataUrl;
-			link.download = filename;
-			window.document.body.appendChild(link);
-			link.click();
-			window.document.body.removeChild(link);
+			downloadImage(dataUrl, `drawing_${timestamp}.png`);
 			return;
 		}
 
@@ -3553,8 +3583,14 @@ function handleTouchStart(e: TouchEvent) {
 		// 1本指の場合は通常の描画
 		startDrawing(e);
 	} else if (e.touches.length === 2) {
-		// 2本指の場合: パン/ズーム開始
-		isDrawing.value = false; // 描画モードを終了
+		// 2本指の場合: パン/ズーム開始（描画中のストロークをキャンセル）
+		if (isDrawing.value && canvasEngine.value) {
+			// CanvasEngineの描画状態をリセット（ストロークを確定せずキャンセル）
+			canvasEngine.value.setState({ isDrawing: false, currentPoints: [] });
+			canvasEngine.value.redraw();
+		}
+		isDrawing.value = false;
+		currentPath = [];
 
 		// 2本指ジェスチャー開始
 		isPanning.value = true;
@@ -4138,11 +4174,11 @@ function adjustCanvasForMobile() {
 	flex-direction: column;
 	align-items: center;
 	gap: 4px;
-	padding: 4px;
+	padding: 2px;
 	background: var(--MI_THEME-bg);
 	border-right: 1px solid var(--MI_THEME-divider);
-	width: 44px;
-	min-width: 44px;
+	width: 40px;
+	min-width: 40px;
 	overflow-y: auto;
 	overflow-x: hidden;
 	scrollbar-width: none;
@@ -4373,6 +4409,7 @@ function adjustCanvasForMobile() {
 	border: 1px solid var(--MI_THEME-divider);
 	border-radius: 4px;
 	background: var(--MI_THEME-panel);
+	color: var(--MI_THEME-fg);
 	cursor: pointer;
 
 	&:hover { background: var(--MI_THEME-buttonHoverBg); }
@@ -4392,6 +4429,7 @@ function adjustCanvasForMobile() {
 
 .widthLabel {
 	font-size: 10px;
+	color: var(--MI_THEME-fg);
 }
 
 .pressureToggle {
