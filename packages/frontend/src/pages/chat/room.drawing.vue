@@ -1486,37 +1486,164 @@ function onContextMenu(e: Event) {
 	e.preventDefault();
 }
 
-// PointerEvent ハンドラ（ペン/マウス用。タッチはtouchイベントで処理）
+// PointerEvent ハンドラ（ペン/マウス用。paintchat準拠の遅延書き出し+スムージング）
+const STROKE_START_THRESHOLD = 3; // ピクセル: この距離以上動いたらストローク開始
+const SMOOTHING_FACTOR = 0.4; // 指描き用スムージング係数
+let pendingPointerStart: { x: number; y: number } | null = null;
+let pointerStrokeStarted = false;
+let smoothedX = 0;
+let smoothedY = 0;
+let isSmoothingInitialized = false;
+
 function onPointerDown(e: PointerEvent) {
-	// タッチはtouchStartで処理（PointerEvent経由だと2本指検出ができない）
 	if (e.pointerType === 'touch') return;
 
-	isPointerDown = true;
-	lastHwPressure = 0.5; // 筆圧スムージングをリセット
+	// 右クリック消しゴム
+	if (e.button === 2 || e.button === 5) {
+		e.preventDefault();
+		isPointerDown = true;
+		temporaryEraserMode = true;
+		originalToolBeforeEraser = currentTool.value;
+		if (canvasEngine.value) {
+			canvasEngine.value.setState({ currentTool: 'eraser' as any });
+			canvasEngine.value.setHardwarePressure(false);
+		}
+		lastHwPressure = 0.5;
+		const point = getEventPoint(e as any);
+		const pressure = getSmoothedPressure(e);
+		if (canvasEngine.value) {
+			canvasEngine.value.setState({ currentColor: currentColor.value, currentWidth: strokeWidth.value, currentOpacity: currentOpacity.value });
+			canvasEngine.value.setCurrentLayer(currentLayer.value);
+			canvasEngine.value.beginStroke(point.x, point.y, pressure);
+		}
+		strokeStarted = true;
+		isDrawing.value = true;
+		return;
+	}
+	if (e.button !== 0) return;
 
-	// Apple Pencil等のハードウェア筆圧を検出
+	isPointerDown = true;
+	lastHwPressure = 0.5;
+
 	if (canvasEngine.value) {
 		canvasEngine.value.setHardwarePressure(e.pointerType === 'pen');
 	}
 
-	// PointerEventをMouseEvent互換で処理
-	startDrawing(e as any);
+	if (isMoveMode.value) {
+		isPanningWithSpace.value = true;
+		panStart.value = { x: e.clientX, y: e.clientY };
+		return;
+	}
+
+	if (currentTool.value === 'eyedropper') {
+		const point = getEventPoint(e as any);
+		eyedropColor(point);
+		return;
+	}
+
+	// ストローク開始遅延（paintchat準拠: ドット防止）
+	const point = getEventPoint(e as any);
+	pendingPointerStart = { x: point.x, y: point.y };
+	pointerStrokeStarted = false;
+	isSmoothingInitialized = false;
+
+	// CanvasEngineの描画状態を同期
+	if (canvasEngine.value) {
+		canvasEngine.value.setState({
+			currentTool: currentTool.value as any,
+			currentColor: currentColor.value,
+			currentWidth: strokeWidth.value,
+			currentOpacity: currentOpacity.value,
+		});
+		canvasEngine.value.setCurrentLayer(currentLayer.value);
+	}
 }
 
 function onPointerMove(e: PointerEvent) {
 	if (e.pointerType === 'touch') return;
-	if (!isPointerDown && !isPanningWithSpace.value) {
-		// 描画中でなくてもカーソル位置を送信
-		const point = getEventPoint(e as any);
-		sendCursorPosition(point);
+
+	// 移動モードパン中
+	if (isPointerDown && isPanningWithSpace.value) {
+		const deltaX = e.clientX - panStart.value.x;
+		const deltaY = e.clientY - panStart.value.y;
+		panOffset.value = { x: panOffset.value.x + deltaX, y: panOffset.value.y + deltaY };
+		panStart.value = { x: e.clientX, y: e.clientY };
 		return;
 	}
-	draw(e as any);
+
+	const point = getEventPoint(e as any);
+	sendCursorPosition(point);
+
+	if (!isPointerDown) return;
+
+	// 遅延書き出しチェック
+	if (pendingPointerStart && !pointerStrokeStarted) {
+		const dx = point.x - pendingPointerStart.x;
+		const dy = point.y - pendingPointerStart.y;
+		if (Math.sqrt(dx * dx + dy * dy) < STROKE_START_THRESHOLD) return;
+		// 十分動いたのでストローク開始
+		pointerStrokeStarted = true;
+		strokeStarted = true;
+		isDrawing.value = true;
+		smoothedX = pendingPointerStart.x;
+		smoothedY = pendingPointerStart.y;
+		isSmoothingInitialized = true;
+		const startPressure = getSmoothedPressure(e);
+		if (canvasEngine.value) {
+			canvasEngine.value.beginStroke(pendingPointerStart.x, pendingPointerStart.y, startPressure);
+		}
+		pendingPointerStart = null;
+	}
+
+	if (!pointerStrokeStarted) return;
+
+	// 座標スムージング（ペンは入力時スムージングなし、マウスはSMOOTHING_FACTOR適用）
+	const sf = e.pointerType === 'pen' ? 0 : SMOOTHING_FACTOR;
+	if (isSmoothingInitialized) {
+		smoothedX = smoothedX + (point.x - smoothedX) * (1 - sf);
+		smoothedY = smoothedY + (point.y - smoothedY) * (1 - sf);
+	} else {
+		smoothedX = point.x;
+		smoothedY = point.y;
+		isSmoothingInitialized = true;
+	}
+
+	const pressure = getSmoothedPressure(e);
+	if (canvasEngine.value) {
+		canvasEngine.value.moveStroke(smoothedX, smoothedY, pressure);
+	}
+
+	// 進捗送信
+	if (canvasEngine.value && connection.value) {
+		const engineState = canvasEngine.value.getState();
+		if (engineState.currentPoints.length > 0) {
+			const now = Date.now();
+			if (now - lastProgressSent >= progressSendInterval) {
+				lastProgressSent = now;
+				connection.value.send('drawingProgress', {
+					points: engineState.currentPoints.slice(),
+					tool: currentTool.value,
+					color: currentColor.value,
+					strokeWidth: strokeWidth.value,
+					opacity: currentOpacity.value,
+					layer: currentLayer.value,
+				});
+			}
+		}
+	}
 }
 
 function onPointerUp(e: PointerEvent) {
 	if (e.pointerType === 'touch') return;
+	if (!isPointerDown) return;
 	isPointerDown = false;
+	pendingPointerStart = null;
+
+	if (!pointerStrokeStarted) {
+		// 遅延中にリリース（短いタップ）: 何もしない
+		return;
+	}
+	pointerStrokeStarted = false;
 	stopDrawing();
 }
 
