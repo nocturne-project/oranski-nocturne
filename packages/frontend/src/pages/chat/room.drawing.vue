@@ -2924,19 +2924,36 @@ function handleTouchEnd(e: TouchEvent) {
 		isZooming.value = false;
 		gestureState.value = 'none';
 		distanceHistory.value = [];
-		stopDrawing();
 
-		// パンまたはズームが行われていた場合、設定を自動保存
+		// パン/ズーム中でなかった場合のみストローク確定（ドット防止）
+		if (!wasPanningOrZooming) {
+			stopDrawing();
+		} else {
+			// パン/ズーム後はCanvasEngineの描画状態をリセット
+			if (canvasEngine.value) {
+				canvasEngine.value.setState({ isDrawing: false, currentPoints: [] });
+				canvasEngine.value.redraw();
+			}
+			isDrawing.value = false;
+			currentPath = [];
+		}
+
 		if (wasPanningOrZooming) {
 			saveUserSettings();
 		}
 	} else if (e.touches.length === 1 && isPanning.value) {
-		// 2本指から1本指になった場合
+		// 2本指から1本指になった場合（描画は開始しない）
 		twoFingerTapStartPos.value = null;
 		isPanning.value = false;
 		isZooming.value = false;
 		gestureState.value = 'none';
 		distanceHistory.value = [];
+		// CanvasEngineの描画状態をリセット
+		if (canvasEngine.value) {
+			canvasEngine.value.setState({ isDrawing: false, currentPoints: [] });
+		}
+		isDrawing.value = false;
+		currentPath = [];
 
 		// パンまたはズームが行われていたため、設定を自動保存
 		saveUserSettings();
