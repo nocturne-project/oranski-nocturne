@@ -1035,9 +1035,6 @@ onMounted(async () => {
 		canvasEngine.value = engine;
 	}
 
-	// CanvasEngine初期化完了 = キャンバス使用可能 → ローディング解除
-	isCanvasLoading.value = false;
-
 	// タッチデバイス検出
 	isTouchDevice.value = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
@@ -1078,6 +1075,9 @@ onMounted(async () => {
 			canvasEngine.value.setLayerOpacity(i, layerOpacity.value[i]);
 		}
 	}
+
+	// ローディング完了（CanvasEngine初期化 + データ読み込み + 設定同期完了）
+	isCanvasLoading.value = false;
 
 	// 全画面モード用のイベントリスナー
 	window.document.addEventListener('fullscreenchange', handleFullscreenChange);
