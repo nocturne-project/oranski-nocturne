@@ -341,9 +341,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 			}"
 			@mousedown="startDrawing"
 			@contextmenu.prevent="onContextMenu"
-			@touchstart="handleContainerTouchStart"
-			@touchmove="handleContainerTouchMove"
-			@touchend="handleContainerTouchEnd"
+			@touchstart.stop.prevent="handleContainerTouchStart"
+			@touchmove.stop.prevent="handleContainerTouchMove"
+			@touchend.stop.prevent="handleContainerTouchEnd"
 		></canvas>
 		<!-- 旧レイヤーキャンバス（CanvasEngine移行後は非表示） -->
 		<canvas
