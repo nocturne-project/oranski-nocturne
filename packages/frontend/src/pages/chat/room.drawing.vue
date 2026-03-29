@@ -33,16 +33,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div :class="[$style.root, 'drawing-root']" style="display: flex; flex-direction: row;">
-	<!-- モバイル用ツールバー開閉ボタン -->
-	<button
-		v-if="isTouchDevice"
-		:class="[$style.toolbarToggle, { [$style.toolbarToggleOpen]: isToolbarOpen }]"
-		title="ツールバー"
-		@click="isToolbarOpen = !isToolbarOpen"
-	>
-		<i :class="isToolbarOpen ? 'ti ti-x' : 'ti ti-tools'"></i>
-	</button>
-
 	<!-- paintchat式左サイドバーツールバー（パネル展開方式） -->
 	<div :class="$style.toolbar">
 		<!-- 移動（パン）ツール -->
@@ -4060,8 +4050,8 @@ function adjustCanvasForMobile() {
 .root {
 	display: flex;
 	flex-direction: row;
-	height: calc(100vh - 100px);
-	max-height: calc(100vh - 100px);
+	height: 100%;
+	max-height: calc(100dvh - 150px);
 	overflow: hidden;
 	background: var(--MI_THEME-panel);
 
@@ -4431,12 +4421,14 @@ function adjustCanvasForMobile() {
 	height: 36px;
 	border: 1px solid var(--MI_THEME-divider);
 	background: var(--MI_THEME-panel);
+	color: var(--MI_THEME-fg);
 	border-radius: 6px;
 	cursor: pointer;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	transition: all 0.2s;
+	font-size: 16px;
 
 	&:hover {
 		background: var(--MI_THEME-buttonHoverBg);
@@ -4802,10 +4794,10 @@ function adjustCanvasForMobile() {
 	overflow: hidden;
 	display: flex;
 	justify-content: center;
-	align-items: center;
-	background: #f5f5f5;
-	padding: 16px;
-	touch-action: none; /* ネイティブタッチ操作を無効化 */
+	align-items: flex-start;
+	background: var(--MI_THEME-bg);
+	padding: 8px;
+	touch-action: none;
 }
 
 .canvas {
