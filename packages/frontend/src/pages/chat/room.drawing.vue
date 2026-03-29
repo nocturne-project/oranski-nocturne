@@ -222,7 +222,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		@mousemove="draw"
 		@mouseup="stopDrawing"
 		@mouseleave="stopDrawing"
-		@wheel="handleWheel"
+		@wheel.prevent="handleWheel"
 		@touchstart="handleContainerTouchStart"
 		@touchmove="handleContainerTouchMove"
 		@touchend="handleContainerTouchEnd"
@@ -2077,18 +2077,21 @@ function zoomOut() {
 
 // マウスホイールによるズーム
 function handleWheel(event: WheelEvent) {
-	// Ctrlキーが押されている場合のみズーム
-	if (event.ctrlKey || event.metaKey) {
-		event.preventDefault();
+	event.preventDefault();
 
+	if (event.ctrlKey || event.metaKey) {
+		// ピンチズーム（Ctrl+wheel / トラックパッドピンチ）
 		const delta = -event.deltaY;
 		const zoomFactor = delta > 0 ? 1.1 : 0.9;
 		const newZoom = Math.max(minZoom, Math.min(maxZoom, zoomLevel.value * zoomFactor));
-
 		zoomLevel.value = newZoom;
-
-		// 設定を自動保存
 		saveUserSettings();
+	} else {
+		// 2本指スワイプ → パン移動（トラックパッド / マウスホイール）
+		panOffset.value = {
+			x: panOffset.value.x - event.deltaX,
+			y: panOffset.value.y - event.deltaY,
+		};
 	}
 }
 
