@@ -196,7 +196,7 @@ defineExpose({ addMessage, openChat, closeChat, isOpen, hasUnread });
 .chatPanel {
 	width: 320px;
 	max-height: 400px;
-	background: rgba(var(--MI_THEME-panel-rgb, 0, 0, 0), 0.9);
+	background: color-mix(in srgb, var(--MI_THEME-panel) 92%, transparent);
 	backdrop-filter: blur(8px);
 	border-radius: 12px;
 	border: 1px solid var(--MI_THEME-divider);
