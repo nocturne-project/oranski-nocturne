@@ -226,9 +226,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<div
 		ref="canvasContainerEl"
 		:class="$style.canvasContainer"
-		@mousemove="draw"
-		@mouseup="stopDrawing"
-		@mouseleave="stopDrawing"
+		@pointermove="onPointerMove"
+		@pointerup="onPointerUp"
+		@pointerleave="onPointerUp"
 		@wheel.prevent="handleWheel"
 		@touchstart="handleContainerTouchStart"
 		@touchmove="handleContainerTouchMove"
@@ -338,7 +338,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 				zIndex: MAX_LAYERS + 1,
 				pointerEvents: 'auto'
 			}"
-			@mousedown="startDrawing"
+			@pointerdown="onPointerDown"
+			@pointermove="onPointerMove"
+			@pointerup="onPointerUp"
+			@pointerleave="onPointerUp"
 			@contextmenu.prevent="onContextMenu"
 			@touchstart.stop.prevent="handleContainerTouchStart"
 			@touchmove.stop.prevent="handleContainerTouchMove"
@@ -1452,10 +1455,44 @@ function setStrokeWidth(width: number) {
 // 右クリック消しゴム状態
 let temporaryEraserMode = false;
 let originalToolBeforeEraser: string = 'pen';
+let isPointerDown = false;
 
 // 右クリックメニュー抑制
 function onContextMenu(e: Event) {
 	e.preventDefault();
+}
+
+// PointerEvent ハンドラ（ペン/マウス用。タッチはtouchイベントで処理）
+function onPointerDown(e: PointerEvent) {
+	// タッチはtouchStartで処理（PointerEvent経由だと2本指検出ができない）
+	if (e.pointerType === 'touch') return;
+
+	isPointerDown = true;
+
+	// Apple Pencil等のハードウェア筆圧を検出
+	if (canvasEngine.value) {
+		canvasEngine.value.setHardwarePressure(e.pointerType === 'pen');
+	}
+
+	// PointerEventをMouseEvent互換で処理
+	startDrawing(e as any);
+}
+
+function onPointerMove(e: PointerEvent) {
+	if (e.pointerType === 'touch') return;
+	if (!isPointerDown && !isPanningWithSpace.value) {
+		// 描画中でなくてもカーソル位置を送信
+		const point = getEventPoint(e as any);
+		sendCursorPosition(point);
+		return;
+	}
+	draw(e as any);
+}
+
+function onPointerUp(e: PointerEvent) {
+	if (e.pointerType === 'touch') return;
+	isPointerDown = false;
+	stopDrawing();
 }
 
 // 描画開始（CanvasEngine経由）
@@ -1498,7 +1535,10 @@ function startDrawing(event: MouseEvent | TouchEvent) {
 	pointBuffer.length = 0;
 
 	const point = getEventPoint(event);
-	const pressure = calculatePressure();
+	// PointerEventの場合はハードウェア筆圧を使用
+	const pressure = (event as any).pressure != null && (event as any).pressure > 0 && (event as any).pressure < 1
+		? (event as any).pressure
+		: calculatePressure();
 
 	if (currentTool.value === 'eyedropper') {
 		eyedropColor(point);
@@ -1557,7 +1597,10 @@ function draw(event: MouseEvent | TouchEvent) {
 
 	if (!isDrawing.value || !strokeStarted || currentTool.value === 'eyedropper') return;
 
-	const pressure = calculatePressure();
+	// PointerEventの場合はハードウェア筆圧を使用
+	const pressure = (event as any).pressure != null && (event as any).pressure > 0 && (event as any).pressure < 1
+		? (event as any).pressure
+		: calculatePressure();
 	const pressurePoint: PressurePoint = { x: point.x, y: point.y, pressure };
 	currentPath.push(pressurePoint);
 
