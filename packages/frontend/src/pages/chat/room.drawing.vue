@@ -3228,8 +3228,7 @@ function adjustCanvasForMobile() {
 	display: flex;
 	flex-direction: row;
 	position: relative;
-	height: calc(100vh - 55px); // vhフォールバック（iOS 15.3以下）
-	height: calc(100dvh - 55px); // dvh優先（iOS 15.4+）
+	height: calc(100dvh - 55px);
 	overflow: hidden;
 	background: var(--MI_THEME-panel);
 	margin: -24px 0 -48px 0;
