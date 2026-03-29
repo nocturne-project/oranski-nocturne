@@ -3161,7 +3161,7 @@ function adjustCanvasForMobile() {
 	height: calc(100dvh - 100px);
 	overflow: hidden;
 	background: var(--MI_THEME-panel);
-	margin: -24px 0 0 0;
+	margin: -24px 0 -24px 0;
 	padding: 0;
 
 	&:fullscreen {
