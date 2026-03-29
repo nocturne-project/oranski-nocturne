@@ -3090,6 +3090,8 @@ function adjustCanvasForMobile() {
 	height: calc(100dvh - 100px);
 	overflow: hidden;
 	background: var(--MI_THEME-panel);
+	margin: -24px 0 0 0; // _spacerのpadding-topを打ち消し
+	padding: 0;
 
 	&:fullscreen {
 		background: #000000;
@@ -3153,12 +3155,12 @@ function adjustCanvasForMobile() {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 4px;
-	padding: 2px;
+	gap: 2px;
+	padding: 1px 0;
 	background: var(--MI_THEME-bg);
 	border-right: 1px solid var(--MI_THEME-divider);
-	width: 40px;
-	min-width: 40px;
+	width: 36px;
+	min-width: 36px;
 	overflow-y: auto;
 	overflow-x: hidden;
 	scrollbar-width: none;
@@ -3290,7 +3292,7 @@ function adjustCanvasForMobile() {
 
 .toolPanel {
 	position: absolute;
-	left: 44px;
+	left: 37px;
 	top: 0;
 	width: 200px;
 	max-height: 100%;
@@ -3455,12 +3457,12 @@ function adjustCanvasForMobile() {
 }
 
 .toolButton {
-	width: 36px;
-	height: 36px;
+	width: 34px;
+	height: 34px;
 	border: 1px solid var(--MI_THEME-divider);
 	background: var(--MI_THEME-panel);
 	color: var(--MI_THEME-fg);
-	border-radius: 6px;
+	border-radius: 4px;
 	cursor: pointer;
 	display: flex;
 	align-items: center;
