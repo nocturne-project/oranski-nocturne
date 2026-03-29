@@ -311,19 +311,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</div>
 			</div>
 		</div>
-		<!-- 背景白レイヤー（操作不可） -->
-		<canvas
-			:class="[$style.canvas, $style.backgroundLayer]"
-			:width="physicalCanvasWidth"
-			:height="physicalCanvasHeight"
-			:style="{
-				width: displayWidth + 'px',
-				height: displayHeight + 'px',
-				transform: `translate(-50%, -50%) translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
-				transformOrigin: 'center',
-				transition: (isPanning || isZooming) ? 'none' : 'transform 0.2s ease'
-			}"
-		></canvas>
 		<!-- CanvasEngine用メインキャンバス（paintchat式: 内部でレイヤー管理） -->
 		<canvas
 			ref="engineCanvasEl"
@@ -344,25 +331,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 			@touchstart.stop.prevent="handleContainerTouchStart"
 			@touchmove.stop.prevent="handleContainerTouchMove"
 			@touchend.stop.prevent="handleContainerTouchEnd"
-		></canvas>
-		<!-- 旧レイヤーキャンバス（CanvasEngine移行後は非表示） -->
-		<canvas
-			v-for="layerIndex in [2, 1, 0]"
-			:key="`layer-${layerIndex}`"
-			:ref="el => { if (el) layerCanvases[layerIndex] = el as HTMLCanvasElement }"
-			:class="[$style.canvas, $style.layerCanvas]"
-			:width="physicalCanvasWidth"
-			:height="physicalCanvasHeight"
-			:style="{
-				width: displayWidth + 'px',
-				height: displayHeight + 'px',
-				transform: `translate(-50%, -50%) translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
-				transformOrigin: 'center',
-				transition: (isPanning || isZooming) ? 'none' : 'transform 0.2s ease',
-				zIndex: MAX_LAYERS - layerIndex,
-				opacity: 0,
-				pointerEvents: 'none'
-			}"
 		></canvas>
 
 		<!-- ウォーターマーク（並べて表示） -->
@@ -514,17 +482,6 @@ const canvasHeight = ref(1200);
 const displayWidth = ref(1600); // 表示サイズ
 const displayHeight = ref(1200);
 
-// DPR考慮した物理サイズ（テンプレートバインド用）
-const physicalCanvasWidth = computed(() => {
-	const dpr = window.devicePixelRatio || 1;
-	return canvasWidth.value * dpr;
-});
-const physicalCanvasHeight = computed(() => {
-	const dpr = window.devicePixelRatio || 1;
-	return canvasHeight.value * dpr;
-});
-
-let ctx: CanvasRenderingContext2D | null = null;
 
 // キャンバスサイズプリセット
 const canvasSizePresets = [
@@ -802,39 +759,22 @@ const rasterizeThreshold = 50; // ラスタライズを実行するストロー�
  */
 const undoStack = ref<Array<any>>([]); // 元に戻す用のスタック（使用しない）
 const redoStack = ref<Array<any>>([]); // やり直す用のスタック
-const canUndo = computed(() => {
-	// 現在のレイヤーに自分のストロークがあればUndo可能
-	const targetLayer = currentLayer.value;
-	const myStrokes = layerStrokeHistory.value[targetLayer]?.filter(s => s.userId === $i.id) || [];
-	return myStrokes.length > 0;
-});
+// CanvasEngine経由: ストローク履歴があればUndo可能
+// CanvasEngineにはcanUndo()がないため、strokeHistoryの長さで判定
+const canUndo = computed(() => strokeHistory.value.length > 0);
 const canRedo = computed(() => undoneStrokes.value.length > 0 || redoStack.value.length > 0);
 
 // レイヤー管理（3レイヤー）
 const MAX_LAYERS = 3;
 const currentLayer = ref(0); // 現在のレイヤー (0, 1, 2)
-const layerCanvases = ref<Array<HTMLCanvasElement | undefined>>([undefined, undefined, undefined]); // 各レイヤーのキャンバス
-const layerContexts = ref<Array<CanvasRenderingContext2D | null>>([null, null, null]); // 各レイヤーのコンテキスト
 const layerVisible = ref<Array<boolean>>([true, true, true]); // 各レイヤーの表示状態
 const layerOpacity = ref<Array<number>>([1.0, 1.0, 1.0]); // 各レイヤーの透明度
-const layerStrokeHistory = ref<Array<Array<any>>>([[], [], []]); // 各レイヤーのストローク履歴
 
 function clampLayerIndex(layer: unknown): number {
 	const numeric = typeof layer === 'number' && Number.isFinite(layer) ? Math.floor(layer) : 0;
 	return Math.min(Math.max(numeric, 0), MAX_LAYERS - 1);
 }
 
-function withLayerContext(layerIndex: number, fn: (context: CanvasRenderingContext2D) => void) {
-	const targetContext = layerContexts.value[layerIndex];
-	if (!targetContext) return;
-	const previousCtx = ctx;
-	ctx = targetContext;
-	try {
-		fn(targetContext);
-	} finally {
-		ctx = previousCtx;
-	}
-}
 
 function normalizeStrokeForHistory(stroke: any) {
 	const layer = clampLayerIndex(stroke?.layer);
@@ -870,6 +810,7 @@ function normalizeStrokeForHistory(stroke: any) {
 	};
 }
 
+// ストロークの正規化のみ行う（旧レイヤーcanvas描画は削除済み）
 function renderStrokeOnLayer(
 	stroke: any,
 	options: { skipIfSelf?: boolean; updateHistory?: boolean; suppressRender?: boolean } = {},
@@ -879,39 +820,6 @@ function renderStrokeOnLayer(
 
 	if (options.skipIfSelf && normalized.userId && normalized.userId === $i.id) {
 		return null;
-	}
-
-	if (!options.suppressRender) {
-		withLayerContext(normalized.layer, () => {
-			if (!ctx) return;
-			if (normalized.points.length === 1) {
-				const point = normalized.points[0];
-				ctx.save();
-				ctx.globalCompositeOperation = normalized.tool === 'eraser' ? 'destination-out' : 'source-over';
-				ctx.fillStyle = normalized.tool === 'eraser' ? '#000000' : normalized.color;
-				ctx.globalAlpha = normalized.opacity;
-				ctx.beginPath();
-				ctx.arc(point.x, point.y, normalized.strokeWidth / 2, 0, Math.PI * 2);
-				ctx.fill();
-				ctx.restore();
-				return;
-			}
-
-			drawSmoothPathLocal(
-				normalized.points,
-				normalized.strokeWidth,
-				normalized.color,
-				normalized.opacity,
-				normalized.tool === 'eraser',
-			);
-		});
-	}
-
-	if (options.updateHistory !== false) {
-		if (!Array.isArray(layerStrokeHistory.value[normalized.layer])) {
-			layerStrokeHistory.value[normalized.layer] = [];
-		}
-		layerStrokeHistory.value[normalized.layer].push(normalized);
 	}
 
 	return normalized;
@@ -929,15 +837,6 @@ const otherCursors = ref<Array<{
 	color: string;
 }>>([]);
 
-// 他のユーザーの描画中ストローク
-const otherActiveStrokes = ref<Map<string, {
-	points: Array<{ x: number; y: number }>;
-	tool: string;
-	color: string;
-	strokeWidth: number;
-	opacity: number;
-	userId: string;
-}>>(new Map());
 
 // チャットオーバーレイ
 const chatOverlay = ref<{
@@ -1092,46 +991,8 @@ onMounted(async () => {
 	// コンテナサイズに合わせてdisplayサイズを更新
 	updateDisplaySize();
 
-	// レイヤーキャンバスの初期化
-	const dpr = window.devicePixelRatio || 1;
-
-	// canvasElに現在のアクティブレイヤーのcanvasを設定
-	// （イベントリスナーやカーソルスタイル変更用）
-	canvasEl.value = layerCanvases.value[currentLayer.value];
-
-	for (let i = 0; i < MAX_LAYERS; i++) {
-		const canvas = layerCanvases.value[i];
-		if (canvas) {
-			const context = canvas.getContext('2d', {
-				alpha: true,
-				desynchronized: false,
-				colorSpace: 'srgb',
-				willReadFrequently: false,
-			});
-
-			if (context) {
-				// DPR対応でスケール調整
-				context.scale(dpr, dpr);
-
-				// 最高品質のアンチエイリアス設定
-				context.lineCap = 'round';
-				context.lineJoin = 'round';
-				context.imageSmoothingEnabled = true;
-				context.imageSmoothingQuality = 'high';
-
-				// より滑らかな描画のための最適化設定
-				context.globalCompositeOperation = 'source-over';
-				context.miterLimit = 10;
-				context.lineWidth = 2;
-				context.filter = 'none';
-
-				layerContexts.value[i] = context;
-			}
-		}
-	}
-
-	// 現在のレイヤーのコンテキストを設定
-	ctx = layerContexts.value[currentLayer.value];
+	// canvasElにengineCanvasElを設定（イベントリスナーやカーソルスタイル変更用）
+	canvasEl.value = engineCanvasEl.value;
 
 	// paintchat式CanvasEngineの初期化（engineCanvasElはDPR非適用の論理サイズcanvas）
 	if (engineCanvasEl.value) {
@@ -1271,7 +1132,7 @@ onMounted(async () => {
 				const beforeZoomCoords = screenToCanvasCoordinates(
 					e.clientX,
 					e.clientY,
-					layerCanvases.value[currentLayer.value] || null,
+					engineCanvasEl.value || null,
 					canvasWidth.value,
 					canvasHeight.value,
 				);
@@ -1284,7 +1145,7 @@ onMounted(async () => {
 				const afterZoomCoords = screenToCanvasCoordinates(
 					e.clientX,
 					e.clientY,
-					layerCanvases.value[currentLayer.value] || null,
+					engineCanvasEl.value || null,
 					canvasWidth.value,
 					canvasHeight.value,
 				);
@@ -1394,8 +1255,6 @@ function connectToChatRoomChannel() {
 				timestamp: Date.now(),
 			};
 			canvasEngine.value.drawRemoteStroke(remoteStroke as any);
-		} else {
-			drawRemoteStroke(data);
 		}
 	});
 
@@ -1407,8 +1266,6 @@ function connectToChatRoomChannel() {
 				x: p.x, y: p.y, pressure: p.pressure ?? 1.0,
 			}));
 			canvasEngine.value.drawRemoteProgress(data.userId, points);
-		} else {
-			drawRemoteProgress(data);
 		}
 	});
 
@@ -1421,23 +1278,20 @@ function connectToChatRoomChannel() {
 		recordCommLog('receive', 'clearCanvas', {});
 		if (canvasEngine.value) {
 			canvasEngine.value.clear();
-		} else {
-			clearCanvasLocal();
 		}
+		clearCanvasLocal();
 	});
 
 	connection.value.on('undoStroke', (data: any) => {
 		recordCommLog('receive', 'undoStroke', data);
 		if (canvasEngine.value && data.strokeId) {
 			canvasEngine.value.applyRemoteUndo(data.strokeId);
-		} else {
-			handleRemoteUndo(data);
 		}
 	});
 
 	connection.value.on('redoStroke', (data: any) => {
 		recordCommLog('receive', 'redoStroke', data);
-		handleRemoteRedo(data);
+		// Redo is handled via drawingStroke event from CanvasEngine
 	});
 
 	connection.value.on('canvasSizeChange', (data: any) => {
@@ -1861,8 +1715,8 @@ function getAccurateCoordinates(canvas: HTMLCanvasElement, clientX: number, clie
 
 // イベントから座標を取得
 function getEventPoint(event: MouseEvent | TouchEvent): { x: number; y: number } {
-	// CanvasEngine用のcanvas要素を優先、なければ旧レイヤーcanvasを使用
-	const canvas = engineCanvasEl.value || layerCanvases.value[currentLayer.value];
+	// CanvasEngine用のcanvas要素を使用
+	const canvas = engineCanvasEl.value;
 
 	let clientX: number, clientY: number;
 	if (event instanceof MouseEvent) {
@@ -1919,427 +1773,12 @@ function recordTraceLog(
 	});
 }
 
-// ダグラス・ピューカー法による線の簡素化
-function simplifyPath(points: Array<{ x: number; y: number }>, tolerance = 1.0): Array<{ x: number; y: number }> {
-	if (points.length <= 2) return points;
 
-	// 再帰的にライン簡素化
-	function douglasPeucker(pts: Array<{ x: number; y: number }>, epsilon: number): Array<{ x: number; y: number }> {
-		if (pts.length <= 2) return pts;
 
-		// 最初と最後の点間の直線からの最大距離を見つける
-		let maxDist = 0;
-		let index = 0;
-		const start = pts[0];
-		const end = pts[pts.length - 1];
 
-		for (let i = 1; i < pts.length - 1; i++) {
-			const dist = pointToLineDistance(pts[i], start, end);
-			if (dist > maxDist) {
-				index = i;
-				maxDist = dist;
-			}
-		}
 
-		// 最大距離が閾値より大きい場合、分割して再帰処理
-		if (maxDist > epsilon) {
-			const left = douglasPeucker(pts.slice(0, index + 1), epsilon);
-			const right = douglasPeucker(pts.slice(index), epsilon);
-			return left.slice(0, -1).concat(right);
-		} else {
-			return [start, end];
-		}
-	}
 
-	// 点から直線への距離計算
-	function pointToLineDistance(point: { x: number; y: number }, lineStart: { x: number; y: number }, lineEnd: { x: number; y: number }): number {
-		const A = point.x - lineStart.x;
-		const B = point.y - lineStart.y;
-		const C = lineEnd.x - lineStart.x;
-		const D = lineEnd.y - lineStart.y;
-		const dot = A * C + B * D;
-		const lenSq = C * C + D * D;
 
-		if (lenSq === 0) return Math.sqrt(A * A + B * B);
-
-		const param = dot / lenSq;
-		let xx: number, yy: number;
-
-		if (param < 0) {
-			xx = lineStart.x;
-			yy = lineStart.y;
-		} else if (param > 1) {
-			xx = lineEnd.x;
-			yy = lineEnd.y;
-		} else {
-			xx = lineStart.x + param * C;
-			yy = lineStart.y + param * D;
-		}
-
-		const dx = point.x - xx;
-		const dy = point.y - yy;
-		return Math.sqrt(dx * dx + dy * dy);
-	}
-
-	return douglasPeucker(points, tolerance);
-}
-
-// 移動平均による座標スムージング
-function smoothPoints(points: Array<{ x: number; y: number }>, windowSize = 3): Array<{ x: number; y: number }> {
-	if (points.length <= windowSize) return points;
-
-	const smoothed: Array<{ x: number; y: number }> = [];
-	const halfWindow = Math.floor(windowSize / 2);
-
-	for (let i = 0; i < points.length; i++) {
-		let sumX = 0, sumY = 0, count = 0;
-
-		for (let j = Math.max(0, i - halfWindow); j <= Math.min(points.length - 1, i + halfWindow); j++) {
-			sumX += points[j].x;
-			sumY += points[j].y;
-			count++;
-		}
-
-		smoothed.push({
-			x: sumX / count,
-			y: sumY / count,
-		});
-	}
-
-	return smoothed;
-}
-
-// 最高品質スムーズパス描画（複数アルゴリズム組み合わせ + 筆圧対応）
-function drawSmoothPathLocal(points: Array<{ x: number; y: number; pressure?: number }>, strokeWidth?: number, color?: string, opacity?: number, isEraser = false) {
-	if (!ctx || points.length < 2) return;
-
-	ctx.save();
-
-	// パラメータが指定された場合は描画設定を更新
-	const baseStrokeWidth = strokeWidth !== undefined ? strokeWidth : ctx.lineWidth;
-	if (color !== undefined) {
-		ctx.strokeStyle = color;
-	}
-	if (opacity !== undefined) {
-		ctx.globalAlpha = opacity;
-	}
-
-	ctx.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
-	ctx.lineCap = 'round';
-	ctx.lineJoin = 'round';
-	ctx.imageSmoothingEnabled = true;
-	ctx.imageSmoothingQuality = 'high';
-
-	// 筆圧情報があるかチェック
-	const hasPressure = points.some(p => p.pressure !== undefined);
-
-	if (hasPressure) {
-		// 筆圧対応：各セグメントごとに描画
-		for (let i = 0; i < points.length - 1; i++) {
-			const p1 = points[i];
-			const p2 = points[i + 1];
-			const pressure = p2.pressure || 1.0;
-
-			ctx.lineWidth = baseStrokeWidth * pressure;
-			ctx.beginPath();
-			ctx.moveTo(p1.x, p1.y);
-			ctx.lineTo(p2.x, p2.y);
-			ctx.stroke();
-		}
-	} else {
-		// 筆圧なし：従来の描画
-		ctx.lineWidth = baseStrokeWidth;
-
-		// 1. 移動平均によるスムージング
-		let processedPoints = smoothPoints(points, 3);
-
-		// 2. ダグラス・ピューカー法による最適化（点が多い場合のみ）
-		if (processedPoints.length > 4) {
-			processedPoints = simplifyPath(processedPoints, 0.5);
-		}
-
-		// 3. 高品質ベジェ曲線描画
-		ctx.beginPath();
-		ctx.moveTo(processedPoints[0].x, processedPoints[0].y);
-
-		if (processedPoints.length === 2) {
-			ctx.lineTo(processedPoints[1].x, processedPoints[1].y);
-		} else if (processedPoints.length === 3) {
-			// 3点の場合は2次ベジェ曲線
-			const cp = {
-				x: (processedPoints[0].x + processedPoints[2].x) / 2,
-				y: (processedPoints[0].y + processedPoints[2].y) / 2,
-			};
-			ctx.quadraticCurveTo(processedPoints[1].x, processedPoints[1].y, cp.x, cp.y);
-			ctx.lineTo(processedPoints[2].x, processedPoints[2].y);
-		} else {
-			// 4点以上の場合は改良されたキャットマル・ロム・スプライン
-			for (let i = 0; i < processedPoints.length - 1; i++) {
-				const p0 = processedPoints[Math.max(0, i - 1)];
-				const p1 = processedPoints[i];
-				const p2 = processedPoints[i + 1];
-				const p3 = processedPoints[Math.min(processedPoints.length - 1, i + 2)];
-
-				// より滑らかな制御点計算
-				const tension = 0.25; // 張力パラメータ
-				const cp1x = p1.x + (p2.x - p0.x) * tension;
-				const cp1y = p1.y + (p2.y - p0.y) * tension;
-				const cp2x = p2.x - (p3.x - p1.x) * tension;
-				const cp2y = p2.y - (p3.y - p1.y) * tension;
-
-				// 3次ベジェ曲線で描画
-				ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
-			}
-		}
-
-		ctx.stroke();
-	}
-
-	ctx.restore();
-}
-
-// ローカル描画（高品質版＋筆圧シミュレーション）
-function drawLine(point: { x: number; y: number }) {
-	if (!ctx) return;
-
-	// 筆圧シミュレーション適用
-	const pressure = calculatePressure();
-	const dynamicStrokeWidth = strokeWidth.value * pressure;
-
-	// リアルタイム描画：軽量な線描画
-	ctx.save();
-	ctx.globalCompositeOperation = currentTool.value === 'eraser' ? 'destination-out' : 'source-over';
-	ctx.strokeStyle = currentColor.value;
-	ctx.globalAlpha = currentOpacity.value;
-	ctx.lineWidth = dynamicStrokeWidth;
-	ctx.lineCap = 'round';
-	ctx.lineJoin = 'round';
-	ctx.imageSmoothingEnabled = true;
-	ctx.imageSmoothingQuality = 'high';
-
-	if (currentPath.length === 1) {
-		// 単一点の場合は小さな円を描画
-		ctx.beginPath();
-		ctx.arc(point.x, point.y, dynamicStrokeWidth / 2, 0, Math.PI * 2);
-		ctx.fill();
-	} else if (currentPath.length >= 2) {
-		// 線描画
-		const prevPoint = currentPath[currentPath.length - 2];
-		ctx.beginPath();
-		ctx.moveTo(prevPoint.x, prevPoint.y);
-		ctx.lineTo(point.x, point.y);
-		ctx.stroke();
-	}
-
-	ctx.restore();
-}
-
-// リモートストローク描画（滑らか描画対応）
-function drawRemoteStroke(data: any) {
-	const stroke = renderStrokeOnLayer(data, { skipIfSelf: true });
-	if (!stroke) return;
-
-	if (stroke.userId && otherActiveStrokes.value.has(stroke.userId)) {
-		otherActiveStrokes.value.delete(stroke.userId);
-	}
-}
-
-/**
- * リモート描画進行状況（描画中）
- *
- * 【仕様】
- * - 他のユーザーが描画中のストロークをリアルタイムで表示
- * - レイヤー情報を含めて保存
- * - 自分の描画は無視
- *
- * 【レイヤー対応】
- * - data.layerが指定されている場合、そのレイヤーに描画
- * - data.layerが未指定の場合、デフォルトでレイヤー0に描画
- * - レイヤー情報はotherActiveStrokesに保存
- *
- * 【描画更新】
- * - otherActiveStrokesに進行中のストローク情報を保存
- * - redrawWithActiveStrokes()を呼び出して再描画
- */
-function drawRemoteProgress(data: any) {
-	if (!ctx || data.userId === $i.id) return;
-
-	// レイヤー情報を取得（未指定の場合は0）
-	const layer = data.layer !== undefined ? data.layer : 0;
-
-	// 進行中の描画を更新（レイヤー情報を含む）
-	otherActiveStrokes.value.set(data.userId, {
-		points: data.points,
-		tool: data.tool,
-		color: data.color,
-		strokeWidth: data.strokeWidth,
-		opacity: data.opacity,
-		userId: data.userId,
-	} as any);
-
-	// キャンバスを再描画（進行中の描画を含む）
-	redrawWithActiveStrokes();
-}
-
-/**
- * 進行中の描画を含むキャンバス再描画
- *
- * 【仕様】
- * - 他のユーザーが描画中のストロークをリアルタイムで表示
- * - レイヤー情報を考慮して正しいレイヤーに描画
- * - 描画が完了していないため、少し透明度を下げて表示（opacity * 0.8）
- *
- * 【レイヤー対応】
- * - strokeData.layerで指定されたレイヤーのコンテキストを使用
- * - layerが未指定の場合はレイヤー0を使用
- * - 各レイヤーごとに独立して描画状態を保存・復元
- *
- * 【描画フロー】
- * 1. 各レイヤーの現在の状態をimageDataとして保存
- * 2. 他のユーザーの進行中のストロークを各レイヤーに描画
- * 3. requestAnimationFrameで次フレームに元の状態を復元
- * 4. 進行中の描画があれば再度描画（アニメーションループ）
- *
- * 【筆圧対応】
- * - strokeData.pointsに筆圧情報(pressure)がある場合はdrawSmoothPathLocalを使用
- * - 筆圧情報がない場合は従来の線形描画を使用
- *
- * 【パフォーマンス】
- * - requestAnimationFrameで描画タイミングを最適化
- * - 進行中の描画がない場合は復元処理をスキップ
- */
-function redrawWithActiveStrokes() {
-	if (!ctx) return;
-
-	// 各レイヤーの現在状態を保存
-	const layerImageData: Map<number, ImageData> = new Map();
-	for (let i = 0; i < MAX_LAYERS; i++) {
-		const layerCtx = layerContexts.value[i];
-		if (layerCtx) {
-			layerImageData.set(i, layerCtx.getImageData(0, 0, canvasWidth.value, canvasHeight.value));
-		}
-	}
-
-	// 進行中の描画を各レイヤーに一時的に描画
-	for (const [, strokeData] of otherActiveStrokes.value) {
-		// レイヤー情報を取得（未指定の場合は0）
-		const targetLayer = (strokeData as any).layer !== undefined ? (strokeData as any).layer : 0;
-		const targetCtx = layerContexts.value[targetLayer];
-
-		if (!targetCtx) continue;
-
-		targetCtx.save();
-
-		// 筆圧対応の描画処理
-		if (strokeData.points && strokeData.points.length > 0) {
-			// 筆圧情報がある場合は drawSmoothPathLocal を使用
-			const hasPressure = strokeData.points.some((p: any) => p.pressure !== undefined);
-
-			if (hasPressure && strokeData.points.length > 1) {
-				// 筆圧対応のスムーズパス描画
-				// 注: drawSmoothPathLocalは現在のレイヤー(ctx)を使用するため、
-				// 一時的にctxを切り替える必要がある
-				const previousCtx: CanvasRenderingContext2D | null = ctx;
-				ctx = targetCtx;
-				drawSmoothPathLocal(
-					strokeData.points,
-					strokeData.strokeWidth,
-					strokeData.color,
-					strokeData.opacity * 0.8, // 進行中は少し薄く
-					strokeData.tool === 'eraser',
-				);
-				ctx = previousCtx;
-			} else {
-				// 筆圧なしの場合は従来の描画方法
-				targetCtx.globalCompositeOperation = strokeData.tool === 'eraser' ? 'destination-out' : 'source-over';
-				targetCtx.strokeStyle = strokeData.color;
-				targetCtx.globalAlpha = strokeData.opacity * 0.8; // 進行中は少し薄く
-				targetCtx.lineWidth = strokeData.strokeWidth;
-				targetCtx.lineCap = 'round';
-				targetCtx.lineJoin = 'round';
-
-				// アンチエイリアス設定
-				targetCtx.imageSmoothingEnabled = true;
-				targetCtx.imageSmoothingQuality = 'high';
-
-				// 線を描画
-				if (strokeData.points.length > 1) {
-					targetCtx.beginPath();
-					for (let i = 0; i < strokeData.points.length; i++) {
-						const point = strokeData.points[i];
-						if (i === 0) {
-							targetCtx.moveTo(point.x, point.y);
-						} else {
-							targetCtx.lineTo(point.x, point.y);
-						}
-					}
-					targetCtx.stroke();
-				}
-			}
-		}
-
-		targetCtx.restore();
-	}
-
-	// パフォーマンス最適化: 次フレームで元の状態に戻す
-	requestAnimationFrame(() => {
-		if (otherActiveStrokes.value.size > 0) {
-			// 進行中の描画があれば、各レイヤーを元の状態に戻してから再度更新
-			for (const [layerIndex, imageData] of layerImageData) {
-				const layerCtx = layerContexts.value[layerIndex];
-				if (layerCtx) {
-					layerCtx.putImageData(imageData, 0, 0);
-				}
-			}
-			redrawWithActiveStrokes();
-		}
-	});
-}
-
-// 描画データ送信
-function sendDrawingStroke() {
-	if (currentPath.length === 0 || !connection.value) return;
-
-	try {
-		const data = {
-			points: currentPath,
-			tool: currentTool.value,
-			color: currentColor.value,
-			strokeWidth: strokeWidth.value,
-			opacity: currentOpacity.value,
-			layer: currentLayer.value, // レイヤー情報を追加
-		};
-		connection.value.send('drawingStroke', data);
-		recordCommLog('send', 'drawingStroke', data);
-	} catch (error) {
-		console.warn('🎨 [WARN] Failed to send drawing stroke:', error);
-	}
-}
-
-// リアルタイム描画進行状況送信
-function sendDrawingProgress() {
-	if (currentPath.length === 0 || !connection.value) return;
-
-	const now = Date.now();
-	if (now - lastProgressSent < progressSendInterval) return;
-	lastProgressSent = now;
-
-	try {
-		const data = {
-			points: currentPath.slice(), // 現在の描画パスをコピー
-			tool: currentTool.value,
-			color: currentColor.value,
-			strokeWidth: strokeWidth.value,
-			opacity: currentOpacity.value,
-			isComplete: false,
-			layer: currentLayer.value, // レイヤー情報を追加
-		};
-		connection.value.send('drawingProgress', data);
-		recordCommLog('send', 'drawingProgress', data);
-	} catch (error) {
-		console.warn('🎨 [WARN] Failed to send drawing progress:', error);
-	}
-}
 
 // カーソル位置送信
 function sendCursorPosition(point: { x: number; y: number }) {
@@ -2480,51 +1919,11 @@ function eyedropColor(point: { x: number; y: number }) {
 function downloadCanvas() {
 	try {
 		// CanvasEngine経由でダウンロード（全レイヤー合成済み）
-		if (canvasEngine.value) {
-			const dataUrl = canvasEngine.value.toDataURL('image/png');
-			const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-			downloadImage(dataUrl, `drawing_${timestamp}.png`);
-			return;
-		}
+		if (!canvasEngine.value) return;
 
-		// 旧フォールバック
-		const compositeCanvas = window.document.createElement('canvas');
-		compositeCanvas.width = physicalCanvasWidth.value;
-		compositeCanvas.height = physicalCanvasHeight.value;
-		const compositeCtx = compositeCanvas.getContext('2d');
-
-		if (!compositeCtx) return;
-
-		compositeCtx.fillStyle = '#FFFFFF';
-		compositeCtx.fillRect(0, 0, compositeCanvas.width, compositeCanvas.height);
-
-		for (let i = MAX_LAYERS - 1; i >= 0; i--) {
-			const layerCanvas = layerCanvases.value[i];
-			if (layerCanvas) {
-				compositeCtx.drawImage(layerCanvas, 0, 0);
-			}
-		}
-
+		const dataUrl = canvasEngine.value.toDataURL('image/png');
 		const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-		const filename = `drawing_${timestamp}.png`;
-
-		compositeCanvas.toBlob((blob) => {
-			if (!blob) {
-				console.error('🎨 [ERROR] Failed to create blob');
-				return;
-			}
-
-			const url = URL.createObjectURL(blob);
-			const a = window.document.createElement('a');
-			a.href = url;
-			a.download = filename;
-			window.document.body.appendChild(a);
-			a.click();
-			window.document.body.removeChild(a);
-			URL.revokeObjectURL(url);
-
-			os.success();
-		}, 'image/png');
+		downloadImage(dataUrl, `drawing_${timestamp}.png`);
 	} catch (error) {
 		console.error('🎨 [ERROR] Download canvas error:', error);
 		os.alert({
@@ -2546,11 +1945,9 @@ function downloadCanvas() {
  * 5. 完了後、トーストで成功メッセージを表示
  *
  * 【クリア対象】
- * - 全レイヤーのキャンバス内容（MAX_LAYERS分）
- * - レイヤーごとの描画履歴（layerStrokeHistory）
+ * - CanvasEngineの全レイヤー内容
  * - 統合描画履歴（strokeHistory）
  * - Undo/Redoスタック（undoStack, redoStack）
- * - 他のユーザーの進行中の描画（otherActiveStrokes）
  *
  * 【ダイアログ仕様】
  * - os.inputText()を使用（Misskey専用UI）
@@ -2635,18 +2032,8 @@ async function clearCanvas() {
  * ローカルキャンバスクリア処理
  *
  * 【処理内容】
- * 1. 全レイヤーのキャンバスをクリア
- *    - MAX_LAYERS分のレイヤーをループ
- *    - 各レイヤーのコンテキストでclearRectを実行
- * 2. 描画履歴をリセット
- *    - layerStrokeHistory: レイヤーごとの描画履歴
- *    - strokeHistory: 統合描画履歴
- *    - undoStack: アンドゥスタック
- *    - redoStack: リドゥスタック
- * 3. 他のユーザーの進行中の描画をクリア
- *    - otherActiveStrokes: リモートユーザーの描画中ストローク
- * 4. 現在のコンテキストを更新
- *    - 現在のレイヤーのコンテキストを再設定
+ * 1. CanvasEngineのクリア
+ * 2. 描画履歴をリセット（strokeHistory, undoStack, redoStack）
  */
 function clearCanvasLocal() {
 	// CanvasEngineのクリア
@@ -2654,25 +2041,10 @@ function clearCanvasLocal() {
 		canvasEngine.value.clear();
 	}
 
-	// 旧レイヤーのキャンバスもクリア
-	for (let i = 0; i < MAX_LAYERS; i++) {
-		const layerCtx = layerContexts.value[i];
-		if (layerCtx) {
-			layerCtx.clearRect(0, 0, canvasWidth.value, canvasHeight.value);
-		}
-	}
-
 	// 描画履歴をリセット
-	layerStrokeHistory.value = Array.from({ length: MAX_LAYERS }, () => []);
 	strokeHistory.value = [];
 	undoStack.value = [];
 	redoStack.value = [];
-
-	// 他のユーザーの進行中の描画をクリア
-	otherActiveStrokes.value.clear();
-
-	// 現在のコンテキストを更新
-	ctx = layerContexts.value[currentLayer.value] ?? ctx;
 }
 
 // ズームをリセット
@@ -2782,17 +2154,6 @@ function updateDisplaySize() {
 
 // キャンバスサイズを変更
 async function changeCanvasSize(newWidth: number, newHeight: number, isRemote = false) {
-	// 全レイヤーの描画内容を保存
-	const layerImageData: Array<ImageData | null> = [];
-	for (let i = 0; i < MAX_LAYERS; i++) {
-		const layerCtx = layerContexts.value[i];
-		if (layerCtx) {
-			layerImageData[i] = layerCtx.getImageData(0, 0, canvasWidth.value, canvasHeight.value);
-		} else {
-			layerImageData[i] = null;
-		}
-	}
-
 	// 新しいサイズを設定
 	canvasWidth.value = newWidth;
 	canvasHeight.value = newHeight;
@@ -2800,51 +2161,8 @@ async function changeCanvasSize(newWidth: number, newHeight: number, isRemote = 
 	// コンテナサイズに合わせてdisplayサイズを更新
 	updateDisplaySize();
 
-	// DPRを考慮して全レイヤーのキャンバスを再初期化
-	const dpr = window.devicePixelRatio || 1;
-
 	// 次のフレームで実行（テンプレートのバインディングが適用された後）
 	await nextTick();
-
-	// 実際のcanvas要素のサイズを確認
-	const firstCanvas = layerCanvases.value[0];
-	if (firstCanvas) {
-	}
-
-	for (let i = 0; i < MAX_LAYERS; i++) {
-		const canvas = layerCanvases.value[i];
-		if (!canvas) continue;
-
-		// コンテキストを再取得
-		const context = canvas.getContext('2d', {
-			alpha: true,
-			desynchronized: false,
-			colorSpace: 'srgb',
-			willReadFrequently: false,
-		});
-
-		if (context) {
-			context.scale(dpr, dpr);
-			context.lineCap = 'round';
-			context.lineJoin = 'round';
-			context.imageSmoothingEnabled = true;
-			context.imageSmoothingQuality = 'high';
-			context.globalCompositeOperation = 'source-over';
-			context.miterLimit = 10;
-			context.lineWidth = 2;
-			context.filter = 'none';
-
-			layerContexts.value[i] = context;
-
-			// 以前の描画を復元
-			if (layerImageData[i]) {
-				context.putImageData(layerImageData[i]!, 0, 0);
-			}
-		}
-	}
-
-	// 現在のレイヤーのコンテキストを更新
-	ctx = layerContexts.value[currentLayer.value];
 
 	// ズームをリセット
 	resetZoom();
@@ -2867,65 +2185,6 @@ async function changeCanvasSize(newWidth: number, newHeight: number, isRemote = 
 	}
 }
 
-/**
- * ストロークを直接キャンバスに描画
- *
- * 【仕様】
- * - 指定されたコンテキストにストロークを直接描画
- * - 筆圧対応の描画処理
- * - renderStrokeOnLayerを使わずに描画（無限ループ防止）
- *
- * 【パラメータ】
- * - targetCtx: 描画先のコンテキスト
- * - stroke: 描画するストロークデータ
- */
-function drawStrokeDirectly(targetCtx: CanvasRenderingContext2D, stroke: any) {
-	if (!stroke || !stroke.points || stroke.points.length === 0) return;
-
-	targetCtx.save();
-
-	// 筆圧情報の有無を確認
-	const hasPressure = stroke.points.some((p: any) => p.pressure !== undefined);
-
-	if (hasPressure && stroke.points.length > 1) {
-		// 筆圧対応の描画
-		const previousCtx = ctx;
-		ctx = targetCtx;
-		drawSmoothPathLocal(
-			stroke.points,
-			stroke.strokeWidth,
-			stroke.color,
-			stroke.opacity,
-			stroke.tool === 'eraser',
-		);
-		ctx = previousCtx;
-	} else {
-		// 筆圧なしの描画
-		targetCtx.globalCompositeOperation = stroke.tool === 'eraser' ? 'destination-out' : 'source-over';
-		targetCtx.strokeStyle = stroke.color;
-		targetCtx.globalAlpha = stroke.opacity;
-		targetCtx.lineWidth = stroke.strokeWidth;
-		targetCtx.lineCap = 'round';
-		targetCtx.lineJoin = 'round';
-		targetCtx.imageSmoothingEnabled = true;
-		targetCtx.imageSmoothingQuality = 'high';
-
-		if (stroke.points.length > 1) {
-			targetCtx.beginPath();
-			for (let i = 0; i < stroke.points.length; i++) {
-				const point = stroke.points[i];
-				if (i === 0) {
-					targetCtx.moveTo(point.x, point.y);
-				} else {
-					targetCtx.lineTo(point.x, point.y);
-				}
-			}
-			targetCtx.stroke();
-		}
-	}
-
-	targetCtx.restore();
-}
 
 // Undo（元に戻す）
 /**
@@ -2942,82 +2201,26 @@ function drawStrokeDirectly(targetCtx: CanvasRenderingContext2D, stroke: any) {
  * - 他のユーザーのストロークは削除しない
  *
  * 【レイヤー対応】
- * - 現在のレイヤー（currentLayer）のストローク履歴から操作
- * - layerStrokeHistory[currentLayer]を操作
- * - strokeHistoryも同期して更新
+ * - CanvasEngine経由で現在のレイヤーのストロークを操作
  */
 // リドゥ用: アンドゥしたストロークデータを保存
 const undoneStrokes = ref<any[]>([]);
 
 function undo() {
+	if (!canvasEngine.value) return;
+
 	// CanvasEngine経由のアンドゥ（ストロークデータを返す）
-	if (canvasEngine.value) {
-		const removedStroke = canvasEngine.value.undo();
-		if (removedStroke) {
-			// リドゥ用にストロークデータを保存
-			undoneStrokes.value.push(removedStroke);
-			if (undoneStrokes.value.length > 3) undoneStrokes.value.shift();
+	const removedStroke = canvasEngine.value.undo();
+	if (removedStroke) {
+		// リドゥ用にストロークデータを保存
+		undoneStrokes.value.push(removedStroke);
+		if (undoneStrokes.value.length > 3) undoneStrokes.value.shift();
 
-			if (connection.value) {
-				const data = { layer: currentLayer.value, strokeId: removedStroke.id, userId: $i?.id, userName: $i?.username };
-				connection.value.send('undoStroke', data);
-				recordCommLog('send', 'undoStroke', data);
-			}
+		if (connection.value) {
+			const data = { layer: currentLayer.value, strokeId: removedStroke.id, userId: $i?.id, userName: $i?.username };
+			connection.value.send('undoStroke', data);
+			recordCommLog('send', 'undoStroke', data);
 		}
-		return;
-	}
-
-	// 旧システムのフォールバック
-	const targetLayer = currentLayer.value;
-
-	const myStrokeIndex = layerStrokeHistory.value[targetLayer]
-		.map((s, i) => ({ stroke: s, index: i }))
-		.filter(item => item.stroke.userId === $i.id)
-		.pop();
-
-	if (!myStrokeIndex) {
-		return;
-	}
-
-	// 自分の最後のストロークを削除
-	const [lastStroke] = layerStrokeHistory.value[targetLayer].splice(myStrokeIndex.index, 1);
-
-	// redoスタックに保存
-	redoStack.value.push({
-		layer: targetLayer,
-		stroke: lastStroke,
-		originalIndex: myStrokeIndex.index,
-	});
-
-	// redoスタックのサイズ制限
-	if (redoStack.value.length > maxUndoHistory) {
-		redoStack.value.shift();
-	}
-
-	// strokeHistoryを更新（現在のレイヤーの履歴で置き換え）
-	strokeHistory.value = [...layerStrokeHistory.value[targetLayer]];
-
-	// 現在のレイヤーのキャンバスをクリアして再描画
-	const layerCtx = layerContexts.value[targetLayer];
-	if (layerCtx) {
-		layerCtx.clearRect(0, 0, canvasWidth.value, canvasHeight.value);
-
-		// 履歴から再描画（renderStrokeOnLayerを使わず直接描画）
-		for (const stroke of layerStrokeHistory.value[targetLayer]) {
-			drawStrokeDirectly(layerCtx, stroke);
-		}
-	}
-
-	// 他のユーザーにundoイベントを送信
-	if (connection.value) {
-		const data = {
-			layer: targetLayer,
-			strokeId: lastStroke.id,
-			userId: $i?.id,
-			userName: $i?.username,
-		};
-		connection.value.send('undoStroke', data);
-		recordCommLog('send', 'undoStroke', data);
 	}
 }
 
@@ -3040,14 +2243,13 @@ function undo() {
  * - 該当レイヤーのキャンバスを再描画
  */
 function redo() {
-	if (!canRedo.value) return;
+	if (!canRedo.value || !canvasEngine.value) return;
 
 	// CanvasEngine経由のリドゥ（アンドゥしたストロークを再追加）
-	if (canvasEngine.value && undoneStrokes.value.length > 0) {
+	if (undoneStrokes.value.length > 0) {
 		const stroke = undoneStrokes.value.pop();
 		if (stroke) {
 			canvasEngine.value.drawRemoteStroke(stroke);
-			// 新しいストロークを描画したのでredoスタックをクリアしない
 			if (connection.value) {
 				const data = {
 					id: stroke.id,
@@ -3062,157 +2264,9 @@ function redo() {
 				recordCommLog('send', 'drawingStroke(redo)', data);
 			}
 		}
-		return;
-	}
-
-	// 旧フォールバック
-	const redoItem = redoStack.value.pop();
-	if (!redoItem) return;
-
-	const { layer: targetLayer, stroke, originalIndex } = redoItem;
-
-	// 元の位置にストロークを挿入
-	if (originalIndex !== undefined && originalIndex >= 0) {
-		layerStrokeHistory.value[targetLayer].splice(originalIndex, 0, stroke);
-	} else {
-		// 元の位置が不明な場合は最後に追加
-		layerStrokeHistory.value[targetLayer].push(stroke);
-	}
-
-	// 現在のレイヤーが対象レイヤーの場合、strokeHistoryも更新
-	if (currentLayer.value === targetLayer) {
-		strokeHistory.value = [...layerStrokeHistory.value[targetLayer]];
-	}
-
-	// 対象レイヤーのキャンバスをクリアして再描画
-	const layerCtx = layerContexts.value[targetLayer];
-	if (layerCtx) {
-		layerCtx.clearRect(0, 0, canvasWidth.value, canvasHeight.value);
-
-		// 履歴から再描画
-		for (const s of layerStrokeHistory.value[targetLayer]) {
-			drawStrokeDirectly(layerCtx, s);
-		}
-	}
-
-	// 他のユーザーにredoイベントを送信
-	if (connection.value) {
-		const data = {
-			layer: targetLayer,
-			stroke: stroke,
-			originalIndex: originalIndex,
-			userId: $i?.id,
-			userName: $i?.username,
-		};
-		connection.value.send('redoStroke', data);
-		recordCommLog('send', 'redoStroke', data);
 	}
 }
 
-/**
- * リモートユーザーのUndoイベントを処理
- *
- * 【仕様】
- * - 他のユーザーがUndoした際に呼ばれる
- * - strokeIdで特定されたストロークを削除
- * - 対象レイヤーのキャンバスを再描画
- *
- * 【ユーザーごとの履歴対応】
- * - data.strokeIdで指定されたストロークを削除
- * - ユーザーごとの履歴を維持（他のユーザーのストロークは保持）
- * - 該当レイヤーを再描画
- */
-function handleRemoteUndo(data: any) {
-	if (data.userId === $i.id) return; // 自分のイベントは無視
-
-	const targetLayer = data.layer;
-	const strokeId = data.strokeId;
-
-	if (targetLayer < 0 || targetLayer >= MAX_LAYERS) {
-		console.warn('🎨 [REMOTE-UNDO] Invalid layer', targetLayer);
-		return;
-	}
-
-	// strokeIdで特定のストロークを削除
-	const strokeIndex = layerStrokeHistory.value[targetLayer].findIndex(s => s.id === strokeId);
-	if (strokeIndex !== -1) {
-		const removedStroke = layerStrokeHistory.value[targetLayer].splice(strokeIndex, 1)[0];
-	} else {
-		console.warn('🎨 [REMOTE-UNDO] Stroke not found', strokeId);
-		return;
-	}
-
-	// 対象レイヤーのキャンバスをクリアして再描画
-	const layerCtx = layerContexts.value[targetLayer];
-	if (layerCtx) {
-		layerCtx.clearRect(0, 0, canvasWidth.value, canvasHeight.value);
-
-		// 履歴から再描画
-		for (const stroke of layerStrokeHistory.value[targetLayer]) {
-			drawStrokeDirectly(layerCtx, stroke);
-		}
-	}
-
-	// 現在のレイヤーが対象レイヤーの場合、strokeHistoryも更新
-	if (currentLayer.value === targetLayer) {
-		strokeHistory.value = [...layerStrokeHistory.value[targetLayer]];
-	}
-}
-
-/**
- * リモートユーザーのRedoイベントを処理
- *
- * 【仕様】
- * - 他のユーザーがRedoした際に呼ばれる
- * - 指定レイヤーの元の位置にストロークを挿入
- * - 対象レイヤーのキャンバスを再描画
- *
- * 【ユーザーごとの履歴対応】
- * - data.originalIndexで指定された位置にストロークを挿入
- * - ストローク順序を維持（他のユーザーのストロークとの関係を保持）
- * - 該当レイヤーを再描画
- */
-function handleRemoteRedo(data: any) {
-	if (data.userId === $i.id) return; // 自分のイベントは無視
-
-	const targetLayer = data.layer;
-	const stroke = data.stroke;
-	const originalIndex = data.originalIndex;
-
-	if (targetLayer < 0 || targetLayer >= MAX_LAYERS) {
-		console.warn('🎨 [REMOTE-REDO] Invalid layer', targetLayer);
-		return;
-	}
-
-	if (!stroke) {
-		console.warn('🎨 [REMOTE-REDO] No stroke data');
-		return;
-	}
-
-	// 元の位置にストロークを挿入
-	if (originalIndex !== undefined && originalIndex >= 0) {
-		layerStrokeHistory.value[targetLayer].splice(originalIndex, 0, stroke);
-	} else {
-		// 元の位置が不明な場合は最後に追加
-		layerStrokeHistory.value[targetLayer].push(stroke);
-	}
-
-	// 現在のレイヤーが対象レイヤーの場合、strokeHistoryも更新
-	if (currentLayer.value === targetLayer) {
-		strokeHistory.value = [...layerStrokeHistory.value[targetLayer]];
-	}
-
-	// 対象レイヤーのキャンバスをクリアして再描画
-	const layerCtx = layerContexts.value[targetLayer];
-	if (layerCtx) {
-		layerCtx.clearRect(0, 0, canvasWidth.value, canvasHeight.value);
-
-		// 履歴から再描画
-		for (const s of layerStrokeHistory.value[targetLayer]) {
-			drawStrokeDirectly(layerCtx, s);
-		}
-	}
-}
 
 /**
  * リモートユーザーのキャンバスサイズ変更イベントを処理
@@ -3255,8 +2309,6 @@ function switchLayer(layerIndex: number) {
 
 	// 新しいレイヤーに切り替え
 	currentLayer.value = layerIndex;
-	ctx = layerContexts.value[layerIndex];
-	canvasEl.value = layerCanvases.value[layerIndex];
 
 	// CanvasEngineにレイヤー切替を通知
 	if (canvasEngine.value) {
@@ -3313,23 +2365,8 @@ async function mergeLayers(fromLayer: number, toLayer: number) {
 	if (fromLayer < 0 || fromLayer >= MAX_LAYERS || toLayer < 0 || toLayer >= MAX_LAYERS) return;
 	if (fromLayer === toLayer) return;
 
-	// fromLayerの内容をtoLayerに結合
-	layerStrokeHistory.value[toLayer] = [
-		...layerStrokeHistory.value[toLayer],
-		...layerStrokeHistory.value[fromLayer],
-	];
-
-	// fromLayerをクリア
-	layerStrokeHistory.value[fromLayer] = [];
-
-	// 現在のレイヤーを再描画
-	if (currentLayer.value === fromLayer || currentLayer.value === toLayer) {
-		strokeHistory.value = layerStrokeHistory.value[currentLayer.value];
-		if (ctx) {
-			ctx.clearRect(0, 0, canvasWidth.value, canvasHeight.value);
-			redrawCanvasFromHistory();
-		}
-	}
+	// TODO: CanvasEngineにmergeLayersメソッドを追加して対応
+	console.warn('mergeLayers: not yet supported in CanvasEngine');
 
 	os.toast(`レイヤー${fromLayer + 1}とレイヤー${toLayer + 1}を結合しました`);
 }
@@ -3359,18 +2396,8 @@ async function moveLayer(fromLayer: number, toLayer: number) {
 	if (fromLayer < 0 || fromLayer >= MAX_LAYERS || toLayer < 0 || toLayer >= MAX_LAYERS) return;
 	if (fromLayer === toLayer) return;
 
-	// fromLayerの内容をtoLayerに移動
-	layerStrokeHistory.value[toLayer] = [...layerStrokeHistory.value[fromLayer]];
-	layerStrokeHistory.value[fromLayer] = [];
-
-	// 現在のレイヤーを再描画
-	if (currentLayer.value === fromLayer || currentLayer.value === toLayer) {
-		strokeHistory.value = layerStrokeHistory.value[currentLayer.value];
-		if (ctx) {
-			ctx.clearRect(0, 0, canvasWidth.value, canvasHeight.value);
-			redrawCanvasFromHistory();
-		}
-	}
+	// TODO: CanvasEngineにmoveLayerメソッドを追加して対応
+	console.warn('moveLayer: not yet supported in CanvasEngine');
 
 	os.toast(`レイヤー${fromLayer + 1}の内容をレイヤー${toLayer + 1}に移動しました`);
 }
@@ -3404,13 +2431,15 @@ async function clearLayerDialog() {
 function clearLayer(layerIndex: number) {
 	if (layerIndex < 0 || layerIndex >= MAX_LAYERS) return;
 
-	layerStrokeHistory.value[layerIndex] = [];
+	// TODO: CanvasEngineにclearLayerメソッドを追加して対応
+	// 現状はclear()で全レイヤーをクリアするフォールバック
+	console.warn('clearLayer: not yet supported in CanvasEngine, clearing all');
+	if (canvasEngine.value) {
+		canvasEngine.value.clear();
+	}
 
 	if (currentLayer.value === layerIndex) {
 		strokeHistory.value = [];
-		if (ctx) {
-			ctx.clearRect(0, 0, canvasWidth.value, canvasHeight.value);
-		}
 	}
 
 	os.toast(`レイヤー${layerIndex + 1}をクリアしました`);
@@ -3533,8 +2562,7 @@ function formatLogData(data: any): string {
 
 // ラッパー関数: インポートした座標変換関数を使用
 function screenToCanvas(clientX: number, clientY: number): Point {
-	// 現在のアクティブレイヤーのcanvas要素を取得
-	const canvas = layerCanvases.value[currentLayer.value];
+	const canvas = engineCanvasEl.value;
 	return screenToCanvasCoordinates(
 		clientX,
 		clientY,
@@ -3546,8 +2574,7 @@ function screenToCanvas(clientX: number, clientY: number): Point {
 
 // ラッパー関数: インポートした描画領域計算関数を使用
 function getDrawingArea() {
-	// 現在のアクティブレイヤーのcanvas要素を取得
-	const canvas = layerCanvases.value[currentLayer.value];
+	const canvas = engineCanvasEl.value;
 	return getActualDrawingArea(
 		canvas || null,
 		canvasWidth.value,
@@ -3911,14 +2938,6 @@ function monitorPerformance() {
 	return stats;
 }
 
-// 他のユーザーのアンドゥに対応（新バージョン）
-function handleUndoStroke(data: any) {
-	if (!ctx) return;
-
-	// リモートユーザーのアンドゥの場合、サーバーから最新データを再取得
-	loadCanvasData();
-}
-
 // キャンバスデータ読み込み
 async function loadCanvasData() {
 	try {
@@ -3936,52 +2955,22 @@ async function loadCanvasData() {
 		if (response.ok) {
 			const strokes = await response.json();
 
-			for (let i = 0; i < MAX_LAYERS; i++) {
-				const layerCtx = layerContexts.value[i];
-				if (layerCtx) {
-					layerCtx.clearRect(0, 0, canvasWidth.value, canvasHeight.value);
-				}
-			}
-
-			layerStrokeHistory.value = Array.from({ length: MAX_LAYERS }, () => []);
 			strokeHistory.value = [];
 			undoStack.value = [];
 			redoStack.value = [];
-			otherActiveStrokes.value.clear();
 
 			// CanvasEngineでストローク復元
 			if (canvasEngine.value && strokes.length > 0) {
 				await canvasEngine.value.restoreStrokes(strokes);
 			}
-
-			// 旧レイヤーcanvasにも描画（フォールバック）
-			for (const stroke of strokes) {
-				renderStrokeOnLayer(stroke);
-			}
-
-			ctx = layerContexts.value[currentLayer.value] ?? ctx;
 		}
 	} catch (error) {
 		console.warn('🎨 [WARN] Failed to load canvas data:', error);
 	}
 }
 
-// ストローク履歴管理
+// ストローク履歴管理（正規化のみ、描画はCanvasEngineが行う）
 function addStrokeToHistory(strokeData: any) {
-	// 新しいストロークを追加する前に、現在の状態をundoスタックに保存
-	if (ctx) {
-		const currentState = {
-			history: [...strokeHistory.value],
-			imageData: ctx.getImageData(0, 0, canvasWidth.value, canvasHeight.value),
-		};
-		undoStack.value.push(currentState);
-
-		// undoスタックのサイズ制限
-		if (undoStack.value.length > maxUndoHistory) {
-			undoStack.value.shift();
-		}
-	}
-
 	// 新しいストロークを追加したらredoスタックをクリア
 	redoStack.value = [];
 
@@ -4000,52 +2989,16 @@ function addStrokeToHistory(strokeData: any) {
 
 	// アンドゥ履歴の制限
 	if (strokeHistory.value.length > maxUndoHistory) {
-		// 古いストロークを削除し、必要に応じてラスタライズ
 		const oldStrokesToRemove = strokeHistory.value.length - maxUndoHistory;
 		strokeHistory.value.splice(0, oldStrokesToRemove);
 	}
-
-	// ラスタライズの判定
-	if (strokeHistory.value.length >= rasterizeThreshold) {
-		performRasterization();
-	}
 }
 
-// ラスタライズ実行
+// ラスタライズ実行（CanvasEngine経由）
 function performRasterization() {
-	if (!ctx || !canvasEl.value) return;
-
-	try {
-		// 現在のキャンバス内容を画像として保存
-		const imageData = canvasEl.value.toDataURL();
-
-		// キャンバスをクリアして再描画
-		ctx.clearRect(0, 0, canvasWidth.value, canvasHeight.value);
-
-		// 保存した画像を背景として描画
-		const img = new Image();
-		img.onload = () => {
-			ctx!.drawImage(img, 0, 0);
-		};
-		img.src = imageData;
-
-		// ストローク履歴をクリア（ラスタライズ後は元に戻せない）
-		strokeHistory.value = [];
-
-		// サーバーに通知（他のユーザーとの同期用）
-		if (connection.value) {
-			try {
-				connection.value.send('canvasRasterized', {
-					imageData: imageData,
-					timestamp: Date.now(),
-				});
-			} catch (error) {
-				console.warn('🎨 [WARN] Failed to send rasterization notification:', error);
-			}
-		}
-	} catch (error) {
-		console.error('🎨 [ERROR] Rasterization failed:', error);
-	}
+	// CanvasEngineが内部でストローク管理しているため、
+	// ローカルの履歴のみクリアする
+	strokeHistory.value = [];
 }
 
 // 改良されたアンドゥ機能
@@ -4054,32 +3007,6 @@ function performAdvancedUndo() {
 	undo();
 }
 
-// 履歴からキャンバスを再描画
-function redrawCanvasFromHistory() {
-	// 全レイヤーを再描画
-	for (let i = 0; i < MAX_LAYERS; i++) {
-		const layerCtx = layerContexts.value[i];
-		if (!layerCtx) continue;
-
-		// レイヤーをクリア
-		layerCtx.clearRect(0, 0, canvasWidth.value, canvasHeight.value);
-
-		// このレイヤーの履歴から再描画
-		for (const stroke of layerStrokeHistory.value[i]) {
-			// 一時的にコンテキストを切り替えて描画
-			const originalCtx = ctx;
-			ctx = layerCtx;
-			drawSmoothPathLocal(
-				stroke.points,
-				stroke.strokeWidth,
-				stroke.color,
-				stroke.opacity,
-				stroke.tool === 'eraser',
-			);
-			ctx = originalCtx;
-		}
-	}
-}
 
 // チャットオーバーレイ表示
 function showChatOverlay(message: any) {
@@ -4127,9 +3054,10 @@ function handleFullscreenChange() {
 
 // スマホ向けキャンバス調整
 function adjustCanvasForMobile() {
-	if (!canvasEl.value || !isTouchDevice.value) return;
+	const canvas = engineCanvasEl.value;
+	if (!canvas || !isTouchDevice.value) return;
 
-	const container = canvasEl.value.parentElement;
+	const container = canvas.parentElement;
 	if (!container) return;
 
 	// コンテナサイズに合わせてキャンバスを調整
@@ -4147,8 +3075,8 @@ function adjustCanvasForMobile() {
 		newWidth = maxHeight * aspectRatio;
 	}
 
-	canvasEl.value.style.width = `${newWidth}px`;
-	canvasEl.value.style.height = `${newHeight}px`;
+	canvas.style.width = `${newWidth}px`;
+	canvas.style.height = `${newHeight}px`;
 }
 </script>
 
@@ -4917,12 +3845,6 @@ function adjustCanvasForMobile() {
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 	background: transparent;
 	box-sizing: border-box;
-}
-
-.backgroundLayer {
-	background: #ffffff;
-	pointer-events: none;
-	z-index: 0;
 }
 
 .layerCanvas {
