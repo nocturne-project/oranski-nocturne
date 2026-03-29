@@ -808,7 +808,7 @@ const canUndo = computed(() => {
 	const myStrokes = layerStrokeHistory.value[targetLayer]?.filter(s => s.userId === $i.id) || [];
 	return myStrokes.length > 0;
 });
-const canRedo = computed(() => redoStack.value.length > 0);
+const canRedo = computed(() => undoneStrokes.value.length > 0 || redoStack.value.length > 0);
 
 // レイヤー管理（3レイヤー）
 const MAX_LAYERS = 3;
@@ -2946,14 +2946,23 @@ function drawStrokeDirectly(targetCtx: CanvasRenderingContext2D, stroke: any) {
  * - layerStrokeHistory[currentLayer]を操作
  * - strokeHistoryも同期して更新
  */
+// リドゥ用: アンドゥしたストロークデータを保存
+const undoneStrokes = ref<any[]>([]);
+
 function undo() {
-	// CanvasEngine経由のアンドゥ
+	// CanvasEngine経由のアンドゥ（ストロークデータを返す）
 	if (canvasEngine.value) {
-		const strokeId = canvasEngine.value.undo();
-		if (strokeId && connection.value) {
-			const data = { layer: currentLayer.value, strokeId, userId: $i?.id, userName: $i?.username };
-			connection.value.send('undoStroke', data);
-			recordCommLog('send', 'undoStroke', data);
+		const removedStroke = canvasEngine.value.undo();
+		if (removedStroke) {
+			// リドゥ用にストロークデータを保存
+			undoneStrokes.value.push(removedStroke);
+			if (undoneStrokes.value.length > 3) undoneStrokes.value.shift();
+
+			if (connection.value) {
+				const data = { layer: currentLayer.value, strokeId: removedStroke.id, userId: $i?.id, userName: $i?.username };
+				connection.value.send('undoStroke', data);
+				recordCommLog('send', 'undoStroke', data);
+			}
 		}
 		return;
 	}
@@ -3033,7 +3042,30 @@ function undo() {
 function redo() {
 	if (!canRedo.value) return;
 
-	// redoスタックから削除されたストロークを取得
+	// CanvasEngine経由のリドゥ（アンドゥしたストロークを再追加）
+	if (canvasEngine.value && undoneStrokes.value.length > 0) {
+		const stroke = undoneStrokes.value.pop();
+		if (stroke) {
+			canvasEngine.value.drawRemoteStroke(stroke);
+			// 新しいストロークを描画したのでredoスタックをクリアしない
+			if (connection.value) {
+				const data = {
+					id: stroke.id,
+					points: stroke.points,
+					tool: stroke.tool,
+					color: stroke.color,
+					strokeWidth: stroke.width ?? stroke.strokeWidth,
+					opacity: stroke.opacity,
+					layer: stroke.layer ?? 0,
+				};
+				connection.value.send('drawingStroke', data);
+				recordCommLog('send', 'drawingStroke(redo)', data);
+			}
+		}
+		return;
+	}
+
+	// 旧フォールバック
 	const redoItem = redoStack.value.pop();
 	if (!redoItem) return;
 

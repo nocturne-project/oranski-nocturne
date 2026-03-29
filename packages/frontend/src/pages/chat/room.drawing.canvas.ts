@@ -586,13 +586,13 @@ export function createCanvasEngine(myUserId: string): CanvasEngine {
 			redrawAll();
 		},
 
-		undo(): string | null {
+		undo(): StrokeData | null {
 			for (let i = strokes.length - 1; i >= 0; i--) {
 				if ((strokes[i].participantId ?? strokes[i].userId) === myUserId && (strokes[i].layer ?? 0) === currentLayer) {
 					const removed = strokes.splice(i, 1)[0];
 					redrawAll();
 					rebuildMyStrokesBuffer();
-					return removed.id;
+					return removed;
 				}
 			}
 			return null;

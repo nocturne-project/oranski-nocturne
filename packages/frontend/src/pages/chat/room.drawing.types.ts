@@ -118,7 +118,7 @@ export interface CanvasEngine {
 	drawRemoteStroke(stroke: StrokeData): void;
 	drawRemoteProgress(participantId: string, points: PressurePoint[]): void;
 	// アンドゥ・リドゥ
-	undo(): string | null;
+	undo(): StrokeData | null;
 	applyRemoteUndo(strokeId: string): void;
 	// キャンバス操作
 	clear(): void;
