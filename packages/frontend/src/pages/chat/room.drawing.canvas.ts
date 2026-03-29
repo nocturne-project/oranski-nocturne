@@ -415,7 +415,10 @@ export function createCanvasEngine(myUserId: string): CanvasEngine {
 			ctx.lineCap = 'round';
 			ctx.lineJoin = 'round';
 			if (state.currentTool === 'eraser') {
-				ctx.globalCompositeOperation = 'destination-out';
+				// プレビュー時は白色で表示（確定時はdestination-outで透明消去）
+				ctx.globalCompositeOperation = 'source-over';
+				ctx.strokeStyle = '#ffffff';
+				ctx.globalAlpha = 1.0;
 			} else {
 				ctx.globalCompositeOperation = 'source-over';
 				ctx.strokeStyle = state.currentColor;
@@ -521,7 +524,10 @@ export function createCanvasEngine(myUserId: string): CanvasEngine {
 				ctx.lineCap = 'round';
 				ctx.lineJoin = 'round';
 				if (state.currentTool === 'eraser') {
-					ctx.globalCompositeOperation = 'destination-out';
+					// リアルタイムプレビュー時は白色で表示
+					ctx.globalCompositeOperation = 'source-over';
+					ctx.strokeStyle = '#ffffff';
+					ctx.globalAlpha = 1.0;
 				} else {
 					ctx.globalCompositeOperation = 'source-over';
 					ctx.strokeStyle = state.currentColor;
