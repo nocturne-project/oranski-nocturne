@@ -380,8 +380,21 @@ export class DrawingCanvasService {
 			const strokesData = await this.redisClient.lrange(canvasKey, 0, -1);
 
 			if (strokesData.length > 0) {
-				// Redisにデータがある場合
-				const strokes: DrawingStroke[] = strokesData
+				const MAX_STROKES = 30; // クライアントに返す最大ストローク数
+
+				// ストロークが多すぎる場合、Redisから古いものを削除
+				if (strokesData.length > MAX_STROKES) {
+					// LTRIMで最新MAX_STROKES件のみ残す（LPUSHなので先頭が最新）
+					await this.redisClient.ltrim(canvasKey, 0, MAX_STROKES - 1);
+					console.log(`[Drawing] Trimmed Redis strokes for ${roomId}: ${strokesData.length} -> ${MAX_STROKES}`);
+				}
+
+				// 最新MAX_STROKES件のみ取得
+				const latestData = strokesData.length > MAX_STROKES
+					? strokesData.slice(0, MAX_STROKES)
+					: strokesData;
+
+				const strokes: DrawingStroke[] = latestData
 					.map(data => {
 						try {
 							return JSON.parse(data) as DrawingStroke;
@@ -390,15 +403,10 @@ export class DrawingCanvasService {
 						}
 					})
 					.filter((stroke): stroke is DrawingStroke => stroke !== null)
-					.reverse(); // 最新が最後になるように逆順
+					.reverse();
 
-				// メモリ節約: 最大500ストロークに制限
-				const MAX_RETURN_STROKES = 500;
-				const limited = strokes.length > MAX_RETURN_STROKES
-					? strokes.slice(strokes.length - MAX_RETURN_STROKES)
-					: strokes;
-				console.log(`[Drawing] Retrieved ${limited.length}/${strokes.length} strokes from Redis for canvas ${roomId}`);
-				return limited;
+				console.log(`[Drawing] Retrieved ${strokes.length} strokes from Redis for canvas ${roomId}`);
+				return strokes;
 			}
 
 			// Redisにデータがない場合、まずDBから復元を試みる

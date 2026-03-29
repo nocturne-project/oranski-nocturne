@@ -3217,8 +3217,8 @@ async function loadCanvasData() {
 			undoStack.value = [];
 			redoStack.value = [];
 
-			// メモリ節約: 最新100ストロークのみ復元（古いストロークはサーバーでマージ済み）
-			const MAX_RESTORE_STROKES = 100;
+			// バックエンドが最大30件に制限済みだが、念のためフロントでも制限
+			const MAX_RESTORE_STROKES = 30;
 			const strokes = allStrokes.length > MAX_RESTORE_STROKES
 				? allStrokes.slice(allStrokes.length - MAX_RESTORE_STROKES)
 				: allStrokes;
