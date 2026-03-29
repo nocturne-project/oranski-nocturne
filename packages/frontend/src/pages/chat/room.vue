@@ -609,10 +609,11 @@ function onMessage(message: Misskey.entities.ChatMessageLite) {
 
 	sound.playMisskeySfx('chatMessage');
 
-	// お絵描きタブ表示中に他ユーザーからメッセージが来たら未読フラグをセット
-	if (tab.value !== 'chat' && message.fromUserId !== $i.id) {
-		hasUnreadWhileDrawing.value = true;
-	}
+	// お絵描きタブ内チャットオーバーレイでメッセージが連動するため、タブハイライトは無効化
+	// highlight機能自体はMkTabsに残っており、必要時に再有効化可能
+	// if (tab.value !== 'chat' && message.fromUserId !== $i.id) {
+	// 	hasUnreadWhileDrawing.value = true;
+	// }
 
 	console.debug('New message:', message);
 
