@@ -2900,6 +2900,9 @@ function handleTouchStart(e: TouchEvent) {
 		e.preventDefault();
 	}
 
+	// Apple Pencil（stylus）はPointerEvent経路で処理するため、touch経路ではスキップ
+	if (e.touches.length === 1 && (e.touches[0] as any).touchType === 'stylus') return;
+
 	if (e.touches.length === 1) {
 		// 1本指の場合は通常の描画
 		startDrawing(e);
@@ -2968,6 +2971,9 @@ function handleTouchStart(e: TouchEvent) {
 }
 
 function handleTouchMove(e: TouchEvent) {
+	// Apple Pencil（stylus）はPointerEvent経路で処理
+	if (e.touches.length === 1 && (e.touches[0] as any).touchType === 'stylus') return;
+
 	// パフォーマンス向上のため、必要な場合のみpreventDefault
 	if ((e.touches.length === 1 && !isPanning.value) || (e.touches.length === 2 && isPanning.value)) {
 		e.preventDefault();
