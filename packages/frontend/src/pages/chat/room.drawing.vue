@@ -635,21 +635,29 @@ function isIOS(): boolean {
 
 // 画像ダウンロード（iOS: Web Share API共有シート、その他: data URL）
 function downloadImage(dataUrl: string, filename: string) {
-	if (isIOS() && navigator.share != null) {
-		// iOS: Web Share APIでPhotosへの保存を含む共有シートを表示
-		const byteString = atob(dataUrl.split(',')[1]);
-		const mimeString = dataUrl.split(',')[0].split(':')[1].split(';')[0];
-		const ab = new ArrayBuffer(byteString.length);
-		const ia = new Uint8Array(ab);
-		for (let i = 0; i < byteString.length; i++) {
-			ia[i] = byteString.charCodeAt(i);
-		}
-		const blob = new Blob([ab], { type: mimeString });
-		const file = new File([blob], filename, { type: 'image/png' });
-		navigator.share({ files: [file] }).catch(() => {
-			// 共有キャンセル時はdata URLフォールバック
+	if (isIOS() && navigator.share != null && typeof navigator.canShare === 'function') {
+		try {
+			// iOS: Web Share APIでPhotosへの保存を含む共有シートを表示
+			const byteString = atob(dataUrl.split(',')[1]);
+			const mimeString = dataUrl.split(',')[0].split(':')[1].split(';')[0];
+			const ab = new ArrayBuffer(byteString.length);
+			const ia = new Uint8Array(ab);
+			for (let i = 0; i < byteString.length; i++) {
+				ia[i] = byteString.charCodeAt(i);
+			}
+			const blob = new Blob([ab], { type: mimeString });
+			const file = new File([blob], filename, { type: 'image/png' });
+			const shareData = { files: [file] };
+			if (navigator.canShare(shareData)) {
+				navigator.share(shareData).catch(() => {
+					downloadViaLink(dataUrl, filename);
+				});
+			} else {
+				downloadViaLink(dataUrl, filename);
+			}
+		} catch {
 			downloadViaLink(dataUrl, filename);
-		});
+		}
 	} else {
 		downloadViaLink(dataUrl, filename);
 	}
@@ -3220,7 +3228,8 @@ function adjustCanvasForMobile() {
 	display: flex;
 	flex-direction: row;
 	position: relative;
-	height: calc(100dvh - 55px);
+	height: calc(100vh - 55px); // vhフォールバック（iOS 15.3以下）
+	height: calc(100dvh - 55px); // dvh優先（iOS 15.4+）
 	overflow: hidden;
 	background: var(--MI_THEME-panel);
 	margin: -24px 0 -48px 0;
