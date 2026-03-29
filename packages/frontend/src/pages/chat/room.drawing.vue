@@ -2433,16 +2433,34 @@ function updateOtherCursor(data: any) {
 	cursorTimers.set(data.userId, timer);
 }
 
-// スポイト機能
+// スポイト機能（CanvasEngineのcanvasからピクセル色を取得）
 function eyedropColor(point: { x: number; y: number }) {
-	if (!ctx) return;
+	const canvas = engineCanvasEl.value;
+	if (!canvas) return;
 
-	const imageData = ctx.getImageData(point.x, point.y, 1, 1);
+	const context = canvas.getContext('2d');
+	if (!context) return;
+
+	// 座標をキャンバスの実際のピクセルにクランプ
+	const x = Math.max(0, Math.min(canvas.width - 1, Math.round(point.x)));
+	const y = Math.max(0, Math.min(canvas.height - 1, Math.round(point.y)));
+
+	const imageData = context.getImageData(x, y, 1, 1);
 	const [r, g, b] = imageData.data;
 	const color = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 
 	currentColor.value = color;
 	currentTool.value = 'pen';
+
+	// カラーヒストリーに追加（スポイト取得時）
+	addColorToHistory(color);
+
+	// CanvasEngineに色を同期
+	if (canvasEngine.value) {
+		canvasEngine.value.setState({ currentColor: color, currentTool: 'pen' as any });
+	}
+
+	saveUserSettings();
 }
 
 /**
