@@ -3158,10 +3158,10 @@ function adjustCanvasForMobile() {
 	display: flex;
 	flex-direction: row;
 	position: relative;
-	height: calc(100dvh - 100px);
+	height: calc(100dvh - 55px);
 	overflow: hidden;
 	background: var(--MI_THEME-panel);
-	margin: -24px 0 -24px 0;
+	margin: -24px 0 -48px 0;
 	padding: 0;
 
 	&:fullscreen {

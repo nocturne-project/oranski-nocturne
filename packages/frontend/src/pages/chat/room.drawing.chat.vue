@@ -138,14 +138,14 @@ async function sendMessage() {
 	try {
 		if (props.roomId) {
 			// ルームチャット: API経由で送信（DB保存＋WebSocket配信）
-			await misskeyApi('chat/messages/create', {
-				roomId: props.roomId,
+			await misskeyApi('chat/messages/create-to-room', {
+				toRoomId: props.roomId,
 				text,
 			} as any);
 		} else if (props.userId) {
 			// DM: API経由で送信
-			await misskeyApi('chat/messages/create', {
-				userId: props.userId,
+			await misskeyApi('chat/messages/create-to-user', {
+				toUserId: props.userId,
 				text,
 			} as any);
 		}
