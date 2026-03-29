@@ -1105,16 +1105,11 @@ onMounted(() => {
 });
 
 // Messagesタブの未読表示（お絵描き中にメッセージが来たら点滅マーク付加）
-const messagesTabTitle = computed(() =>
-	hasUnreadWhileDrawing.value
-		? `${i18n.ts._chat.messages} (!)`
-		: i18n.ts._chat.messages
-);
-
 const headerTabs = computed(() => room.value ? [{
 	key: 'chat',
-	title: messagesTabTitle.value,
-	icon: hasUnreadWhileDrawing.value ? 'ti ti-message-circle-exclamation' : 'ti ti-messages',
+	title: i18n.ts._chat.messages,
+	icon: 'ti ti-messages',
+	highlight: hasUnreadWhileDrawing.value,
 }, {
 	key: 'drawing',
 	title: 'お絵かき',
@@ -1133,8 +1128,9 @@ const headerTabs = computed(() => room.value ? [{
 	icon: 'ti ti-info-circle',
 }] : [{
 	key: 'chat',
-	title: messagesTabTitle.value,
-	icon: hasUnreadWhileDrawing.value ? 'ti ti-message-circle-exclamation' : 'ti ti-messages',
+	title: i18n.ts._chat.messages,
+	icon: 'ti ti-messages',
+	highlight: hasUnreadWhileDrawing.value,
 }, {
 	key: 'drawing',
 	title: 'お絵かき',
@@ -1330,18 +1326,5 @@ definePage(computed(() => {
 	font-size: 0.9em;
 	margin: 0 auto 16px;
 	width: fit-content;
-}
-</style>
-
-<style lang="scss">
-/* 未読メッセージ通知: Messagesタブのアイコンをpaintchat同様に優しく点滅 */
-.ti-message-circle-exclamation {
-	animation: unreadPulse 1.5s ease-in-out infinite;
-	color: var(--MI_THEME-accent);
-}
-
-@keyframes unreadPulse {
-	0%, 100% { opacity: 1; }
-	50% { opacity: 0.4; }
 }
 </style>
