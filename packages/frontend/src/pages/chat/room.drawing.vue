@@ -33,6 +33,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div :class="[$style.root, 'drawing-root']" style="display: flex; flex-direction: row;">
+	<!-- ローディングHUD -->
+	<div v-if="isCanvasLoading" :class="$style.loadingOverlay">
+		<div :class="$style.loadingSpinner"></div>
+		<div :class="$style.loadingText">Loading...</div>
+	</div>
+
 	<!-- paintchat式左サイドバーツールバー（パネル展開方式） -->
 	<div :class="$style.toolbar">
 		<!-- 移動（パン）ツール -->
@@ -471,6 +477,7 @@ const drawingId = computed(() => {
 
 // paintchat式CanvasEngineインスタンス
 const canvasEngine = ref<CanvasEngine | null>(null);
+const isCanvasLoading = ref(true);
 // CanvasEngine用のcanvas要素
 const engineCanvasEl = ref<HTMLCanvasElement>();
 
@@ -1045,6 +1052,9 @@ onMounted(async () => {
 			canvasEngine.value.setLayerOpacity(i, layerOpacity.value[i]);
 		}
 	}
+
+	// ローディング完了
+	isCanvasLoading.value = false;
 
 	// 全画面モード用のイベントリスナー
 	window.document.addEventListener('fullscreenchange', handleFullscreenChange);
@@ -3084,13 +3094,45 @@ function adjustCanvasForMobile() {
 </script>
 
 <style lang="scss" module>
+.loadingOverlay {
+	position: absolute;
+	inset: 0;
+	z-index: 9999;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+	background: var(--MI_THEME-panel);
+}
+
+.loadingSpinner {
+	width: 32px;
+	height: 32px;
+	border: 3px solid var(--MI_THEME-divider);
+	border-top-color: var(--MI_THEME-accent);
+	border-radius: 50%;
+	animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+	to { transform: rotate(360deg); }
+}
+
+.loadingText {
+	font-size: 13px;
+	color: var(--MI_THEME-fg);
+	opacity: 0.6;
+}
+
 .root {
 	display: flex;
 	flex-direction: row;
+	position: relative;
 	height: calc(100dvh - 100px);
 	overflow: hidden;
 	background: var(--MI_THEME-panel);
-	margin: -24px 0 0 0; // _spacerのpadding-topを打ち消し
+	margin: -24px 0 0 0;
 	padding: 0;
 
 	&:fullscreen {
