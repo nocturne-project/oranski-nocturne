@@ -4106,8 +4106,7 @@ function adjustCanvasForMobile() {
 .root {
 	display: flex;
 	flex-direction: row;
-	height: 100%;
-	max-height: calc(100dvh - 150px);
+	height: calc(100dvh - 100px);
 	overflow: hidden;
 	background: var(--MI_THEME-panel);
 
