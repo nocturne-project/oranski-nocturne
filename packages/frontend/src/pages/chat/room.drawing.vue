@@ -3949,7 +3949,7 @@ function adjustCanvasForMobile() {
 	touch-action: none;
 	border-radius: 8px;
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-	background: transparent;
+	background: #ffffff;
 	box-sizing: border-box;
 }
 
