@@ -1825,18 +1825,19 @@ function recordTraceLog(
 
 
 // カーソル位置送信
+let lastCursorSentTime = 0;
 function sendCursorPosition(point: { x: number; y: number }) {
 	if (!connection.value) return;
 
+	// 100msのレート制限（カーソル送信頻度を抑制）
+	const now = Date.now();
+	if (now - lastCursorSentTime < 100) return;
+	lastCursorSentTime = now;
+
 	try {
-		const data = {
-			x: point.x,
-			y: point.y,
-		};
-		connection.value.send('cursorMove', data);
-		recordCommLog('send', 'cursorMove', data);
-	} catch (error) {
-		console.error('🎨 [ERROR] Failed to send cursor position:', error);
+		connection.value.send('cursorMove', { x: point.x, y: point.y });
+	} catch {
+		// silent fail
 	}
 }
 

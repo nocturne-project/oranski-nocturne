@@ -287,6 +287,7 @@ export function createCanvasEngine(myUserId: string): CanvasEngine {
 	};
 
 	const remoteProgress: Map<string, PressurePoint[]> = new Map();
+	let pendingProgressRedraw = false;
 	let strokeIdCounter = 0;
 
 	function generateStrokeId(): string {
@@ -589,7 +590,14 @@ export function createCanvasEngine(myUserId: string): CanvasEngine {
 
 		drawRemoteProgress(participantId: string, points: PressurePoint[]) {
 			remoteProgress.set(participantId, points);
-			redrawAll();
+			// requestAnimationFrameでスロットリング（大量の進捗更新による再描画を間引き）
+			if (!pendingProgressRedraw) {
+				pendingProgressRedraw = true;
+				requestAnimationFrame(() => {
+					pendingProgressRedraw = false;
+					redrawAll();
+				});
+			}
 		},
 
 		undo(): StrokeData | null {
