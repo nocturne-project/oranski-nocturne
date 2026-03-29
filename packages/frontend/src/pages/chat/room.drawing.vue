@@ -1343,6 +1343,7 @@ function connectToChatRoomChannel() {
 					|| (message.fromUserId === $i.id ? ($i.name || $i.username) : ''),
 				content: message.text || '',
 				createdAt: message.createdAt || new Date().toISOString(),
+				fromUserId: message.fromUserId,
 			});
 		}
 	});
@@ -4574,17 +4575,15 @@ function adjustCanvasForMobile() {
 	border-top: 6px solid transparent;
 	border-bottom: 6px solid transparent;
 	filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
-	margin-left: 25px;
-	margin-top: 41px;
 }
 
 .cursorLabel {
-	padding: 3px 8px;
-	border-radius: 6px;
-	font-size: 12px;
+	padding: 2px 6px;
+	border-radius: 4px;
+	font-size: 11px;
 	font-weight: 600;
 	white-space: nowrap;
-	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-	margin-left: 2px;
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+	margin-left: 12px;
 }
 </style>

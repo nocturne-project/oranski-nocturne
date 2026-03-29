@@ -54,6 +54,9 @@ paintchatのroom.chat.vueを移植。既存のchatRoomチャネルのメッセ�
 import { ref, nextTick } from 'vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
 
+// ユーザー名キャッシュ（APIレスポンスのfromUserから構築）
+const userNameCache = new Map<string, string>();
+
 // メッセージの型（グループチャットのメッセージ形式）
 interface DrawingChatMessage {
 	id: string;
@@ -112,10 +115,18 @@ async function loadMessages() {
 
 		// APIレスポンスをDrawingChatMessage形式に変換
 		// fromUserがない場合はfromUserIdで判定
+		// fromUserからキャッシュを構築
+		for (const msg of apiMessages) {
+			if (msg.fromUser && msg.fromUserId) {
+				userNameCache.set(msg.fromUserId, msg.fromUser.name || msg.fromUser.username || '');
+			}
+		}
+		userNameCache.set(props.myUserId, props.myUserName);
+
 		const converted: DrawingChatMessage[] = apiMessages.map((msg: any) => ({
 			id: msg.id,
 			userName: msg.fromUser?.name || msg.fromUser?.username
-				|| (msg.fromUserId === props.myUserId ? props.myUserName : ''),
+				|| userNameCache.get(msg.fromUserId) || '',
 			content: msg.text || '',
 			createdAt: msg.createdAt,
 		})).reverse(); // APIは新しい順なので逆順にする
@@ -157,9 +168,18 @@ async function sendMessage() {
 }
 
 // 外部からメッセージを追加する（WebSocket経由）
-function addMessage(msg: DrawingChatMessage) {
+function addMessage(msg: DrawingChatMessage & { fromUserId?: string }) {
 	// 重複チェック
 	if (messages.value.some(m => m.id === msg.id)) return;
+
+	// ユーザー名が空の場合キャッシュからフォールバック
+	if (!msg.userName && msg.fromUserId) {
+		msg.userName = userNameCache.get(msg.fromUserId) || '';
+	}
+	// キャッシュに保存
+	if (msg.userName && msg.fromUserId) {
+		userNameCache.set(msg.fromUserId, msg.userName);
+	}
 
 	messages.value.push(msg);
 
