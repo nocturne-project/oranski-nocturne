@@ -1514,11 +1514,18 @@ function startDrawing(event: MouseEvent | TouchEvent) {
 	});
 	canvasEngine.value.setCurrentLayer(currentLayer.value);
 
-	// CanvasEngine経由でストローク開始
-	canvasEngine.value.beginStroke(point.x, point.y, pressure);
+	// ストローク開始を遅延（paintchat同様: 2本指パンへの切替時にドットが描かれるのを防止）
+	// draw()で一定距離以上動いたら実際にbeginStrokeする
+	pendingStrokeStart = { x: point.x, y: point.y, pressure };
+	strokeStarted = false;
 	isDrawing.value = true;
-	currentPath = [{ x: point.x, y: point.y, pressure }];
+	currentPath = [];
 }
+
+// ストローク遅延書き出し用
+let pendingStrokeStart: { x: number; y: number; pressure: number } | null = null;
+let strokeStarted = false;
+const STROKE_START_THRESHOLD = 3; // ピクセル: この距離以上動いたらストローク開始
 
 // 描画中（CanvasEngine経由）
 function draw(event: MouseEvent | TouchEvent) {
@@ -1552,6 +1559,19 @@ function draw(event: MouseEvent | TouchEvent) {
 	sendCursorPosition(point);
 
 	if (!isDrawing.value || currentTool.value === 'eyedropper') return;
+
+	// 遅延書き出し: 一定距離以上動いたらbeginStroke
+	if (pendingStrokeStart && !strokeStarted) {
+		const dx = point.x - pendingStrokeStart.x;
+		const dy = point.y - pendingStrokeStart.y;
+		if (Math.sqrt(dx * dx + dy * dy) < STROKE_START_THRESHOLD) return;
+		// 十分動いたのでストローク開始
+		canvasEngine.value.beginStroke(pendingStrokeStart.x, pendingStrokeStart.y, pendingStrokeStart.pressure);
+		strokeStarted = true;
+		pendingStrokeStart = null;
+	}
+
+	if (!strokeStarted) return;
 
 	const pressure = calculatePressure();
 	const pressurePoint: PressurePoint = { x: point.x, y: point.y, pressure };
@@ -1595,6 +1615,14 @@ function stopDrawing() {
 	if (!isDrawing.value || !canvasEngine.value) return;
 
 	isDrawing.value = false;
+
+	// 遅延書き出し中（まだbeginStrokeしていない）の場合はキャンセル
+	if (!strokeStarted) {
+		pendingStrokeStart = null;
+		return;
+	}
+	pendingStrokeStart = null;
+	strokeStarted = false;
 
 	// CanvasEngine経由でストローク確定（スムージング・スプライン適用）
 	const stroke = canvasEngine.value.endStroke();
@@ -2711,12 +2739,13 @@ function handleTouchStart(e: TouchEvent) {
 		// 1本指の場合は通常の描画
 		startDrawing(e);
 	} else if (e.touches.length === 2) {
-		// 2本指の場合: パン/ズーム開始（描画中のストロークをキャンセル）
-		if (isDrawing.value && canvasEngine.value) {
-			// CanvasEngineの描画状態をリセット（ストロークを確定せずキャンセル）
-			canvasEngine.value.setState({ isDrawing: false, currentPoints: [] });
-			canvasEngine.value.redraw();
+		// 2本指の場合: パン/ズーム開始（paintchat同様: 描画中ストロークを正式終了）
+		if (strokeStarted && canvasEngine.value) {
+			canvasEngine.value.endStroke(); // ストロークを破棄せず正式終了（短いストロークは自然に処理）
 		}
+		// 遅延書き出し中（まだbeginStrokeしていない）の場合はキャンセル
+		pendingStrokeStart = null;
+		strokeStarted = false;
 		isDrawing.value = false;
 		currentPath = [];
 
@@ -2926,15 +2955,13 @@ function handleTouchEnd(e: TouchEvent) {
 		gestureState.value = 'none';
 		distanceHistory.value = [];
 
-		// パン/ズーム中でなかった場合のみストローク確定（ドット防止）
+		// パン/ズーム中でなかった場合のみストローク確定
 		if (!wasPanningOrZooming) {
 			stopDrawing();
 		} else {
-			// パン/ズーム後はCanvasEngineの描画状態をリセット
-			if (canvasEngine.value) {
-				canvasEngine.value.setState({ isDrawing: false, currentPoints: [] });
-				canvasEngine.value.redraw();
-			}
+			// パン/ズーム後は描画状態をリセット
+			pendingStrokeStart = null;
+			strokeStarted = false;
 			isDrawing.value = false;
 			currentPath = [];
 		}
