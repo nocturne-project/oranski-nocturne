@@ -85,6 +85,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<i class="ti ti-download"></i>
 		</button>
 
+		<div :class="$style.separator"></div>
+
+		<!-- チャット（未読時点滅） -->
+		<button :class="[$style.toolButton, { [$style.highlight]: drawingChatRef?.hasUnread }]" title="チャット" @click="toggleDrawingChat">
+			<i class="ti ti-message-circle"></i>
+		</button>
+
 		<!-- その他（グループチャット固有機能） -->
 		<button :class="[$style.toolButton, { [$style.active]: activeToolPanel === 'more' }]" title="その他" @click="toggleToolPanel('more')">
 			<i class="ti ti-dots"></i>
@@ -377,7 +384,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</div>
 	</div>
 
-	<!-- チャットオーバーレイ -->
+	<!-- チャットオーバーレイ（メッセージ通知バブル） -->
 	<Transition name="chat-overlay">
 		<div v-if="chatOverlay" :class="$style.chatOverlay">
 			<div :class="$style.chatBubble">
@@ -386,6 +393,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</div>
 		</div>
 	</Transition>
+
+	<!-- お絵描きチャットオーバーレイ -->
+	<XDrawingChat
+		ref="drawingChatRef"
+		:connection="connection"
+		:myUserId="$i.id"
+		:myUserName="$i.name || $i.username"
+	/>
 </div>
 </template>
 
@@ -395,6 +410,7 @@ import { defineAsyncComponent } from 'vue';
 // 分離したコンポーネントをインポート
 import DrawingToolbar from './room.drawing.toolbar.vue';
 import DrawingDebugPanel from './room.drawing.debug.vue';
+import XDrawingChat from './room.drawing.chat.vue';
 // 分離したモジュールをインポート
 import { screenToCanvasCoordinates, getActualDrawingArea } from './room.drawing.coordinates.js';
 import {
@@ -557,9 +573,19 @@ let debugLogCount = 0;
 const showDebugPanel = ref(false);
 const showMoreMenu = ref(false);
 const activeToolPanel = ref<'color' | 'width' | 'layer' | 'download' | 'more' | null>(null);
+const drawingChatRef = ref<InstanceType<typeof XDrawingChat> | null>(null);
 
 function toggleToolPanel(panel: 'color' | 'width' | 'layer' | 'download' | 'more') {
 	activeToolPanel.value = activeToolPanel.value === panel ? null : panel;
+}
+
+// チャットオーバーレイの開閉
+function toggleDrawingChat() {
+	if (drawingChatRef.value?.isOpen) {
+		drawingChatRef.value.closeChat();
+	} else {
+		drawingChatRef.value?.openChat();
+	}
 }
 
 // 移動（パン）ツール
@@ -1311,6 +1337,15 @@ function connectToChatRoomChannel() {
 	// チャットオーバーレイ用
 	connection.value.on('message', (message: any) => {
 		showChatOverlay(message);
+		// チャットオーバーレイにメッセージを追加
+		if (drawingChatRef.value && message.fromUserId !== $i.id) {
+			drawingChatRef.value.addMessage({
+				id: message.id || `msg-${Date.now()}`,
+				userName: message.fromUser?.name || message.fromUser?.username || '???',
+				content: message.text || '',
+				createdAt: message.createdAt || new Date().toISOString(),
+			});
+		}
 	});
 }
 
@@ -3532,6 +3567,16 @@ function adjustCanvasForMobile() {
 		color: var(--MI_THEME-fgOnAccent);
 		border-color: var(--MI_THEME-accent);
 	}
+
+	&.highlight {
+		animation: toolHighlightPulse 1.5s ease-in-out infinite;
+		color: var(--MI_THEME-accent);
+	}
+}
+
+@keyframes toolHighlightPulse {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.4; }
 }
 
 .colorPalette {
