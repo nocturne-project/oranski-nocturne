@@ -126,10 +126,10 @@ function drawVariableWidthStroke(ctx: CanvasRenderingContext2D, interpolated: Pr
 
 	// 非対称エンベロープ方式の筆圧スムージング
 	// 細くなる方向（筆圧低下）: 即座に反応 (RELEASE_RATE=0.6)
-	// 太くなる方向（筆圧増加）: ゆっくり追従 (ATTACK_RATE=0.08)
+	// 太くなる方向（筆圧増加）: 追従 (ATTACK_RATE=0.15)
 	const smoothedPressures: number[] = [];
-	let envPressure = interpolated[0].pressure * 0.3;
-	const ATTACK_RATE = 0.08;
+	let envPressure = interpolated[0].pressure * 0.6;
+	const ATTACK_RATE = 0.15;
 	const RELEASE_RATE = 0.6;
 	for (let i = 0; i < interpolated.length; i++) {
 		const raw = interpolated[i].pressure;
@@ -141,8 +141,8 @@ function drawVariableWidthStroke(ctx: CanvasRenderingContext2D, interpolated: Pr
 		smoothedPressures.push(envPressure);
 	}
 
-	// 書き始め/書き終わりのフェードイン/フェードアウト（数珠防止）
-	const FADE_POINTS = Math.min(15, Math.floor(interpolated.length * 0.1));
+	// 書き始め/書き終わりのフェードイン/フェードアウト（短めにして数珠防止）
+	const FADE_POINTS = Math.min(8, Math.floor(interpolated.length * 0.05));
 	for (let i = 0; i < FADE_POINTS; i++) {
 		smoothedPressures[i] *= (i + 1) / (FADE_POINTS + 1);
 	}
