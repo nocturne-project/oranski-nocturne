@@ -1457,6 +1457,22 @@ let temporaryEraserMode = false;
 let originalToolBeforeEraser: string = 'pen';
 let isPointerDown = false;
 
+// ハードウェア筆圧スムージング（paintchat準拠）
+let lastHwPressure = 0.5;
+const HW_PRESSURE_SMOOTH_FACTOR = 0.35;
+
+// PointerEventからスムージング済み筆圧を取得
+function getSmoothedPressure(e: PointerEvent | MouseEvent | TouchEvent): number {
+	const pe = e as PointerEvent;
+	if (pe.pressure != null && pe.pressure > 0 && pe.pressure < 1 && pe.pointerType !== 'mouse') {
+		// ハードウェア筆圧: スムージングで急激な変化を抑制（数珠防止）
+		lastHwPressure = lastHwPressure + (pe.pressure - lastHwPressure) * (1 - HW_PRESSURE_SMOOTH_FACTOR);
+		return Math.max(0.08, lastHwPressure);
+	}
+	// マウス/タッチ: 速度ベースシミュレーション
+	return calculatePressure();
+}
+
 // 右クリックメニュー抑制
 function onContextMenu(e: Event) {
 	e.preventDefault();
@@ -1468,6 +1484,7 @@ function onPointerDown(e: PointerEvent) {
 	if (e.pointerType === 'touch') return;
 
 	isPointerDown = true;
+	lastHwPressure = 0.5; // 筆圧スムージングをリセット
 
 	// Apple Pencil等のハードウェア筆圧を検出
 	if (canvasEngine.value) {
@@ -1535,10 +1552,7 @@ function startDrawing(event: MouseEvent | TouchEvent) {
 	pointBuffer.length = 0;
 
 	const point = getEventPoint(event);
-	// PointerEventの場合はハードウェア筆圧を使用
-	const pressure = (event as any).pressure != null && (event as any).pressure > 0 && (event as any).pressure < 1
-		? (event as any).pressure
-		: calculatePressure();
+	const pressure = getSmoothedPressure(event);
 
 	if (currentTool.value === 'eyedropper') {
 		eyedropColor(point);
@@ -1597,10 +1611,7 @@ function draw(event: MouseEvent | TouchEvent) {
 
 	if (!isDrawing.value || !strokeStarted || currentTool.value === 'eyedropper') return;
 
-	// PointerEventの場合はハードウェア筆圧を使用
-	const pressure = (event as any).pressure != null && (event as any).pressure > 0 && (event as any).pressure < 1
-		? (event as any).pressure
-		: calculatePressure();
+	const pressure = getSmoothedPressure(event);
 	const pressurePoint: PressurePoint = { x: point.x, y: point.y, pressure };
 	currentPath.push(pressurePoint);
 
