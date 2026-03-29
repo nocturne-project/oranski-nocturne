@@ -1335,11 +1335,12 @@ function connectToChatRoomChannel() {
 	// チャットオーバーレイ用
 	connection.value.on('message', (message: any) => {
 		showChatOverlay(message);
-		// チャットオーバーレイにメッセージを追加
-		if (drawingChatRef.value && message.fromUserId !== $i.id) {
+		// チャットオーバーレイにメッセージを追加（自分のメッセージも含む）
+		if (drawingChatRef.value) {
 			drawingChatRef.value.addMessage({
 				id: message.id || `msg-${Date.now()}`,
-				userName: message.fromUser?.name || message.fromUser?.username || '???',
+				userName: message.fromUser?.name || message.fromUser?.username
+					|| (message.fromUserId === $i.id ? ($i.name || $i.username) : ''),
 				content: message.text || '',
 				createdAt: message.createdAt || new Date().toISOString(),
 			});

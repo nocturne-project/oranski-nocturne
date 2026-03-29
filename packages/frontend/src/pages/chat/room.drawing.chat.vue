@@ -111,9 +111,11 @@ async function loadMessages() {
 		}
 
 		// APIレスポンスをDrawingChatMessage形式に変換
+		// fromUserがない場合はfromUserIdで判定
 		const converted: DrawingChatMessage[] = apiMessages.map((msg: any) => ({
 			id: msg.id,
-			userName: msg.fromUser?.name || msg.fromUser?.username || '???',
+			userName: msg.fromUser?.name || msg.fromUser?.username
+				|| (msg.fromUserId === props.myUserId ? props.myUserName : ''),
 			content: msg.text || '',
 			createdAt: msg.createdAt,
 		})).reverse(); // APIは新しい順なので逆順にする
@@ -126,25 +128,32 @@ async function loadMessages() {
 	}
 }
 
-// メッセージを送信（chatRoomチャネル経由）
-function sendMessage() {
+// メッセージを送信（API経由でMessages側にも反映）
+async function sendMessage() {
 	const text = inputText.value.trim();
-	if (!text || !props.connection) return;
+	if (!text) return;
 
 	inputText.value = '';
 
-	// chatRoomチャネルのメッセージ送信
-	props.connection.send('message', {
-		text,
-	});
-
-	// ローカルにも即座に追加（楽観的更新）
-	addMessage({
-		id: `local-${Date.now()}`,
-		userName: props.myUserName,
-		content: text,
-		createdAt: new Date().toISOString(),
-	});
+	try {
+		if (props.roomId) {
+			// ルームチャット: API経由で送信（DB保存＋WebSocket配信）
+			await misskeyApi('chat/messages/create', {
+				roomId: props.roomId,
+				text,
+			} as any);
+		} else if (props.userId) {
+			// DM: API経由で送信
+			await misskeyApi('chat/messages/create', {
+				userId: props.userId,
+				text,
+			} as any);
+		}
+		// メッセージはWebSocketのmessageイベントで受信してaddMessageされる
+	} catch {
+		// 送信失敗時は入力欄に戻す
+		inputText.value = text;
+	}
 }
 
 // 外部からメッセージを追加する（WebSocket経由）
