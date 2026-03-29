@@ -141,14 +141,18 @@ function drawVariableWidthStroke(ctx: CanvasRenderingContext2D, interpolated: Pr
 		smoothedPressures.push(envPressure);
 	}
 
-	// 書き始め/書き終わりのフェードイン/フェードアウト（paintchatオリジナル値）
+	// 書き始め/書き終わりのフェードイン/フェードアウト
+	// 完全に消えず「細いが見える」状態を維持（最低20%の太さを保証）
 	const FADE_POINTS = Math.min(15, Math.floor(interpolated.length * 0.1));
+	const MIN_FADE_RATIO = 0.2; // フェード時の最低筆圧比率
 	for (let i = 0; i < FADE_POINTS; i++) {
-		smoothedPressures[i] *= (i + 1) / (FADE_POINTS + 1);
+		const ratio = (i + 1) / (FADE_POINTS + 1);
+		smoothedPressures[i] *= MIN_FADE_RATIO + ratio * (1 - MIN_FADE_RATIO);
 	}
 	for (let i = 0; i < FADE_POINTS; i++) {
 		const idx = interpolated.length - 1 - i;
-		if (idx >= 0) smoothedPressures[idx] *= (i + 1) / (FADE_POINTS + 1);
+		const ratio = (i + 1) / (FADE_POINTS + 1);
+		if (idx >= 0) smoothedPressures[idx] *= MIN_FADE_RATIO + ratio * (1 - MIN_FADE_RATIO);
 	}
 
 	// セグメント別stroke: 各セグメントで筆圧に応じたlineWidth
