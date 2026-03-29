@@ -1525,7 +1525,7 @@ function startDrawing(event: MouseEvent | TouchEvent) {
 // ストローク遅延書き出し用
 let pendingStrokeStart: { x: number; y: number; pressure: number } | null = null;
 let strokeStarted = false;
-const STROKE_START_THRESHOLD = 3; // ピクセル: この距離以上動いたらストローク開始
+const STROKE_START_THRESHOLD = 2; // ピクセル: この距離以上動いたらストローク開始（paintchatは3だが体感改善のため2に）
 
 // 描画中（CanvasEngine経由）
 function draw(event: MouseEvent | TouchEvent) {
@@ -1662,7 +1662,6 @@ function stopDrawing() {
 				layer: stroke.layer ?? 0,
 			};
 			connection.value.send('drawingStroke', data);
-			recordCommLog('send', 'drawingStroke', data);
 		}
 	}
 
@@ -3067,25 +3066,13 @@ async function loadCanvasData() {
 // ストローク履歴管理（正規化のみ、描画はCanvasEngineが行う）
 function addStrokeToHistory(strokeData: any) {
 	// 新しいストロークを追加したらredoスタックをクリア
-	redoStack.value = [];
+	undoneStrokes.value = [];
 
-	const layerIndex = clampLayerIndex(currentLayer.value);
-	const strokeWithMeta = {
-		...strokeData,
-		layer: layerIndex,
-		userId: $i.id,
-		userName: $i.username ?? $i.name ?? null,
-	};
-	const normalized = renderStrokeOnLayer(strokeWithMeta, { suppressRender: true });
-	if (!normalized) {
-		return;
-	}
-	strokeHistory.value.push(normalized);
+	strokeHistory.value.push(strokeData);
 
-	// アンドゥ履歴の制限
+	// 履歴の制限
 	if (strokeHistory.value.length > maxUndoHistory) {
-		const oldStrokesToRemove = strokeHistory.value.length - maxUndoHistory;
-		strokeHistory.value.splice(0, oldStrokesToRemove);
+		strokeHistory.value.splice(0, strokeHistory.value.length - maxUndoHistory);
 	}
 }
 
