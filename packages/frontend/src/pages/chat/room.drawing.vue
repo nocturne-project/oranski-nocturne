@@ -1022,7 +1022,7 @@ onMounted(async () => {
 	connectToChatRoomChannel();
 
 	// 既存のキャンバスデータを復元
-	loadCanvasData();
+	await loadCanvasData();
 
 	// ユーザー設定を読み込む
 	await loadUserSettings();
@@ -3132,8 +3132,13 @@ function adjustCanvasForMobile() {
 	height: calc(100dvh - 100px);
 	overflow: hidden;
 	background: var(--MI_THEME-panel);
-	margin: -24px 0 0 0;
+	margin: 0;
 	padding: 0;
+
+	// スマホ: _spacerのpadding-topを打ち消し
+	@media (max-width: 700px) {
+		margin: -24px 0 0 0;
+	}
 
 	&:fullscreen {
 		background: #000000;
@@ -3197,12 +3202,20 @@ function adjustCanvasForMobile() {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 2px;
-	padding: 1px 0;
+	gap: 4px;
+	padding: 4px 2px;
 	background: var(--MI_THEME-bg);
 	border-right: 1px solid var(--MI_THEME-divider);
-	width: 36px;
-	min-width: 36px;
+	width: 42px;
+	min-width: 42px;
+
+	// スマホ: 余白を最小化
+	@media (max-width: 700px) {
+		gap: 2px;
+		padding: 1px 0;
+		width: 36px;
+		min-width: 36px;
+	}
 	overflow-y: auto;
 	overflow-x: hidden;
 	scrollbar-width: none;
@@ -3334,7 +3347,11 @@ function adjustCanvasForMobile() {
 
 .toolPanel {
 	position: absolute;
-	left: 37px;
+	left: 43px;
+
+	@media (max-width: 700px) {
+		left: 37px;
+	}
 	top: 0;
 	width: 200px;
 	max-height: 100%;
@@ -3499,12 +3516,19 @@ function adjustCanvasForMobile() {
 }
 
 .toolButton {
-	width: 34px;
-	height: 34px;
+	width: 36px;
+	height: 36px;
 	border: 1px solid var(--MI_THEME-divider);
 	background: var(--MI_THEME-panel);
 	color: var(--MI_THEME-fg);
-	border-radius: 4px;
+	border-radius: 6px;
+
+	// スマホ: コンパクトに
+	@media (max-width: 700px) {
+		width: 34px;
+		height: 34px;
+		border-radius: 4px;
+	}
 	cursor: pointer;
 	display: flex;
 	align-items: center;
