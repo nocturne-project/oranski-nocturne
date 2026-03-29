@@ -1035,28 +1035,28 @@ onMounted(async () => {
 		canvasEngine.value = engine;
 	}
 
+	// CanvasEngine初期化完了 = キャンバス使用可能 → ローディング解除
+	isCanvasLoading.value = false;
+
 	// タッチデバイス検出
 	isTouchDevice.value = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
-	// タッチデバイスの場合、初期ストローク幅を太くする（ユーザーが変更していない場合のみ）
 	if (isTouchDevice.value && strokeWidth.value === 2) {
 		strokeWidth.value = 4;
-		// ペンツールの太さも同期
 		toolStrokeWidths.value.pen = 4;
 	}
 
-	// WebSocket接続（統合）
+	// WebSocket接続
 	connectToChatRoomChannel();
 
-	// キャンバスデータとユーザー設定を並行読み込み（高速化）
-	await Promise.all([
+	// データ読み込み（バックグラウンド、ローディングHUDなし）
+	const [, userSettings] = await Promise.all([
 		loadCanvasData(),
 		loadUserSettings(),
 	]);
 
-	// CanvasEngineにユーザー設定を同期（loadUserSettingsで復元された値を反映）
+	// CanvasEngineにユーザー設定を同期
 	if (canvasEngine.value) {
-		// ツール別太さから現在のツールの太さを取得
 		const currentWidth = (currentTool.value === 'pen' || currentTool.value === 'eraser')
 			? toolStrokeWidths.value[currentTool.value as 'pen' | 'eraser']
 			: strokeWidth.value;
@@ -1070,7 +1070,6 @@ onMounted(async () => {
 		});
 		canvasEngine.value.setCurrentLayer(currentLayer.value);
 
-		// 移動モード時のカーソル設定
 		if (isMoveMode.value && engineCanvasEl.value) {
 			engineCanvasEl.value.style.cursor = 'grab';
 		}
@@ -1079,9 +1078,6 @@ onMounted(async () => {
 			canvasEngine.value.setLayerOpacity(i, layerOpacity.value[i]);
 		}
 	}
-
-	// ローディング完了
-	isCanvasLoading.value = false;
 
 	// 全画面モード用のイベントリスナー
 	window.document.addEventListener('fullscreenchange', handleFullscreenChange);
@@ -2180,10 +2176,13 @@ function updateDisplaySize() {
 	const container = canvasContainerEl.value;
 	const containerRect = container.getBoundingClientRect();
 
-	// パディングを考慮（CSS: padding: 16px）
-	const padding = 32; // 16px × 2
+	// パディングを考慮（CSS: padding: 8px）
+	const padding = 16; // 8px × 2
 	const containerWidth = containerRect.width - padding;
 	const containerHeight = containerRect.height - padding;
+
+	// コンテナサイズが0の場合はスキップ（DOMレンダリング前）
+	if (containerWidth <= 0 || containerHeight <= 0) return;
 
 	// キャンバスのアスペクト比
 	const canvasAspect = canvasWidth.value / canvasHeight.value;
