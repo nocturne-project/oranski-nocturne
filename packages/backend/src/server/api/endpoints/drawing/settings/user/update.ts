@@ -29,7 +29,7 @@ export const paramDef = {
 	type: 'object',
 	properties: {
 		canvasId: { type: 'string' },
-		currentTool: { type: 'string', enum: ['pen', 'eraser', 'eyedropper'], nullable: true },
+		currentTool: { type: 'string', enum: ['pen', 'eraser', 'eyedropper', 'move'], nullable: true },
 		currentColor: { type: 'string', pattern: '^#[0-9a-fA-F]{6}$', nullable: true },
 		currentOpacity: { type: 'number', minimum: 0.1, maximum: 1.0, nullable: true },
 		strokeWidth: { type: 'number', minimum: 1, maximum: 200, nullable: true },

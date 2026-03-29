@@ -571,7 +571,7 @@ const MAX_COMM_LOG_ENTRIES = 100;
 
 // 描画状態
 const isDrawing = ref(false);
-const currentTool = ref<'pen' | 'eraser' | 'eyedropper'>('pen');
+const currentTool = ref<'pen' | 'eraser' | 'eyedropper' | 'move'>('pen');
 const currentColor = ref('#000000');
 const currentColorIndex = ref(0); // 現在選択中のカラーパレットのインデックス
 const currentOpacity = ref(1);
@@ -607,10 +607,13 @@ const isMoveMode = ref(false);
 function toggleMoveMode() {
 	isMoveMode.value = !isMoveMode.value;
 	if (isMoveMode.value) {
+		currentTool.value = 'move' as any;
 		if (engineCanvasEl.value) engineCanvasEl.value.style.cursor = 'grab';
 	} else {
+		currentTool.value = 'pen';
 		if (engineCanvasEl.value) engineCanvasEl.value.style.cursor = 'crosshair';
 	}
+	saveUserSettings();
 }
 
 // 筆圧ON/OFF
@@ -928,7 +931,15 @@ async function loadUserSettings() {
 		});
 
 		if (settings) {
-			currentTool.value = settings.currentTool;
+			// 移動ツールの復元
+			const tool = settings.currentTool as string;
+			if (tool === 'move') {
+				isMoveMode.value = true;
+				currentTool.value = 'move';
+			} else {
+				currentTool.value = tool as any;
+				isMoveMode.value = false;
+			}
 			currentColor.value = settings.currentColor;
 			currentOpacity.value = settings.currentOpacity;
 			strokeWidth.value = settings.strokeWidth;
@@ -1135,6 +1146,11 @@ onMounted(async () => {
 			currentOpacity: currentOpacity.value,
 		});
 		canvasEngine.value.setCurrentLayer(currentLayer.value);
+
+		// 移動モード時のカーソル設定
+		if (isMoveMode.value && engineCanvasEl.value) {
+			engineCanvasEl.value.style.cursor = 'grab';
+		}
 		canvasEngine.value.setPressureEnabled(pressureEnabled.value);
 		for (let i = 0; i < layerOpacity.value.length; i++) {
 			canvasEngine.value.setLayerOpacity(i, layerOpacity.value[i]);
@@ -1520,10 +1536,14 @@ function onContextMenu(e: Event) {
 function startDrawing(event: MouseEvent | TouchEvent) {
 	if (!canvasEngine.value) return;
 
-	// 移動モード中はパンとして処理
-	if (isMoveMode.value && event instanceof MouseEvent) {
+	// 移動モード中はパンとして処理（マウス・タッチ両対応）
+	if (isMoveMode.value) {
 		isPanningWithSpace.value = true;
-		panStart.value = { x: event.clientX, y: event.clientY };
+		if (event instanceof MouseEvent) {
+			panStart.value = { x: event.clientX, y: event.clientY };
+		} else if (event.touches.length > 0) {
+			panStart.value = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+		}
 		if (engineCanvasEl.value) engineCanvasEl.value.style.cursor = 'grabbing';
 		return;
 	}

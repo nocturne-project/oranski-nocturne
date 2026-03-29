@@ -15,7 +15,7 @@ export interface RoomSettings {
 }
 
 export interface UserSettings {
-	currentTool: 'pen' | 'eraser' | 'eyedropper';
+	currentTool: 'pen' | 'eraser' | 'eyedropper' | 'move';
 	currentColor: string;
 	currentOpacity: number;
 	strokeWidth: number;

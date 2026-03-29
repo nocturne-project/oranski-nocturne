@@ -19,7 +19,7 @@ export const meta = {
 	res: {
 		type: 'object',
 		properties: {
-			currentTool: { type: 'string', enum: ['pen', 'eraser', 'eyedropper'] },
+			currentTool: { type: 'string', enum: ['pen', 'eraser', 'eyedropper', 'move'] },
 			currentColor: { type: 'string' },
 			currentOpacity: { type: 'number' },
 			strokeWidth: { type: 'number' },
