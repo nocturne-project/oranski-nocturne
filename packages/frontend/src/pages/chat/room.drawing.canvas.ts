@@ -620,6 +620,13 @@ export function createCanvasEngine(myUserId: string): CanvasEngine {
 			}
 		},
 
+		// 描画中のストロークを確定せずにキャンセル（ズーム切替時のドット防止）
+		cancelStroke() {
+			state.isDrawing = false;
+			state.currentPoints = [];
+			redrawAll();
+		},
+
 		clear() {
 			strokes.length = 0;
 			for (let i = 0; i < MAX_LAYERS; i++) mergedImagePerLayer[i] = null;

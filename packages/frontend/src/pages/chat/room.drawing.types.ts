@@ -120,6 +120,8 @@ export interface CanvasEngine {
 	// アンドゥ・リドゥ
 	undo(): StrokeData | null;
 	applyRemoteUndo(strokeId: string): void;
+	// ストロークキャンセル（確定せずに破棄）
+	cancelStroke(): void;
 	// キャンバス操作
 	clear(): void;
 	redraw(): void;

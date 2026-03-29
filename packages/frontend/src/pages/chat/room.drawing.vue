@@ -2760,8 +2760,8 @@ function handleTouchStart(e: TouchEvent) {
 	} else if (e.touches.length === 2) {
 		// 2本指の場合: パン/ズーム開始（描画中のストロークをキャンセル）
 		if (strokeStarted && canvasEngine.value) {
-			// endStroke()で正式終了するがストロークは送信しない（ズーム時のゴミ防止）
-			canvasEngine.value.endStroke();
+			// cancelStroke()で確定せずに破棄（ドット防止）
+			canvasEngine.value.cancelStroke();
 		}
 		strokeStarted = false;
 		isDrawing.value = false;
