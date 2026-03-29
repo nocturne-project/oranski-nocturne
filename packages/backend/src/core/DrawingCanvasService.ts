@@ -392,8 +392,13 @@ export class DrawingCanvasService {
 					.filter((stroke): stroke is DrawingStroke => stroke !== null)
 					.reverse(); // 最新が最後になるように逆順
 
-				console.log(`[Drawing] Retrieved ${strokes.length} strokes from Redis for canvas ${roomId}`);
-				return strokes;
+				// メモリ節約: 最大500ストロークに制限
+				const MAX_RETURN_STROKES = 500;
+				const limited = strokes.length > MAX_RETURN_STROKES
+					? strokes.slice(strokes.length - MAX_RETURN_STROKES)
+					: strokes;
+				console.log(`[Drawing] Retrieved ${limited.length}/${strokes.length} strokes from Redis for canvas ${roomId}`);
+				return limited;
 			}
 
 			// Redisにデータがない場合、まずDBから復元を試みる

@@ -3211,15 +3211,23 @@ async function loadCanvasData() {
 		});
 
 		if (response.ok) {
-			const strokes = await response.json();
+			const allStrokes = await response.json();
 
 			strokeHistory.value = [];
 			undoStack.value = [];
 			redoStack.value = [];
 
+			// メモリ節約: 最新100ストロークのみ復元（古いストロークはサーバーでマージ済み）
+			const MAX_RESTORE_STROKES = 100;
+			const strokes = allStrokes.length > MAX_RESTORE_STROKES
+				? allStrokes.slice(allStrokes.length - MAX_RESTORE_STROKES)
+				: allStrokes;
+
 			// CanvasEngineでストローク復元
 			if (canvasEngine.value && strokes.length > 0) {
 				await canvasEngine.value.restoreStrokes(strokes);
+				// 復元後に古いストロークをマージ（メモリ節約）
+				canvasEngine.value.mergeOldStrokes();
 			}
 		}
 	} catch (error) {
