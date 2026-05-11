@@ -15,7 +15,7 @@ export interface RoomSettings {
 }
 
 export interface UserSettings {
-	currentTool: 'pen' | 'eraser' | 'eyedropper';
+	currentTool: 'pen' | 'eraser' | 'eyedropper' | 'move';
 	currentColor: string;
 	currentOpacity: number;
 	strokeWidth: number;
@@ -25,7 +25,12 @@ export interface UserSettings {
 	zoomLevel: number;
 	panOffsetX: number;
 	panOffsetY: number;
-	colors?: string[];
+	// colors は DB に存在しないため除外
+	// グループチャット描画アップグレードで追加されたフィールド
+	colorHistory: string[]; // ユーザーが使用した色の履歴
+	pressureEnabled: boolean; // 筆圧感知の有効/無効
+	penStrokeWidth: number; // ペンツールのストローク幅
+	eraserStrokeWidth: number; // 消しゴムツールのストローク幅
 }
 
 @Injectable()
@@ -51,10 +56,10 @@ export class DrawingSettingsService {
 			};
 		}
 
-		// デフォルト値を返す
+		// デフォルトキャンバスサイズ: 1600x1200（グループチャット描画アップグレード対応）
 		return {
-			canvasWidth: 800,
-			canvasHeight: 600,
+			canvasWidth: 1600,
+			canvasHeight: 1200,
 		};
 	}
 
@@ -77,8 +82,8 @@ export class DrawingSettingsService {
 			// 新規作成
 			const newSettings = this.drawingRoomSettingsRepository.create({
 				id: canvasId,
-				canvasWidth: settings.canvasWidth ?? 800,
-				canvasHeight: settings.canvasHeight ?? 600,
+				canvasWidth: settings.canvasWidth ?? 1600,
+				canvasHeight: settings.canvasHeight ?? 1200,
 				createdAt: new Date(),
 				updatedAt: new Date(),
 			});
@@ -106,7 +111,11 @@ export class DrawingSettingsService {
 				zoomLevel: settings.zoomLevel,
 				panOffsetX: settings.panOffsetX,
 				panOffsetY: settings.panOffsetY,
-				colors: settings.colors ?? undefined,
+				// 新規フィールド（後方互換: DBに値がない場合はデフォルト値を使用）
+				colorHistory: (settings as any).colorHistory ?? [],
+				pressureEnabled: (settings as any).pressureEnabled ?? true,
+				penStrokeWidth: (settings as any).penStrokeWidth ?? 5,
+				eraserStrokeWidth: (settings as any).eraserStrokeWidth ?? 20,
 			};
 		}
 
@@ -122,6 +131,11 @@ export class DrawingSettingsService {
 			zoomLevel: 1.0,
 			panOffsetX: 0,
 			panOffsetY: 0,
+			// グループチャット描画アップグレードで追加されたデフォルト値
+			colorHistory: [],
+			pressureEnabled: true,
+			penStrokeWidth: 5,
+			eraserStrokeWidth: 20,
 		};
 	}
 
@@ -164,8 +178,22 @@ export class DrawingSettingsService {
 			if (settings.panOffsetY !== undefined) {
 				existing.panOffsetY = settings.panOffsetY;
 			}
-			if (settings.colors !== undefined) {
-				existing.colors = settings.colors;
+			// colors カラムはDBに存在しないためスキップ（エンティティ定義のみ）
+			// if (settings.colors !== undefined) {
+			// 	existing.colors = settings.colors;
+			// }
+			// グループチャット描画アップグレードで追加されたフィールドの保存
+			if (settings.colorHistory !== undefined) {
+				(existing as any).colorHistory = settings.colorHistory;
+			}
+			if (settings.pressureEnabled !== undefined) {
+				(existing as any).pressureEnabled = settings.pressureEnabled;
+			}
+			if (settings.penStrokeWidth !== undefined) {
+				(existing as any).penStrokeWidth = settings.penStrokeWidth;
+			}
+			if (settings.eraserStrokeWidth !== undefined) {
+				(existing as any).eraserStrokeWidth = settings.eraserStrokeWidth;
 			}
 			existing.updatedAt = new Date();
 
@@ -186,12 +214,18 @@ export class DrawingSettingsService {
 				zoomLevel: settings.zoomLevel ?? 1.0,
 				panOffsetX: settings.panOffsetX ?? 0,
 				panOffsetY: settings.panOffsetY ?? 0,
-				colors: settings.colors ?? undefined,
+				// colors カラムはDBに存在しないためスキップ
+				// グループチャット描画アップグレードで追加されたフィールド
+				colorHistory: settings.colorHistory ?? [],
+				pressureEnabled: settings.pressureEnabled ?? true,
+				penStrokeWidth: settings.penStrokeWidth ?? 5,
+				eraserStrokeWidth: settings.eraserStrokeWidth ?? 20,
 				createdAt: new Date(),
 				updatedAt: new Date(),
-			});
+			} as any);
 
-			return await this.drawingUserSettingsRepository.insert(newSettings).then(() => newSettings);
+			await this.drawingUserSettingsRepository.insert(newSettings);
+			return newSettings as unknown as MiDrawingUserSettings;
 		}
 	}
 }

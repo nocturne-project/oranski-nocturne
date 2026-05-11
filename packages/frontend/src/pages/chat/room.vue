@@ -161,6 +161,8 @@ export type NormalizedChatMessage = Omit<Misskey.entities.ChatMessageLite, 'from
 
 const initializing = ref(false);
 const initialized = ref(false);
+// お絵描きタブ表示中のメッセージ未読フラグ
+const hasUnreadWhileDrawing = ref(false);
 const initializeId = ref(0); // 初期化IDで重複防止
 const moreFetching = ref(false);
 const messages = ref<NormalizedChatMessage[]>([]);
@@ -606,6 +608,12 @@ function onMessage(message: Misskey.entities.ChatMessageLite) {
 	}
 
 	sound.playMisskeySfx('chatMessage');
+
+	// お絵描きタブ内チャットオーバーレイでメッセージが連動するため、タブハイライトは無効化
+	// highlight機能自体はMkTabsに残っており、必要時に再有効化可能
+	// if (tab.value !== 'chat' && message.fromUserId !== $i.id) {
+	// 	hasUnreadWhileDrawing.value = true;
+	// }
 
 	console.debug('New message:', message);
 
@@ -1067,12 +1075,13 @@ function getInitialTab(): string {
 
 const tab = ref(getInitialTab());
 
-// タブが変更されたらURLハッシュを更新
+// タブが変更されたらURLハッシュを更新 + 未読フラグクリア
 watch(tab, (newTab) => {
 	if (newTab !== 'chat') {
 		window.location.hash = newTab;
 	} else {
-		// chatタブの場合はハッシュをクリア
+		// chatタブに戻ったら未読フラグをクリア
+		hasUnreadWhileDrawing.value = false;
 		window.history.pushState('', window.document.title, window.location.pathname + window.location.search);
 	}
 });
@@ -1096,10 +1105,12 @@ onMounted(() => {
 	});
 });
 
+// Messagesタブの未読表示（お絵描き中にメッセージが来たら点滅マーク付加）
 const headerTabs = computed(() => room.value ? [{
 	key: 'chat',
 	title: i18n.ts._chat.messages,
 	icon: 'ti ti-messages',
+	highlight: hasUnreadWhileDrawing.value,
 }, {
 	key: 'drawing',
 	title: 'お絵かき',
@@ -1120,6 +1131,7 @@ const headerTabs = computed(() => room.value ? [{
 	key: 'chat',
 	title: i18n.ts._chat.messages,
 	icon: 'ti ti-messages',
+	highlight: hasUnreadWhileDrawing.value,
 }, {
 	key: 'drawing',
 	title: 'お絵かき',
@@ -1152,26 +1164,33 @@ const headerActions = computed<PageHeaderItem[]>(() => {
 });
 
 definePage(computed(() => {
+	// お絵描きタブの場合はウィジェットペインを非表示にしてキャンバス領域を最大化
+	const isDrawingTab = tab.value === 'drawing';
+
 	if (initialized.value) {
 		if (user.value) {
 			return {
 				userName: user.value,
 				title: user.value.name ?? user.value.username,
 				avatar: user.value,
+				needWideArea: isDrawingTab,
 			};
 		} else if (room.value) {
 			return {
 				title: room.value.name,
 				icon: 'ti ti-users',
+				needWideArea: isDrawingTab,
 			};
 		} else {
 			return {
 				title: i18n.ts.directMessage,
+				needWideArea: isDrawingTab,
 			};
 		}
 	} else {
 		return {
 			title: i18n.ts.directMessage,
+			needWideArea: isDrawingTab,
 		};
 	}
 }));

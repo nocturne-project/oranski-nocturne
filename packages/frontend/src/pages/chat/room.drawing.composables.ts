@@ -155,8 +155,9 @@ export function useZoomPan() {
 	const isZooming = ref(false);
 	const zoomCenter = ref<Point>({ x: 0, y: 0 });
 
-	const minZoom = 0.5;
-	const maxZoom = 3.0;
+	// ズーム範囲: paintchat互換（0.25x〜12x）
+	const minZoom = 0.25;
+	const maxZoom = 12;
 
 	function resetZoom() {
 		zoomLevel.value = 1;
@@ -340,6 +341,62 @@ export function useDrawingUtils() {
 		formatLogData,
 		simplifyPath,
 		smoothPoints,
+	};
+}
+
+/**
+ * カラー履歴管理のComposable
+ * localStorageにカラー履歴を保存し、最大10色まで管理する
+ */
+export function useColorHistory() {
+	const STORAGE_KEY = 'drawing-color-history';
+	const MAX_COLORS = 10;
+
+	// localStorageから初期値を読み込む
+	const loadColors = (): string[] => {
+		try {
+			const stored = localStorage.getItem(STORAGE_KEY);
+			if (stored) {
+				const parsed = JSON.parse(stored);
+				if (Array.isArray(parsed)) {
+					return parsed.filter((c): c is string => typeof c === 'string').slice(0, MAX_COLORS);
+				}
+			}
+		} catch {
+			// パース失敗時は空配列で初期化
+		}
+		return [];
+	};
+
+	const colorHistory = ref<string[]>(loadColors());
+
+	// localStorageに保存する
+	const saveColors = () => {
+		try {
+			localStorage.setItem(STORAGE_KEY, JSON.stringify(colorHistory.value));
+		} catch {
+			// ストレージ容量超過時は無視
+		}
+	};
+
+	// カラーを履歴の先頭に追加する（重複除去、最大10色）
+	function addColor(color: string) {
+		const normalized = color.toLowerCase();
+		const filtered = colorHistory.value.filter(c => c.toLowerCase() !== normalized);
+		filtered.unshift(normalized);
+		colorHistory.value = filtered.slice(0, MAX_COLORS);
+		saveColors();
+	}
+
+	// 現在のカラー履歴を返す
+	function getColors(): string[] {
+		return colorHistory.value;
+	}
+
+	return {
+		colorHistory,
+		addColor,
+		getColors,
 	};
 }
 

@@ -5,8 +5,7 @@
 
 import type { Ref } from 'vue';
 import * as os from '@/os.js';
-
-const MAX_LAYERS = 3;
+import { MAX_LAYERS } from './room.drawing.types.js';
 
 // レイヤー操作用のComposable
 export function useDrawingLayers(deps: {

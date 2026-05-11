@@ -14,6 +14,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			:class="[$style.tab, {
 				[$style.active]: t.key != null && t.key === tab,
 				[$style.animate]: prefer.s.animation,
+				[$style.highlight]: t.highlight,
 			}]"
 			:style="getTabStyle(t)"
 			@mousedown="(ev) => onTabMousedown(t, ev)"
@@ -54,6 +55,7 @@ export type Tab<K = string> = {
 	iconOnly?: boolean;
 	title: string;
 	icon?: string;
+	highlight?: boolean; // タブを点滅表示（未読通知等）
 };
 </script>
 
@@ -230,6 +232,16 @@ onUnmounted(() => {
 	&.animate {
 		transition: opacity 0.2s ease;
 	}
+
+	&.highlight {
+		animation: tabHighlightPulse 1.5s ease-in-out infinite;
+		color: var(--MI_THEME-accent);
+	}
+}
+
+@keyframes tabHighlightPulse {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.4; }
 }
 
 .tabInner {

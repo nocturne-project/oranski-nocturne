@@ -44,6 +44,22 @@ export class MiChatRoom {
 	})
 	public isSecretMessageMode: boolean;
 
+	// Redis→DB退避用のキャンバスデータ（アイドル1時間超で退避）
+	@Column('jsonb', {
+		nullable: true,
+		default: null,
+		comment: 'Canvas strokes data archived from Redis',
+	})
+	public canvasStrokes: object[] | null;
+
+	// Redis→DB退避用のマージ済み画像（レイヤーごとのbase64）
+	@Column('jsonb', {
+		nullable: true,
+		default: null,
+		comment: 'Merged canvas images archived from Redis (per layer base64)',
+	})
+	public canvasMergedImages: object | null;
+
 	@Column('timestamp with time zone', {
 		default: () => 'CURRENT_TIMESTAMP',
 	})

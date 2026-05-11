@@ -95,11 +95,33 @@ export class MiDrawingUserSettings {
 	})
 	public panOffsetY: number;
 
+	// colors カラムはDBテーブルに存在しない（マイグレーション未実施）ため、エンティティ定義から除外
+	// カラーパレットはフロントエンドのローカル状態で管理
+
+	// paintchat式の追加設定
 	@Column('jsonb', {
-		nullable: true,
-		comment: 'Custom color palette (array of 16 hex colors)',
+		default: [],
+		comment: 'Color history (max 10 hex colors)',
 	})
-	public colors: string[] | null;
+	public colorHistory: string[];
+
+	@Column('boolean', {
+		default: true,
+		comment: 'Pressure sensitivity enabled',
+	})
+	public pressureEnabled: boolean;
+
+	@Column('smallint', {
+		default: 5,
+		comment: 'Pen mode stroke width',
+	})
+	public penStrokeWidth: number;
+
+	@Column('smallint', {
+		default: 20,
+		comment: 'Eraser mode stroke width',
+	})
+	public eraserStrokeWidth: number;
 
 	@Column('timestamp with time zone', {
 		default: () => 'CURRENT_TIMESTAMP',

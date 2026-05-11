@@ -1328,6 +1328,13 @@ export class ChatService {
 		});
 	}
 
+	/**
+	 * 描画ストローク配信
+	 *
+	 * 【仕様】
+	 * - strokeDataにはlayer（レイヤーインデックス0-2）とpressure（筆圧、points内）を含む
+	 * - normalizeStrokeDataで検証済みのデータをそのまま配信する
+	 */
 	@bindThis
 	public async broadcastDrawingStroke(roomId: MiChatRoom['id'], fromUserId: MiUser['id'], strokeData: any): Promise<void> {
 		const room = await this.chatRoomsRepository.findOneBy({ id: roomId });
@@ -1341,9 +1348,17 @@ export class ChatService {
 			return;
 		}
 
+		// strokeDataにはlayer, points[].pressureが含まれる（DrawingCanvasService.normalizeStrokeDataで設定済み）
 		this.globalEventService.publishChatRoomStream(roomId, 'drawingStroke', strokeData);
 	}
 
+	/**
+	 * 描画進行状況配信
+	 *
+	 * 【仕様】
+	 * - progressDataにはlayer（レイヤーインデックス0-2）を含む
+	 * - 高頻度イベントのためログ出力は抑制
+	 */
 	@bindThis
 	public async broadcastDrawingProgress(roomId: MiChatRoom['id'], fromUserId: MiUser['id'], progressData: any): Promise<void> {
 		const room = await this.chatRoomsRepository.findOneBy({ id: roomId });
@@ -1351,6 +1366,7 @@ export class ChatService {
 
 		if (!await this.isRoomMember(room, fromUserId)) return; // 無言で制限
 
+		// progressDataにはlayerが含まれる（chat-room.tsで設定済み）
 		this.globalEventService.publishChatRoomStream(roomId, 'drawingProgress', progressData);
 	}
 
