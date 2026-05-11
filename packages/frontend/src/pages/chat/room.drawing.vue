@@ -509,7 +509,6 @@ const canvasHeight = ref(1200);
 const displayWidth = ref(1600); // 表示サイズ
 const displayHeight = ref(1200);
 
-
 // キャンバスサイズプリセット
 const canvasSizePresets = [
 	{ name: '標準 (800×600)', width: 800, height: 600 },
@@ -595,6 +594,7 @@ function toggleDrawingChat() {
 
 // 移動（パン）ツール
 const isMoveMode = ref(false);
+
 function toggleMoveMode() {
 	isMoveMode.value = !isMoveMode.value;
 	if (isMoveMode.value) {
@@ -609,6 +609,7 @@ function toggleMoveMode() {
 
 // 筆圧ON/OFF
 const pressureEnabled = ref(true);
+
 function togglePressure() {
 	pressureEnabled.value = !pressureEnabled.value;
 	if (canvasEngine.value) {
@@ -820,7 +821,6 @@ function clampLayerIndex(layer: unknown): number {
 	return Math.min(Math.max(numeric, 0), MAX_LAYERS - 1);
 }
 
-
 function normalizeStrokeForHistory(stroke: any) {
 	const layer = clampLayerIndex(stroke?.layer);
 	const rawPoints = Array.isArray(stroke?.points) ? stroke.points : [];
@@ -881,7 +881,6 @@ const otherCursors = ref<Array<{
 	y: number;
 	color: string;
 }>>([]);
-
 
 // チャットオーバーレイ
 const chatOverlay = ref<{
@@ -2010,15 +2009,9 @@ function recordTraceLog(
 	});
 }
 
-
-
-
-
-
-
-
 // カーソル位置送信
 let lastCursorSentTime = 0;
+
 function sendCursorPosition(point: { x: number; y: number }) {
 	if (!connection.value) return;
 
@@ -2429,7 +2422,6 @@ async function changeCanvasSize(newWidth: number, newHeight: number, isRemote = 
 	}
 }
 
-
 // Undo（元に戻す）
 /**
  * Undo（元に戻す）
@@ -2510,7 +2502,6 @@ function redo() {
 		}
 	}
 }
-
 
 /**
  * リモートユーザーのキャンバスサイズ変更イベントを処理
@@ -3266,7 +3257,6 @@ function performAdvancedUndo() {
 	// CanvasEngine経由のアンドゥ（2本指ダブルタップ用）
 	undo();
 }
-
 
 // チャットオーバーレイ表示
 function showChatOverlay(message: any) {
