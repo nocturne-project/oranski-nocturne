@@ -22374,7 +22374,7 @@ export interface operations {
                 content: {
                     'application/json': {
                         /** @enum {string} */
-                        currentTool: 'pen' | 'eraser' | 'eyedropper';
+                        currentTool: 'pen' | 'eraser' | 'eyedropper' | 'move';
                         currentColor: string;
                         currentOpacity: number;
                         strokeWidth: number;
@@ -22385,6 +22385,10 @@ export interface operations {
                         panOffsetX: number;
                         panOffsetY: number;
                         colors: string[] | null;
+                        penStrokeWidth: number;
+                        eraserStrokeWidth: number;
+                        pressureEnabled: boolean;
+                        colorHistory: string[];
                     };
                 };
             };
@@ -22441,7 +22445,7 @@ export interface operations {
                 'application/json': {
                     canvasId: string;
                     /** @enum {string|null} */
-                    currentTool?: 'pen' | 'eraser' | 'eyedropper' | null;
+                    currentTool?: 'pen' | 'eraser' | 'eyedropper' | 'move' | null;
                     currentColor?: string | null;
                     currentOpacity?: number | null;
                     strokeWidth?: number | null;
@@ -22451,7 +22455,10 @@ export interface operations {
                     zoomLevel?: number | null;
                     panOffsetX?: number | null;
                     panOffsetY?: number | null;
-                    colors?: string[] | null;
+                    penStrokeWidth?: number | null;
+                    eraserStrokeWidth?: number | null;
+                    pressureEnabled?: boolean | null;
+                    colorHistory?: string[] | null;
                 };
             };
         };
