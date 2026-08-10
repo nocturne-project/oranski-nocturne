@@ -4,7 +4,7 @@
  *
  * イラストランキングAPI仕様:
  * - リアクション数が大きい順にイラストを取得
- * - 直近3ヶ月以内に投稿されたイラストのみ対象
+ * - 直近1ヶ月以内に投稿されたイラストのみ対象
  * - 画像ファイルが添付されている公開投稿のみ（タグは不問）
  * - チャンネル投稿は除外
  * - offset/limit形式のページネーション対応
@@ -67,21 +67,21 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			/**
 			 * イラストランキング仕様:
 			 * - リアクション数が大きい順にソート
-			 * - 直近3ヶ月以内に投稿されたイラストのみ
+			 * - 直近1ヶ月以内に投稿されたイラストのみ
 			 * - 画像ファイルが添付されている投稿のみ（タグは不問）
 			 */
 
-			// 3ヶ月前のIDを計算（MisskeyのIDは時系列順）
-			const threeMonthsAgo = new Date();
-			threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-			const threeMonthsAgoId = genAid(threeMonthsAgo.getTime());
+			// 1ヶ月前のIDを計算（MisskeyのIDは時系列順）
+			const oneMonthAgo = new Date();
+			oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+			const oneMonthAgoId = genAid(oneMonthAgo.getTime());
 
 			// クエリ構築
 			const query = this.notesRepository.createQueryBuilder('note')
 				.where('note.fileIds != \'{}\'') // 画像ありのみ
 				.andWhere('note.channelId IS NULL') // チャンネル投稿ではない
 				.andWhere('note.visibility = \'public\'') // Public投稿のみ
-				.andWhere('note.id > :threeMonthsAgoId', { threeMonthsAgoId }) // 3ヶ月以内
+				.andWhere('note.id > :oneMonthAgoId', { oneMonthAgoId }) // 1ヶ月以内
 				.andWhere('note.userHost IS NULL'); // ローカルユーザーのみ
 
 			query.innerJoinAndSelect('note.user', 'user')
