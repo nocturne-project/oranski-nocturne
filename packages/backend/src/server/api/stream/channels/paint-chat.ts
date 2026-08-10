@@ -4,6 +4,7 @@
  */
 
 import { Inject, Injectable, Scope } from '@nestjs/common';
+import Redis from 'ioredis';
 import { bindThis } from '@/decorators.js';
 import { DI } from '@/di-symbols.js';
 import type { PaintChatMessagesRepository } from '@/models/_.js';
@@ -27,6 +28,7 @@ export class PaintChatChannel extends Channel {
 	private roomId: string | null = null;
 	private participantId: string | null = null;
 	private lastPresenceStatus: 'online' | 'offline' | null = null;
+	private lastConsentNotified: boolean | null = null;
 
 	// レート制限用
 	private lastCursorMove: number = 0;
@@ -35,6 +37,9 @@ export class PaintChatChannel extends Channel {
 	constructor(
 		@Inject(REQUEST)
 		request: ChannelRequest,
+
+		@Inject(DI.redis)
+		private redisClient: Redis.Redis,
 
 		@Inject(DI.paintChatMessagesRepository)
 		private paintChatMessagesRepository: PaintChatMessagesRepository,
@@ -68,6 +73,19 @@ export class PaintChatChannel extends Channel {
 
 		// paintChatストリームを購読
 		(this.subscriber as any).on(`paintChatStream:${this.roomId}`, this.onEvent);
+
+		// 保存済みの投稿許可状態をこの接続に再送する。
+		// 同意状態はWebSocketイベントでしか伝わらないため、入室・リロード・再接続の
+		// タイミング次第で相手の許可を取りこぼすと合作投稿ボタンが永久に有効化されない
+		// （実際に稼働開始から合作投稿が一度も成立していなかった原因の一つ）。
+		try {
+			const consents = await this.redisClient.hgetall(`paintChat:publishConsent:${this.roomId}`);
+			for (const [pid, v] of Object.entries(consents)) {
+				if (v === '1') {
+					this.send('publishConsentUpdate', { participantId: pid, consent: true });
+				}
+			}
+		} catch { /* ignore */ }
 
 		// 接続時にプレゼンスonlineを自動通知（再接続時も含む）+ DB保存
 		this.broadcastToRoom('presenceUpdate', {
@@ -104,7 +122,7 @@ export class PaintChatChannel extends Channel {
 				this.onPresence(body);
 				break;
 			case 'publishConsent':
-				this.onPublishConsent(body);
+				await this.onPublishConsent(body);
 				break;
 		}
 	}
@@ -193,13 +211,62 @@ export class PaintChatChannel extends Channel {
 		}
 	}
 
-	// 投稿同意通知（WebSocket経由で相手に通知するだけ。DB操作なし。）
-	private onPublishConsent(body: JsonObject): void {
+	// 投稿同意通知。相手へのブロードキャストに加えて:
+	// - Redisに状態を保存する（init時の再送用。取りこぼし対策）
+	// - システムメッセージをチャットに流す（相手が気付ける導線。これが無いと
+	//   相手は投稿パネルを自発的に開かない限り許可に気付けず、合作投稿が成立しない）
+	private async onPublishConsent(body: JsonObject): Promise<void> {
 		if (typeof body.consent !== 'boolean') return;
+		if (this.roomId == null || this.participantId == null) return;
+		const consent = body.consent;
+
+		// キャンバスデータと同じ7日TTLで保持
+		try {
+			const key = `paintChat:publishConsent:${this.roomId}`;
+			await this.redisClient.hset(key, this.participantId, consent ? '1' : '0');
+			await this.redisClient.expire(key, 604800);
+		} catch { /* ignore */ }
+
 		this.broadcastToRoom('publishConsentUpdate', {
 			participantId: this.participantId,
-			consent: body.consent,
+			consent,
 		});
+
+		// 同じ状態の連続通知はシステムメッセージを出さない（連打スパム防止）
+		if (this.lastConsentNotified !== consent) {
+			this.lastConsentNotified = consent;
+			await this.saveConsentMessage(consent);
+		}
+	}
+
+	// 投稿許可の変更をシステムメッセージとしてDB保存+配信する（入退室メッセージと同じ流儀）
+	private async saveConsentMessage(consent: boolean): Promise<void> {
+		if (this.roomId == null || this.participantId == null) return;
+		let name = '???';
+		try {
+			const participant = await this.paintChatService.getParticipantById(this.participantId);
+			if (participant) name = participant.anonymousName;
+		} catch { /* ignore */ }
+		const content = consent
+			? `${name} が合作の投稿を許可しました（お互いが許可すると「合作を投稿」できます）`
+			: `${name} が合作の投稿許可を取り消しました`;
+		const msgId = this.idService.gen();
+		try {
+			await this.paintChatMessagesRepository.insert({
+				id: msgId,
+				roomId: this.roomId,
+				participantId: this.participantId,
+				type: 'system',
+				content,
+			});
+			this.broadcastToRoom('message', {
+				id: msgId,
+				participantId: this.participantId,
+				type: 'system',
+				content,
+				createdAt: new Date().toISOString(),
+			});
+		} catch { /* ignore */ }
 	}
 
 	// プレゼンスイベント処理（statusはonline/offlineのみ許可）+ DB保存
