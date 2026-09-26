@@ -10,12 +10,22 @@ import { IdService } from '@/core/IdService.js';
 import { unique } from '@/misc/prelude/array.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
 import { AppEntityService } from '@/core/entities/AppEntityService.js';
+import { findBlockedAuthApp } from '@/misc/blocked-auth-apps.js';
+import { ApiError } from '@/server/api/error.js';
 import { DI } from '@/di-symbols.js';
 
 export const meta = {
 	tags: ['app'],
 
 	requireCredential: false,
+
+	errors: {
+		blockedApp: {
+			message: 'This application is blocked by the administrator.',
+			code: 'BLOCKED_APP',
+			id: 'd1a0c1cf-8f35-4d4a-bc35-6b1a0e3b4c8d',
+		},
+	},
 
 	res: {
 		type: 'object',
@@ -47,6 +57,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
+			if (findBlockedAuthApp({ name: ps.name, urls: [ps.callbackUrl] }) != null) {
+				throw new ApiError(meta.errors.blockedApp);
+			}
+
 			// Generate secret
 			const secret = secureRndstr(32);
 

@@ -54,6 +54,7 @@ async function onAccept(token: string) {
 		session: props.session,
 		name: props.name,
 		iconUrl: props.icon,
+		callback: props.callback,
 		permission: _permissions.value,
 	}, token).then(() => {
 		if (props.callback && props.callback !== '') {

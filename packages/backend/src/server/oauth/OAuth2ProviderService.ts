@@ -29,6 +29,7 @@ import { MemoryKVCache } from '@/misc/cache.js';
 import { LoggerService } from '@/core/LoggerService.js';
 import Logger from '@/logger.js';
 import { StatusError } from '@/misc/status-error.js';
+import { findBlockedAuthApp } from '@/misc/blocked-auth-apps.js';
 import { HtmlTemplateService } from '@/server/web/HtmlTemplateService.js';
 import { OAuthPage } from '@/server/web/views/oauth.js';
 import type { ServerResponse } from 'node:http';
@@ -475,6 +476,10 @@ export class OAuth2ProviderService {
 				this.#logger.info(`Validating authorization parameters, with client_id: ${clientID}, redirect_uri: ${redirectURI}, scope: ${scope}`);
 
 				const clientUrl = validateClientId(clientID);
+
+				if (findBlockedAuthApp({ urls: [clientID, redirectURI] }) != null) {
+					throw new AuthorizationError('This client is blocked by the administrator.', 'invalid_request');
+				}
 
 				// https://indieauth.spec.indieweb.org/#client-information-discovery
 				// "the server may want to resolve the domain name first and avoid fetching the document

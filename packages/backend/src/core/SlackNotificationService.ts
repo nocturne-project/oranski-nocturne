@@ -267,4 +267,52 @@ export class SlackNotificationService {
 			console.error('Failed to send Slack notification:', err);
 		}
 	}
+
+	@bindThis
+	public async sendAuthAppNotification(data: {
+		kind: 'blocked' | 'new';
+		flow: string;
+		appName?: string | null;
+		callback?: string | null;
+		username?: string | null;
+		blockedBy?: string;
+		permission?: string[];
+	}): Promise<void> {
+		if (!this.config.slack?.enableSignupErrorNotification || !this.config.slack?.botToken) {
+			return;
+		}
+
+		const title = data.kind === 'blocked' ? '🚫 ブロック済みアプリの連携を拒否' : '🆕 新しいアプリが連携されました';
+		const summary = `${title}: ${data.appName ?? '(名前なし)'} (${data.flow})`;
+
+		const fields = [
+			{ type: 'mrkdwn', text: `*アプリ名:*\n${data.appName ?? '(名前なし)'}` },
+			{ type: 'mrkdwn', text: `*方式:*\n${data.flow}` },
+			{ type: 'mrkdwn', text: `*コールバック:*\n${data.callback ?? 'なし'}` },
+			{ type: 'mrkdwn', text: `*ユーザー:*\n${data.username ? `@${data.username}` : 'N/A'}` },
+		];
+		if (data.blockedBy) fields.push({ type: 'mrkdwn', text: `*一致した条件:*\n${data.blockedBy}` });
+		if (data.permission?.length) fields.push({ type: 'mrkdwn', text: `*要求権限:*\n${data.permission.length}件` });
+
+		try {
+			await this.httpRequestService.send('https://slack.com/api/chat.postMessage', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Authorization': `Bearer ${this.config.slack.botToken}`,
+				},
+				body: JSON.stringify({
+					channel: this.config.slack.channelId,
+					blocks: [
+						{ type: 'header', text: { type: 'plain_text', text: title } },
+						{ type: 'section', fields },
+						{ type: 'section', text: { type: 'mrkdwn', text: `サーバー: ${this.config.url}` } },
+					],
+					text: summary,
+				}),
+			});
+		} catch (err) {
+			console.error('Failed to send Slack notification:', err);
+		}
+	}
 }
