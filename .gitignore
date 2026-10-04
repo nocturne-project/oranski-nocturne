@@ -84,7 +84,6 @@ vite.config.local-dev.ts.timestamp-*
 
 # VSCode addon
 .favorites.json
-AGENTS.md
 assets/roles/role_ban_icon_credit.png
 assets/roles/role_ban_icon_mudantensai.png
 assets/roles/role_ban_icon_sample_neki.png
@@ -103,22 +102,6 @@ assets/roles/role_shimoneta.png
 assets/roles/role_suisougakubu.png
 assets/roles/role_utamita_haisinsya.png
 assets/roles/role_yakousei.png
-
-# factory
-.factory
-/specs
-
-# openspec
-/openspec
-/.specify
-scripts/deploy.sh
-*.bak
-
-# Claude workspace
-/claude
-CLAUDE.md
-CLAUDE.local.md
-.claude
 
 # Affinity
 *.af~lock~
