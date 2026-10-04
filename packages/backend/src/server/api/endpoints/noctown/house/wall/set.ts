@@ -117,7 +117,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			// Get the player's item
 			const playerItem = await this.noctownPlayerItemsRepository.findOne({
 				where: { id: ps.playerItemId, playerId: player.id },
-				relations: ['item'],
+				relations: { item: true },
 			});
 			if (!playerItem || !playerItem.item) {
 				throw new ApiError(meta.errors.itemNotFound);

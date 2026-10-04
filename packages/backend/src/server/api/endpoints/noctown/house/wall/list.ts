@@ -134,7 +134,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				if (wallItem.attachedPlayerItemId) {
 					const playerItem = await this.noctownPlayerItemsRepository.findOne({
 						where: { id: wallItem.attachedPlayerItemId },
-						relations: ['item'],
+						relations: { item: true },
 					});
 					if (playerItem && playerItem.item) {
 						attachedItem = {

@@ -106,13 +106,13 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			if (ps.distributeToAll) {
 				// Distribute to all players
 				targetPlayers = await this.playersRepository.find({
-					select: ['id'],
+					select: { id: true },
 				});
 			} else if (ps.targetPlayerIds && ps.targetPlayerIds.length > 0) {
 				// Distribute to specific players
 				targetPlayers = await this.playersRepository.find({
 					where: { id: In(ps.targetPlayerIds) },
-					select: ['id'],
+					select: { id: true },
 				});
 
 				if (targetPlayers.length !== ps.targetPlayerIds.length) {

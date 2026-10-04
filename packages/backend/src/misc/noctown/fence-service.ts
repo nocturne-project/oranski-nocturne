@@ -68,7 +68,7 @@ export class FenceService {
 				positionX: Between(x - radius, x + radius),
 				positionZ: Between(z - radius, z + radius),
 			},
-			relations: ['item'],
+			relations: { item: true },
 		});
 
 		// Filter for fence items
@@ -90,7 +90,7 @@ export class FenceService {
 	public async detectEnclosure(startFenceId: string): Promise<FenceEnclosure | null> {
 		const startFence = await this.placedItemsRepository.findOne({
 			where: { id: startFenceId },
-			relations: ['item'],
+			relations: { item: true },
 		});
 
 		if (!startFence) {
@@ -294,7 +294,7 @@ export class FenceService {
 				positionX: Between(enclosure.boundingBox.minX, enclosure.boundingBox.maxX),
 				positionZ: Between(enclosure.boundingBox.minZ, enclosure.boundingBox.maxZ),
 			},
-			relations: ['item'],
+			relations: { item: true },
 		});
 
 		const animals = placedItems
@@ -328,7 +328,7 @@ export class FenceService {
 				positionX: Between(x - tolerance, x + tolerance),
 				positionZ: Between(z - tolerance, z + tolerance),
 			},
-			relations: ['item'],
+			relations: { item: true },
 		});
 
 		if (existingFence && existingFence.item?.name === 'フェンス') {
@@ -361,7 +361,7 @@ export class FenceService {
 		// Get all fences placed by this player
 		const playerFences = await this.placedItemsRepository.find({
 			where: { playerId },
-			relations: ['item'],
+			relations: { item: true },
 		});
 
 		const fencePlacements = playerFences.filter(

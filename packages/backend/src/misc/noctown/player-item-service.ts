@@ -350,7 +350,7 @@ export class PlayerItemService {
 	}>> {
 		const playerItems = await this.playerItemsRepository.find({
 			where: { playerId },
-			relations: ['item'],
+			relations: { item: true },
 		});
 
 		return playerItems.map(pi => ({
@@ -393,7 +393,7 @@ export class PlayerItemService {
 	}>> {
 		const playerItems = await this.playerItemsRepository.find({
 			where: { playerId },
-			relations: ['item'],
+			relations: { item: true },
 		});
 
 		return playerItems

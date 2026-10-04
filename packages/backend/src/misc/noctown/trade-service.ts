@@ -92,7 +92,7 @@ export class TradeService {
 			// Get other player info
 			const otherPlayer = await this.playersRepository.findOne({
 				where: { id: otherPlayerId },
-				relations: ['user'],
+				relations: { user: true },
 			});
 
 			// Count items in trade
@@ -144,7 +144,7 @@ export class TradeService {
 
 			const otherPlayer = await this.playersRepository.findOne({
 				where: { id: otherPlayerId },
-				relations: ['user'],
+				relations: { user: true },
 			});
 
 			const itemCount = await this.tradeItemsRepository.count({
@@ -225,7 +225,7 @@ export class TradeService {
 				{ initiatorId: In(playerIds), status: In(['pending', 'accepted']) },
 				{ targetId: In(playerIds), status: In(['pending', 'accepted']) },
 			],
-			select: ['initiatorId', 'targetId'],
+			select: { initiatorId: true, targetId: true },
 		});
 
 		const tradingPlayerIds = new Set<string>();
@@ -313,8 +313,8 @@ export class TradeService {
 
 			// T016: 送信者と受信者の情報を取得
 			const [initiator, target] = await Promise.all([
-				this.playersRepository.findOne({ where: { id: trade.initiatorId }, relations: ['user'] }),
-				this.playersRepository.findOne({ where: { id: trade.targetId }, relations: ['user'] }),
+				this.playersRepository.findOne({ where: { id: trade.initiatorId }, relations: { user: true } }),
+				this.playersRepository.findOne({ where: { id: trade.targetId }, relations: { user: true } }),
 			]);
 
 			// T016: Notify initiator（送信者に拒否されたことを通知）
@@ -337,8 +337,8 @@ export class TradeService {
 
 		// T016: 送信者と受信者の情報を取得
 		const [initiator, target] = await Promise.all([
-			this.playersRepository.findOne({ where: { id: trade.initiatorId }, relations: ['user'] }),
-			this.playersRepository.findOne({ where: { id: trade.targetId }, relations: ['user'] }),
+			this.playersRepository.findOne({ where: { id: trade.initiatorId }, relations: { user: true } }),
+			this.playersRepository.findOne({ where: { id: trade.targetId }, relations: { user: true } }),
 		]);
 		console.log('[Trade Service] Player info loaded:', {
 			initiator: initiator ? { id: initiator.id, username: initiator.user?.username } : 'null',

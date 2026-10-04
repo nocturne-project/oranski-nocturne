@@ -120,7 +120,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			// 仕様: コンテナアイテムを取得
 			const containerPlayerItem = await this.playerItemsRepository.findOne({
 				where: { id: ps.containerPlayerItemId },
-				relations: ['item'],
+				relations: { item: true },
 			});
 
 			if (!containerPlayerItem) {

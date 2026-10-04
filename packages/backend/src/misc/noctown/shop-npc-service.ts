@@ -74,7 +74,7 @@ export class ShopNpcService {
 		// Get inventory
 		const inventoryItems = await this.noctownShopInventoriesRepository.find({
 			where: { interiorMapId: interior.id },
-			relations: ['item'],
+			relations: { item: true },
 			order: { displayOrder: 'ASC' },
 		});
 
@@ -150,7 +150,7 @@ export class ShopNpcService {
 		// Get shop inventory item
 		const inventoryItem = await this.noctownShopInventoriesRepository.findOne({
 			where: { id: inventoryItemId },
-			relations: ['interiorMap', 'item'],
+			relations: { interiorMap: true, item: true },
 		});
 
 		if (!inventoryItem || !inventoryItem.item) {
@@ -234,7 +234,7 @@ export class ShopNpcService {
 		// Get player item
 		const playerItem = await this.noctownPlayerItemsRepository.findOne({
 			where: { id: playerItemId, playerId },
-			relations: ['item'],
+			relations: { item: true },
 		});
 
 		if (!playerItem || !playerItem.item) {
@@ -381,7 +381,7 @@ export class ShopNpcService {
 	}>> {
 		const playerItems = await this.noctownPlayerItemsRepository.find({
 			where: { playerId },
-			relations: ['item'],
+			relations: { item: true },
 		});
 
 		return playerItems

@@ -101,7 +101,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				// Get source NPC name via player -> user
 				const sourceNpc = await this.noctownNpcsRepository.findOne({
 					where: { id: quest.sourceNpcId },
-					relations: ['player'],
+					relations: { player: true },
 				});
 				if (sourceNpc?.player) {
 					const user = await this.usersRepository.findOneBy({ id: sourceNpc.player.userId });
@@ -112,7 +112,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				if (quest.destinationNpcId) {
 					const destNpc = await this.noctownNpcsRepository.findOne({
 						where: { id: quest.destinationNpcId },
-						relations: ['player'],
+						relations: { player: true },
 					});
 					if (destNpc?.player) {
 						const user = await this.usersRepository.findOneBy({ id: destNpc.player.userId });

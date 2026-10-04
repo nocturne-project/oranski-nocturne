@@ -104,7 +104,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			// Get recipe
 			const recipe = await this.recipesRepository.findOne({
 				where: { id: ps.recipeId },
-				relations: ['resultItem'],
+				relations: { resultItem: true },
 			});
 
 			if (!recipe) {

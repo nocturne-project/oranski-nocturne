@@ -125,7 +125,7 @@ export class ScoreCalculatorService {
 	private async calculateItemScore(playerId: string): Promise<number> {
 		const playerItems = await this.playerItemsRepository.find({
 			where: { playerId },
-			relations: ['item'],
+			relations: { item: true },
 		});
 
 		let score = 0;
@@ -182,7 +182,7 @@ export class ScoreCalculatorService {
 		// Farming score based on seed-type items owned
 		const seedItems = await this.playerItemsRepository.find({
 			where: { playerId },
-			relations: ['item'],
+			relations: { item: true },
 		});
 
 		let score = 0;
@@ -201,7 +201,7 @@ export class ScoreCalculatorService {
 		// Livestock score based on feed-type items owned
 		const feedItems = await this.playerItemsRepository.find({
 			where: { playerId },
-			relations: ['item'],
+			relations: { item: true },
 		});
 
 		let score = 0;
@@ -220,7 +220,7 @@ export class ScoreCalculatorService {
 		// Crafting score based on tool-type items owned
 		const toolItems = await this.playerItemsRepository.find({
 			where: { playerId },
-			relations: ['item'],
+			relations: { item: true },
 		});
 
 		let score = 0;

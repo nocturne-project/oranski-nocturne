@@ -397,7 +397,7 @@ export class ChatService {
 		// メッセージを取得
 		const message = await this.chatMessagesRepository.findOne({
 			where: { id: messageId },
-			relations: ['toUser', 'toRoom'],
+			relations: { toUser: true, toRoom: true },
 		});
 
 		if (!message) {

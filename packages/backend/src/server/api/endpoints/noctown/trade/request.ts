@@ -118,7 +118,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			// Get target player with user relation for username
 			const target = await this.playersRepository.findOne({
 				where: { id: ps.targetPlayerId },
-				relations: ['user'],
+				relations: { user: true },
 			});
 			if (!target) {
 				throw new ApiError(meta.errors.targetNotFound);

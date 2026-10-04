@@ -66,7 +66,7 @@ export class UniqueItemService {
 	): Promise<{ canObtain: boolean; reason?: string }> {
 		const uniqueItem = await this.uniqueItemsRepository.findOne({
 			where: { id: uniqueItemId },
-			relations: ['item'],
+			relations: { item: true },
 		});
 
 		if (!uniqueItem) {
@@ -283,7 +283,7 @@ export class UniqueItemService {
 	public async getUniqueItemInfo(uniqueItemId: string): Promise<UniqueItemInfo | null> {
 		const uniqueItem = await this.uniqueItemsRepository.findOne({
 			where: { id: uniqueItemId },
-			relations: ['item', 'currentOwner'],
+			relations: { item: true, currentOwner: true },
 		});
 
 		if (!uniqueItem) {
@@ -311,7 +311,7 @@ export class UniqueItemService {
 	public async getPlayerUniqueItems(playerId: string): Promise<UniqueItemInfo[]> {
 		const uniqueItems = await this.uniqueItemsRepository.find({
 			where: { currentOwnerId: playerId },
-			relations: ['item'],
+			relations: { item: true },
 		});
 
 		return uniqueItems.map(ui => ({
@@ -351,7 +351,7 @@ export class UniqueItemService {
 	public async getObtainableUniqueItems(): Promise<UniqueItemInfo[]> {
 		const uniqueItems = await this.uniqueItemsRepository.find({
 			where: { isObtainable: true },
-			relations: ['item'],
+			relations: { item: true },
 		});
 
 		return uniqueItems.map(ui => ({

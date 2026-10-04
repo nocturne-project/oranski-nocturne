@@ -245,7 +245,7 @@ export class ItemDropService {
 				positionX: Between(x - radius, x + radius),
 				positionZ: Between(z - radius, z + radius),
 			},
-			relations: ['item'],
+			relations: { item: true },
 			take: 100,
 		});
 

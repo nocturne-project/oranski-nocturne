@@ -58,7 +58,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 			const message = await this.chatMessagesRepository.findOne({
 				where: { id: ps.messageId },
-				relations: ['toUser', 'toRoom'],
+				relations: { toUser: true, toRoom: true },
 			});
 
 			if (!message) {

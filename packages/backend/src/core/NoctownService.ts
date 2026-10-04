@@ -460,7 +460,7 @@ export class NoctownService {
 		// Find the player item
 		const playerItem = await this.noctownPlayerItemsRepository.findOne({
 			where: { id: playerItemId, playerId },
-			relations: ['item'],
+			relations: { item: true },
 		});
 		if (!playerItem || !playerItem.item) return null;
 
@@ -675,7 +675,7 @@ export class NoctownService {
 		// Find the player item
 		const playerItem = await this.noctownPlayerItemsRepository.findOne({
 			where: { id: playerItemId, playerId },
-			relations: ['item'],
+			relations: { item: true },
 		});
 		if (!playerItem || !playerItem.item) return { success: false, error: 'not_found' };
 
@@ -1160,7 +1160,7 @@ export class NoctownService {
 			// Check if player has the item
 			const playerItem = await this.noctownPlayerItemsRepository.findOne({
 				where: { id: submittedItemId, playerId },
-				relations: ['item'],
+				relations: { item: true },
 			});
 			if (!playerItem || playerItem.itemId !== quest.targetItemId) {
 				return { success: false, error: 'WRONG_ITEM' };
@@ -1182,7 +1182,7 @@ export class NoctownService {
 			// Check if player has the item
 			const playerItem = await this.noctownPlayerItemsRepository.findOne({
 				where: { id: submittedItemId, playerId },
-				relations: ['item'],
+				relations: { item: true },
 			});
 			if (!playerItem || playerItem.itemId !== quest.targetItemId) {
 				return { success: false, error: 'WRONG_ITEM' };
@@ -1203,7 +1203,7 @@ export class NoctownService {
 
 			const playerItem = await this.noctownPlayerItemsRepository.findOne({
 				where: { id: submittedItemId, playerId },
-				relations: ['item'],
+				relations: { item: true },
 			});
 			if (!playerItem || !playerItem.item) {
 				return { success: false, error: 'ITEM_NOT_FOUND' };
@@ -1573,7 +1573,7 @@ export class NoctownService {
 		// Verify player has the seed item
 		const playerItem = await this.noctownPlayerItemsRepository.findOne({
 			where: { id: seedItemId, playerId },
-			relations: ['item'],
+			relations: { item: true },
 		});
 		if (!playerItem || !playerItem.item) {
 			return { success: false, error: 'SEED_NOT_FOUND' };
@@ -1617,7 +1617,7 @@ export class NoctownService {
 		// Get crop and verify ownership through plot
 		const crop = await this.noctownCropsRepository.findOne({
 			where: { id: cropId },
-			relations: ['plot'],
+			relations: { plot: true },
 		});
 		if (!crop || !crop.plot || crop.plot.playerId !== playerId) {
 			return { success: false, error: 'CROP_NOT_FOUND' };
@@ -1647,7 +1647,7 @@ export class NoctownService {
 	): Promise<{ success: boolean; itemId?: string; quantity?: number; error?: string }> {
 		const crop = await this.noctownCropsRepository.findOne({
 			where: { id: cropId },
-			relations: ['plot'],
+			relations: { plot: true },
 		});
 		if (!crop || !crop.plot || crop.plot.playerId !== playerId) {
 			return { success: false, error: 'CROP_NOT_FOUND' };
@@ -2114,7 +2114,7 @@ export class NoctownService {
 		// Verify player has the house item
 		const playerItem = await this.noctownPlayerItemsRepository.findOne({
 			where: { id: playerItemId, playerId },
-			relations: ['item'],
+			relations: { item: true },
 		});
 		if (!playerItem || !playerItem.item) {
 			return { success: false, error: 'HOUSE_ITEM_NOT_FOUND' };
@@ -3195,7 +3195,7 @@ export class NoctownService {
 		// 仕様: 設置者情報を含めて取得（playerリレーション追加）
 		const placedItems = await this.noctownPlacedItemsRepository.find({
 			where: { worldId: worldIdCondition },
-			relations: ['item', 'player'],
+			relations: { item: true, player: true },
 		});
 
 		// 仕様: 設置者のユーザー名を効率的に取得（一括クエリ）
@@ -3210,7 +3210,7 @@ export class NoctownService {
 		// 落ちているアイテムを取得（FR-025）
 		const droppedItems = await this.noctownDroppedItemsRepository.find({
 			where: { worldId: worldIdCondition },
-			relations: ['item'],
+			relations: { item: true },
 		});
 
 		// 動物を取得（FR-024）

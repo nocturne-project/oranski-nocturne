@@ -90,7 +90,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			// Get placed item
 			const placedItem = await this.noctownPlacedItemsRepository.findOne({
 				where: { id: ps.placedItemId },
-				relations: ['item'],
+				relations: { item: true },
 			});
 
 			if (!placedItem) {

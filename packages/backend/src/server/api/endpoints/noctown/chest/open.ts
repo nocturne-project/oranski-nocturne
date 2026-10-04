@@ -134,7 +134,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			// Get chest
 			const chest = await this.noctownTreasureChestsRepository.findOne({
 				where: { id: ps.chestId },
-				relations: ['containedItem'],
+				relations: { containedItem: true },
 			});
 			if (!chest) {
 				throw new ApiError(meta.errors.chestNotFound);

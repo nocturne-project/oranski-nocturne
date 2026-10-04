@@ -104,11 +104,11 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			// Get players info
 			const initiator = await this.noctownPlayersRepository.findOne({
 				where: { id: trade.initiatorId },
-				relations: ['user'],
+				relations: { user: true },
 			});
 			const target = await this.noctownPlayersRepository.findOne({
 				where: { id: trade.targetId },
-				relations: ['user'],
+				relations: { user: true },
 			});
 
 			// Get trade items

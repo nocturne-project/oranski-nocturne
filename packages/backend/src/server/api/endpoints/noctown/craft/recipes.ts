@@ -107,7 +107,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			// Get player's inventory for checking craftability
 			const playerItems = await this.playerItemsRepository.find({
 				where: { playerId: me.id },
-				relations: ['item'],
+				relations: { item: true },
 			});
 
 			// Create inventory map for quick lookup
@@ -121,7 +121,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				// Get ingredients for this recipe
 				const ingredients = await this.ingredientsRepository.find({
 					where: { recipeId: recipe.id },
-					relations: ['item'],
+					relations: { item: true },
 				});
 
 				// Check if player can craft this recipe

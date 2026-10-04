@@ -32538,6 +32538,7 @@ export interface operations {
                     name?: string | null;
                     description?: string | null;
                     iconUrl?: string | null;
+                    callback?: string | null;
                     permission: string[];
                 };
             };

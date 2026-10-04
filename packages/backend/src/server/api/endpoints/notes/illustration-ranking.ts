@@ -139,7 +139,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 						id: In(allFileIds),
 						excludedFromIllustrationHighlight: true,
 					},
-					select: ['id'],
+					select: { id: true },
 				});
 
 				for (const file of excludedFiles) {

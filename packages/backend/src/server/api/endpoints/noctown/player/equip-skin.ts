@@ -84,7 +84,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					id: ps.playerItemId,
 					playerId: player.id,
 				},
-				relations: ['item'],
+				relations: { item: true },
 			});
 
 			if (!playerItem) {
