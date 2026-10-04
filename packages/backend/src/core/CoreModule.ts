@@ -18,7 +18,7 @@ import { FlashService } from '@/core/FlashService.js';
 import { ChannelMutingService } from '@/core/ChannelMutingService.js';
 import { AccountMoveService } from './AccountMoveService.js';
 import { AccountUpdateService } from './AccountUpdateService.js';
-import { AiService } from './AiService.js';
+import { SensitiveMediaDetectionService } from './SensitiveMediaDetectionService.js';
 import { AnnouncementService } from './AnnouncementService.js';
 import { AntennaService } from './AntennaService.js';
 import { AchievementService } from './AchievementService.js';
@@ -177,15 +177,17 @@ import { ApQuestionService } from './activitypub/models/ApQuestionService.js';
 import { QueueModule } from './QueueModule.js';
 import { QueueService } from './QueueService.js';
 import { LoggerService } from './LoggerService.js';
+import { TelemetryService } from './telemetry/TelemetryService.js';
 import type { Provider } from '@nestjs/common';
 
 //#region 文字列ベースでのinjection用(循環参照対応のため)
 const $LoggerService: Provider = { provide: 'LoggerService', useExisting: LoggerService };
+const $TelemetryService: Provider = { provide: 'TelemetryService', useExisting: TelemetryService };
 const $AbuseReportService: Provider = { provide: 'AbuseReportService', useExisting: AbuseReportService };
 const $AbuseReportNotificationService: Provider = { provide: 'AbuseReportNotificationService', useExisting: AbuseReportNotificationService };
 const $AccountMoveService: Provider = { provide: 'AccountMoveService', useExisting: AccountMoveService };
 const $AccountUpdateService: Provider = { provide: 'AccountUpdateService', useExisting: AccountUpdateService };
-const $AiService: Provider = { provide: 'AiService', useExisting: AiService };
+const $SensitiveMediaDetectionService: Provider = { provide: 'SensitiveMediaDetectionService', useExisting: SensitiveMediaDetectionService };
 const $AnnouncementService: Provider = { provide: 'AnnouncementService', useExisting: AnnouncementService };
 const $AntennaService: Provider = { provide: 'AntennaService', useExisting: AntennaService };
 const $AchievementService: Provider = { provide: 'AchievementService', useExisting: AchievementService };
@@ -357,7 +359,7 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		AbuseReportNotificationService,
 		AccountMoveService,
 		AccountUpdateService,
-		AiService,
+		SensitiveMediaDetectionService,
 		AnnouncementService,
 		AntennaService,
 		AchievementService,
@@ -523,6 +525,7 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		ApPersonService,
 		ApQuestionService,
 		QueueService,
+		TelemetryService,
 
 		//#region 文字列ベースでのinjection用(循環参照対応のため)
 		$LoggerService,
@@ -530,7 +533,7 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		$AbuseReportNotificationService,
 		$AccountMoveService,
 		$AccountUpdateService,
-		$AiService,
+		$SensitiveMediaDetectionService,
 		$AnnouncementService,
 		$AntennaService,
 		$AchievementService,
@@ -690,6 +693,7 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		$ApNoteService,
 		$ApPersonService,
 		$ApQuestionService,
+		$TelemetryService,
 		//#endregion
 	],
 	exports: [
@@ -699,7 +703,7 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		AbuseReportNotificationService,
 		AccountMoveService,
 		AccountUpdateService,
-		AiService,
+		SensitiveMediaDetectionService,
 		AnnouncementService,
 		AntennaService,
 		AchievementService,
@@ -864,6 +868,7 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		ApPersonService,
 		ApQuestionService,
 		QueueService,
+		TelemetryService,
 
 		//#region 文字列ベースでのinjection用(循環参照対応のため)
 		$LoggerService,
@@ -871,7 +876,7 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		$AbuseReportNotificationService,
 		$AccountMoveService,
 		$AccountUpdateService,
-		$AiService,
+		$SensitiveMediaDetectionService,
 		$AnnouncementService,
 		$AntennaService,
 		$AchievementService,
@@ -1029,6 +1034,7 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		$ApNoteService,
 		$ApPersonService,
 		$ApQuestionService,
+		$TelemetryService,
 		//#endregion
 	],
 })

@@ -4,11 +4,13 @@
 
 ```ts
 
-import type { AuthenticationResponseJSON } from '@simplewebauthn/types';
+import type { AuthenticationResponseJSON } from '@simplewebauthn/browser';
 import { EventEmitter } from 'eventemitter3';
 import { Options } from 'reconnecting-websocket';
-import type { PublicKeyCredentialRequestOptionsJSON as PublicKeyCredentialRequestOptionsJSON_2 } from '@simplewebauthn/types';
-import { reconnectingWebsocket } from 'reconnecting-websocket';
+import type { PublicKeyCredentialCreationOptionsJSON as PublicKeyCredentialCreationOptionsJSON_2 } from '@simplewebauthn/browser';
+import type { PublicKeyCredentialRequestOptionsJSON as PublicKeyCredentialRequestOptionsJSON_2 } from '@simplewebauthn/browser';
+import _ReconnectingWebSocket from 'reconnecting-websocket';
+import type { RegistrationResponseJSON } from '@simplewebauthn/browser';
 
 // Warning: (ae-forgotten-export) The symbol "components" needs to be exported by the entry point index.d.ts
 //
@@ -225,9 +227,6 @@ type AdminFederationDeleteAllFilesRequest = operations['admin___federation___del
 type AdminFederationRefreshRemoteInstanceMetadataRequest = operations['admin___federation___refresh-remote-instance-metadata']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
-type AdminFederationRemoveAllFollowingByUserIdRequest = operations['admin___federation___remove-all-following-by-user-id']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
 type AdminFederationRemoveAllFollowingRequest = operations['admin___federation___remove-all-following']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
@@ -264,69 +263,6 @@ type AdminInviteListResponse = operations['admin___invite___list']['responses'][
 type AdminMetaResponse = operations['admin___meta']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
-type AdminNoctownGachaAddItemRequest = operations['admin___noctown___gacha___add-item']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type AdminNoctownGachaAddItemResponse = operations['admin___noctown___gacha___add-item']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type AdminNoctownGachaCreateRequest = operations['admin___noctown___gacha___create']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type AdminNoctownGachaCreateResponse = operations['admin___noctown___gacha___create']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type AdminNoctownGachaDeleteRequest = operations['admin___noctown___gacha___delete']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type AdminNoctownGachaItemsRequest = operations['admin___noctown___gacha___items']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type AdminNoctownGachaItemsResponse = operations['admin___noctown___gacha___items']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type AdminNoctownGachaListRequest = operations['admin___noctown___gacha___list']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type AdminNoctownGachaListResponse = operations['admin___noctown___gacha___list']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type AdminNoctownGachaRemoveItemRequest = operations['admin___noctown___gacha___remove-item']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type AdminNoctownGachaUpdateRequest = operations['admin___noctown___gacha___update']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type AdminNoqDiscloseRequest = operations['admin___noq___disclose']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type AdminNoqDiscloseResponse = operations['admin___noq___disclose']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type AdminNoqSettingsResponse = operations['admin___noq___settings']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type AdminNoqSettingsUpdateRequest = operations['admin___noq___settings___update']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type AdminNoqSettingsUpdateResponse = operations['admin___noq___settings___update']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type AdminPaintChatSettingsResponse = operations['admin___paint-chat___settings']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type AdminPaintChatSettingsUpdateRequest = operations['admin___paint-chat___settings___update']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type AdminPaintChatSettingsUpdateResponse = operations['admin___paint-chat___settings___update']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type AdminPaintChatStegoExtractRequest = operations['admin___paint-chat___stego___extract']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type AdminPaintChatStegoExtractResponse = operations['admin___paint-chat___stego___extract']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
 type AdminPromoCreateRequest = operations['admin___promo___create']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
@@ -345,6 +281,9 @@ type AdminQueueJobsRequest = operations['admin___queue___jobs']['requestBody']['
 type AdminQueueJobsResponse = operations['admin___queue___jobs']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
+type AdminQueuePauseRequest = operations['admin___queue___pause']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
 type AdminQueuePromoteJobsRequest = operations['admin___queue___promote-jobs']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
@@ -358,6 +297,9 @@ type AdminQueueQueueStatsResponse = operations['admin___queue___queue-stats']['r
 
 // @public (undocumented)
 type AdminQueueRemoveJobRequest = operations['admin___queue___remove-job']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type AdminQueueResumeRequest = operations['admin___queue___resume']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
 type AdminQueueRetryJobRequest = operations['admin___queue___retry-job']['requestBody']['content']['application/json'];
@@ -492,6 +434,9 @@ type AdminSystemWebhookUpdateRequest = operations['admin___system-webhook___upda
 type AdminSystemWebhookUpdateResponse = operations['admin___system-webhook___update']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
+type AdminUnsetMfaRequest = operations['admin___unset-mfa']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
 type AdminUnsetUserAvatarRequest = operations['admin___unset-user-avatar']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
@@ -514,9 +459,6 @@ type AdminUpdateProxyAccountResponse = operations['admin___update-proxy-account'
 
 // @public (undocumented)
 type AdminUpdateUserNoteRequest = operations['admin___update-user-note']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type AdminUpdateUserSuspendedReasonRequest = operations['admin___update-user-suspended-reason']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
 type Announcement = components['schemas']['Announcement'];
@@ -558,6 +500,9 @@ type AntennasNotesRequest = operations['antennas___notes']['requestBody']['conte
 
 // @public (undocumented)
 type AntennasNotesResponse = operations['antennas___notes']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type AntennasRemoveNoteRequest = operations['antennas___remove-note']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
 type AntennasShowRequest = operations['antennas___show']['requestBody']['content']['application/json'];
@@ -943,70 +888,6 @@ export type Channels = {
             claimTimeIsUp: null | Record<string, never>;
         };
     };
-    noctown: {
-        params: null;
-        events: {
-            playerMoved: (payload: {
-                id: string;
-                userId: string;
-                username: string;
-                avatarUrl: string | null;
-                positionX: number;
-                positionY: number;
-                positionZ: number;
-                rotation: number;
-                isOnline: boolean;
-            }) => void;
-            playerJoined: (payload: {
-                id: string;
-                userId: string;
-                username: string;
-                avatarUrl: string | null;
-                positionX: number;
-                positionY: number;
-                positionZ: number;
-                rotation: number;
-                isOnline: boolean;
-            }) => void;
-            playerLeft: (payload: {
-                playerId: string;
-            }) => void;
-            itemDropped: (payload: {
-                id: string;
-                itemId: string;
-                positionX: number;
-                positionY: number;
-                positionZ: number;
-            }) => void;
-            itemPicked: (payload: {
-                droppedItemId: string;
-                playerId: string;
-            }) => void;
-        };
-        receives: {
-            move: {
-                x: number;
-                y: number;
-                z: number;
-                rotation?: number;
-            };
-            pickItem: {
-                droppedItemId: string;
-            };
-            placeItem: {
-                playerItemId: string;
-                x: number;
-                y: number;
-                z: number;
-                rotation?: number;
-            };
-            interact: {
-                targetType: string;
-                targetId: string;
-            };
-            heartbeat: Record<string, never>;
-        };
-    };
     chatUser: {
         params: {
             otherId: string;
@@ -1024,130 +905,10 @@ export type Channels = {
                 user?: UserLite;
                 messageId: ChatMessageLite['id'];
             }) => void;
-            read: (payload: {
-                messageId: ChatMessageLite['id'];
-                readerId: User['id'];
-            }) => void;
-            typing: (payload: {
-                userId: User['id'];
-                user?: UserLite;
-            }) => void;
-            typingStop: (payload: {
-                userId: User['id'];
-            }) => void;
-            drawingStroke: (payload: {
-                id: string;
-                userId: User['id'];
-                userName: string;
-                points: Array<{
-                    x: number;
-                    y: number;
-                    pressure?: number;
-                }>;
-                tool: 'pen' | 'eraser' | 'eyedropper';
-                color: string;
-                strokeWidth: number;
-                opacity: number;
-                timestamp: number;
-                layer?: number;
-            }) => void;
-            drawingProgress: (payload: {
-                id?: string;
-                userId?: User['id'];
-                points: Array<{
-                    x: number;
-                    y: number;
-                    pressure?: number;
-                }>;
-                tool: 'pen' | 'eraser' | 'eyedropper';
-                color: string;
-                strokeWidth?: number;
-                opacity?: number;
-                isComplete?: boolean;
-                layer?: number;
-                timestamp?: number;
-            }) => void;
-            cursorMove: (payload: {
-                userId: User['id'];
-                userName: string;
-                x: number;
-                y: number;
-                timestamp: number;
-            }) => void;
-            clearCanvas: (payload: {
-                userId: User['id'];
-                userName?: string;
-                timestamp: number;
-                layer?: number;
-            }) => void;
-            undoStroke: (payload: {
-                userId: User['id'];
-                userName?: string;
-                strokeId?: string;
-                timestamp: number;
-                layer?: number;
-            }) => void;
-            redoStroke: (payload: {
-                userId: User['id'];
-                userName?: string;
-                strokeId?: string;
-                timestamp: number;
-                layer?: number;
-            }) => void;
         };
         receives: {
             read: {
                 id: ChatMessageLite['id'];
-            };
-            typing: {
-                roomId?: string;
-            };
-            typingStop: {
-                roomId?: string;
-            };
-            drawingStroke: {
-                points: Array<{
-                    x: number;
-                    y: number;
-                    pressure?: number;
-                }>;
-                tool: 'pen' | 'eraser' | 'eyedropper';
-                color: string;
-                strokeWidth?: number;
-                opacity?: number;
-                layer?: number;
-            };
-            drawingProgress: {
-                points: Array<{
-                    x: number;
-                    y: number;
-                    pressure?: number;
-                }>;
-                tool: 'pen' | 'eraser' | 'eyedropper';
-                color: string;
-                strokeWidth?: number;
-                opacity?: number;
-                isComplete?: boolean;
-                layer?: number;
-            };
-            cursorMove: {
-                x: number;
-                y: number;
-            };
-            clearCanvas: {
-                layer?: number;
-            } | null;
-            undoStroke: {
-                layer?: number;
-                strokeId?: string;
-            };
-            redoStroke: {
-                layer?: number;
-                strokeId?: string;
-            };
-            canvasRasterized: {
-                imageData: string;
-                timestamp: number;
             };
         };
     };
@@ -1168,134 +929,10 @@ export type Channels = {
                 user?: UserLite;
                 messageId: ChatMessageLite['id'];
             }) => void;
-            read: (payload: {
-                messageId: ChatMessageLite['id'];
-                readerId: User['id'];
-            }) => void;
-            typing: (payload: {
-                userId: User['id'];
-                user?: UserLite;
-            }) => void;
-            typingStop: (payload: {
-                userId: User['id'];
-            }) => void;
-            drawingStroke: (payload: {
-                id: string;
-                userId: User['id'];
-                userName: string;
-                points: Array<{
-                    x: number;
-                    y: number;
-                    pressure?: number;
-                }>;
-                tool: 'pen' | 'eraser' | 'eyedropper';
-                color: string;
-                strokeWidth: number;
-                opacity: number;
-                timestamp: number;
-                layer?: number;
-            }) => void;
-            drawingProgress: (payload: {
-                id?: string;
-                userId?: User['id'];
-                points: Array<{
-                    x: number;
-                    y: number;
-                    pressure?: number;
-                }>;
-                tool: 'pen' | 'eraser' | 'eyedropper';
-                color: string;
-                strokeWidth?: number;
-                opacity?: number;
-                isComplete?: boolean;
-                layer?: number;
-                timestamp?: number;
-            }) => void;
-            cursorMove: (payload: {
-                userId: User['id'];
-                userName: string;
-                x: number;
-                y: number;
-                timestamp: number;
-            }) => void;
-            clearCanvas: (payload: {
-                userId: User['id'];
-                userName?: string;
-                timestamp: number;
-                layer?: number;
-            }) => void;
-            undoStroke: (payload: {
-                userId: User['id'];
-                userName: string;
-                strokeId?: string;
-                timestamp: number;
-                layer?: number;
-            }) => void;
-            redoStroke: (payload: {
-                userId: User['id'];
-                userName: string;
-                strokeId?: string;
-                timestamp: number;
-                layer?: number;
-            }) => void;
         };
         receives: {
             read: {
                 id: ChatMessageLite['id'];
-            };
-            typing: {
-                roomId?: string;
-            };
-            typingStop: {
-                roomId?: string;
-            };
-            drawingStroke: {
-                points: Array<{
-                    x: number;
-                    y: number;
-                    pressure?: number;
-                }>;
-                tool: 'pen' | 'eraser' | 'eyedropper';
-                color: string;
-                strokeWidth?: number;
-                opacity?: number;
-                layer?: number;
-            };
-            drawingProgress: {
-                points: Array<{
-                    x: number;
-                    y: number;
-                    pressure?: number;
-                }>;
-                tool: 'pen' | 'eraser' | 'eyedropper';
-                color: string;
-                strokeWidth?: number;
-                opacity?: number;
-                isComplete?: boolean;
-                layer?: number;
-            };
-            cursorMove: {
-                x: number;
-                y: number;
-            };
-            clearCanvas: null | {
-                layer?: number;
-            };
-            undoStroke: {
-                userId?: User['id'];
-                timestamp: number;
-                layer?: number;
-                strokeId?: string;
-            };
-            redoStroke: {
-                userId?: User['id'];
-                timestamp: number;
-                layer?: number;
-                strokeId?: string;
-            };
-            canvasRasterized: {
-                imageData: string;
-                timestamp: number;
             };
         };
     };
@@ -1443,9 +1080,6 @@ type ChartsUsersRequest = operations['charts___users']['requestBody']['content']
 type ChartsUsersResponse = operations['charts___users']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
-type ChatGetSecretModeForUserRequest = operations['chat___get-secret-mode-for-user']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
 type ChatHistoryRequest = operations['chat___history']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
@@ -1480,15 +1114,6 @@ type ChatMessagesDeleteRequest = operations['chat___messages___delete']['request
 
 // @public (undocumented)
 type ChatMessagesReactRequest = operations['chat___messages___react']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type ChatMessagesReadRequest = operations['chat___messages___read']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type ChatMessagesReadUsersRequest = operations['chat___messages___read-users']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type ChatMessagesReadUsersResponse = operations['chat___messages___read-users']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
 type ChatMessagesRoomTimelineRequest = operations['chat___messages___room-timeline']['requestBody']['content']['application/json'];
@@ -1534,12 +1159,6 @@ type ChatRoomsCreateResponse = operations['chat___rooms___create']['responses'][
 
 // @public (undocumented)
 type ChatRoomsDeleteRequest = operations['chat___rooms___delete']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type ChatRoomsGetSecretModeRequest = operations['chat___rooms___get-secret-mode']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type ChatRoomsGetSecretModeResponse = operations['chat___rooms___get-secret-mode']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
 type ChatRoomsInvitationsCreateRequest = operations['chat___rooms___invitations___create']['requestBody']['content']['application/json'];
@@ -1590,9 +1209,6 @@ type ChatRoomsOwnedRequest = operations['chat___rooms___owned']['requestBody']['
 type ChatRoomsOwnedResponse = operations['chat___rooms___owned']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
-type ChatRoomsSetSecretModeRequest = operations['chat___rooms___set-secret-mode']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
 type ChatRoomsShowRequest = operations['chat___rooms___show']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
@@ -1603,9 +1219,6 @@ type ChatRoomsUpdateRequest = operations['chat___rooms___update']['requestBody']
 
 // @public (undocumented)
 type ChatRoomsUpdateResponse = operations['chat___rooms___update']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type ChatSetSecretModeForUserRequest = operations['chat___set-secret-mode-for-user']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
 type Clip = components['schemas']['Clip'];
@@ -1660,33 +1273,6 @@ type ClipsUpdateResponse = operations['clips___update']['responses']['200']['con
 
 // @public (undocumented)
 type DateString = string;
-
-// @public (undocumented)
-type DrawingCanvasRequest = operations['drawing___canvas']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type DrawingCanvasResponse = operations['drawing___canvas']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type DrawingSaveRequest = operations['drawing___save']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type DrawingSettingsRoomGetRequest = operations['drawing___settings___room___get']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type DrawingSettingsRoomGetResponse = operations['drawing___settings___room___get']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type DrawingSettingsRoomUpdateRequest = operations['drawing___settings___room___update']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type DrawingSettingsUserGetRequest = operations['drawing___settings___user___get']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type DrawingSettingsUserGetResponse = operations['drawing___settings___user___get']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type DrawingSettingsUserUpdateRequest = operations['drawing___settings___user___update']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
 type DriveFile = components['schemas']['DriveFile'];
@@ -1744,9 +1330,6 @@ type DriveFilesShowRequest = operations['drive___files___show']['requestBody']['
 
 // @public (undocumented)
 type DriveFilesShowResponse = operations['drive___files___show']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type DriveFilesToggleIllustrationHighlightExclusionRequest = operations['drive___files___toggle-illustration-highlight-exclusion']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
 type DriveFilesUpdateRequest = operations['drive___files___update']['requestBody']['content']['application/json'];
@@ -1902,6 +1485,14 @@ export type Endpoints = Overwrite<Endpoints_2, {
             };
         };
     };
+    'i/2fa/register-key': {
+        req: I2faRegisterKeyRequest;
+        res: I2faRegisterKeyResponse_2;
+    };
+    'i/2fa/key-done': {
+        req: I2faKeyDoneRequest_2;
+        res: I2faKeyDoneResponse;
+    };
     'admin/roles/create': {
         req: Overwrite<AdminRolesCreateRequest, {
             policies: PartialRolePolicyOverride;
@@ -1941,6 +1532,8 @@ declare namespace entities {
         SigninWithPasskeyRequest,
         SigninWithPasskeyInitResponse,
         SigninWithPasskeyResponse,
+        I2faRegisterKeyResponse_2 as I2faRegisterKeyResponse,
+        I2faKeyDoneRequest_2 as I2faKeyDoneRequest,
         PartialRolePolicyOverride,
         EmptyRequest,
         EmptyResponse,
@@ -2006,7 +1599,6 @@ declare namespace entities {
         AdminFederationDeleteAllFilesRequest,
         AdminFederationRefreshRemoteInstanceMetadataRequest,
         AdminFederationRemoveAllFollowingRequest,
-        AdminFederationRemoveAllFollowingByUserIdRequest,
         AdminFederationUpdateInstanceRequest,
         AdminForwardAbuseUserReportRequest,
         AdminGetIndexStatsResponse,
@@ -2018,38 +1610,19 @@ declare namespace entities {
         AdminInviteListRequest,
         AdminInviteListResponse,
         AdminMetaResponse,
-        AdminNoctownGachaAddItemRequest,
-        AdminNoctownGachaAddItemResponse,
-        AdminNoctownGachaCreateRequest,
-        AdminNoctownGachaCreateResponse,
-        AdminNoctownGachaDeleteRequest,
-        AdminNoctownGachaItemsRequest,
-        AdminNoctownGachaItemsResponse,
-        AdminNoctownGachaListRequest,
-        AdminNoctownGachaListResponse,
-        AdminNoctownGachaRemoveItemRequest,
-        AdminNoctownGachaUpdateRequest,
-        AdminNoqDiscloseRequest,
-        AdminNoqDiscloseResponse,
-        AdminNoqSettingsResponse,
-        AdminNoqSettingsUpdateRequest,
-        AdminNoqSettingsUpdateResponse,
-        AdminPaintChatSettingsResponse,
-        AdminPaintChatSettingsUpdateRequest,
-        AdminPaintChatSettingsUpdateResponse,
-        AdminPaintChatStegoExtractRequest,
-        AdminPaintChatStegoExtractResponse,
         AdminPromoCreateRequest,
         AdminQueueClearRequest,
         AdminQueueDeliverDelayedResponse,
         AdminQueueInboxDelayedResponse,
         AdminQueueJobsRequest,
         AdminQueueJobsResponse,
+        AdminQueuePauseRequest,
         AdminQueuePromoteJobsRequest,
         AdminQueueQueueStatsRequest,
         AdminQueueQueueStatsResponse,
         AdminQueueQueuesResponse,
         AdminQueueRemoveJobRequest,
+        AdminQueueResumeRequest,
         AdminQueueRetryJobRequest,
         AdminQueueShowJobRequest,
         AdminQueueShowJobResponse,
@@ -2094,6 +1667,7 @@ declare namespace entities {
         AdminSystemWebhookTestRequest,
         AdminSystemWebhookUpdateRequest,
         AdminSystemWebhookUpdateResponse,
+        AdminUnsetMfaRequest,
         AdminUnsetUserAvatarRequest,
         AdminUnsetUserBannerRequest,
         AdminUnsuspendUserRequest,
@@ -2102,7 +1676,6 @@ declare namespace entities {
         AdminUpdateProxyAccountRequest,
         AdminUpdateProxyAccountResponse,
         AdminUpdateUserNoteRequest,
-        AdminUpdateUserSuspendedReasonRequest,
         AnnouncementsRequest,
         AnnouncementsResponse,
         AnnouncementsShowRequest,
@@ -2113,6 +1686,7 @@ declare namespace entities {
         AntennasListResponse,
         AntennasNotesRequest,
         AntennasNotesResponse,
+        AntennasRemoveNoteRequest,
         AntennasShowRequest,
         AntennasShowResponse,
         AntennasUpdateRequest,
@@ -2188,7 +1762,6 @@ declare namespace entities {
         ChartsUserReactionsResponse,
         ChartsUsersRequest,
         ChartsUsersResponse,
-        ChatGetSecretModeForUserRequest,
         ChatHistoryRequest,
         ChatHistoryResponse,
         ChatMessagesCreateToRoomRequest,
@@ -2197,9 +1770,6 @@ declare namespace entities {
         ChatMessagesCreateToUserResponse,
         ChatMessagesDeleteRequest,
         ChatMessagesReactRequest,
-        ChatMessagesReadRequest,
-        ChatMessagesReadUsersRequest,
-        ChatMessagesReadUsersResponse,
         ChatMessagesRoomTimelineRequest,
         ChatMessagesRoomTimelineResponse,
         ChatMessagesSearchRequest,
@@ -2212,8 +1782,6 @@ declare namespace entities {
         ChatRoomsCreateRequest,
         ChatRoomsCreateResponse,
         ChatRoomsDeleteRequest,
-        ChatRoomsGetSecretModeRequest,
-        ChatRoomsGetSecretModeResponse,
         ChatRoomsInvitationsCreateRequest,
         ChatRoomsInvitationsCreateResponse,
         ChatRoomsInvitationsIgnoreRequest,
@@ -2230,12 +1798,10 @@ declare namespace entities {
         ChatRoomsMuteRequest,
         ChatRoomsOwnedRequest,
         ChatRoomsOwnedResponse,
-        ChatRoomsSetSecretModeRequest,
         ChatRoomsShowRequest,
         ChatRoomsShowResponse,
         ChatRoomsUpdateRequest,
         ChatRoomsUpdateResponse,
-        ChatSetSecretModeForUserRequest,
         ClipsAddNoteRequest,
         ClipsCreateRequest,
         ClipsCreateResponse,
@@ -2252,15 +1818,6 @@ declare namespace entities {
         ClipsUnfavoriteRequest,
         ClipsUpdateRequest,
         ClipsUpdateResponse,
-        DrawingCanvasRequest,
-        DrawingCanvasResponse,
-        DrawingSaveRequest,
-        DrawingSettingsRoomGetRequest,
-        DrawingSettingsRoomGetResponse,
-        DrawingSettingsRoomUpdateRequest,
-        DrawingSettingsUserGetRequest,
-        DrawingSettingsUserGetResponse,
-        DrawingSettingsUserUpdateRequest,
         DriveResponse,
         DriveFilesRequest,
         DriveFilesResponse,
@@ -2280,7 +1837,6 @@ declare namespace entities {
         DriveFilesMoveBulkRequest,
         DriveFilesShowRequest,
         DriveFilesShowResponse,
-        DriveFilesToggleIllustrationHighlightExclusionRequest,
         DriveFilesUpdateRequest,
         DriveFilesUpdateResponse,
         DriveFilesUploadFromUrlRequest,
@@ -2344,6 +1900,8 @@ declare namespace entities {
         FollowingDeleteResponse,
         FollowingInvalidateRequest,
         FollowingInvalidateResponse,
+        FollowingListRequest,
+        FollowingListResponse,
         FollowingRequestsAcceptRequest,
         FollowingRequestsCancelRequest,
         FollowingRequestsCancelResponse,
@@ -2371,8 +1929,6 @@ declare namespace entities {
         GalleryPostsUpdateResponse,
         GetAvatarDecorationsResponse,
         GetOnlineUsersCountResponse,
-        HashtagsIllustrationRequest,
-        HashtagsIllustrationResponse,
         HashtagsListRequest,
         HashtagsListResponse,
         HashtagsSearchRequest,
@@ -2385,13 +1941,11 @@ declare namespace entities {
         IResponse,
         I2faDoneRequest,
         I2faDoneResponse,
-        I2faKeyDoneRequest,
         I2faKeyDoneResponse,
         I2faPasswordLessRequest,
         I2faRegisterRequest,
         I2faRegisterResponse,
         I2faRegisterKeyRequest,
-        I2faRegisterKeyResponse,
         I2faRemoveKeyRequest,
         I2faUnregisterRequest,
         I2faUpdateKeyRequest,
@@ -2473,223 +2027,6 @@ declare namespace entities {
         MuteListResponse,
         MyAppsRequest,
         MyAppsResponse,
-        NoctownAdminItemCreateRequest,
-        NoctownAdminItemCreateResponse,
-        NoctownAdminItemDistributeRequest,
-        NoctownAdminItemDistributeResponse,
-        NoctownAgentEquipRequest,
-        NoctownAgentEquipResponse,
-        NoctownAgentFeedRequest,
-        NoctownAgentFeedResponse,
-        NoctownAgentHintRequest,
-        NoctownAgentHintResponse,
-        NoctownAgentListResponse,
-        NoctownBulletinAttachItemRequest,
-        NoctownBulletinAttachItemResponse,
-        NoctownBulletinBoardsRequest,
-        NoctownBulletinBoardsResponse,
-        NoctownBulletinCreatePostRequest,
-        NoctownBulletinCreatePostResponse,
-        NoctownBulletinDeletePostRequest,
-        NoctownBulletinLikeRequest,
-        NoctownBulletinLikeResponse,
-        NoctownBulletinPostsRequest,
-        NoctownBulletinPostsResponse,
-        NoctownBulletinUnlikeRequest,
-        NoctownBulletinUnlikeResponse,
-        NoctownChatHistoryRequest,
-        NoctownChatHistoryResponse,
-        NoctownChatLogReceiveRequest,
-        NoctownChatLogReceiveResponse,
-        NoctownChestOpenRequest,
-        NoctownChestOpenResponse,
-        NoctownChickenCollectEggsRequest,
-        NoctownChickenCollectEggsResponse,
-        NoctownChickenFeedRequest,
-        NoctownChickenFeedResponse,
-        NoctownChickenListResponse,
-        NoctownChickenPlaceRequest,
-        NoctownChickenPlaceResponse,
-        NoctownContainerOpenRequest,
-        NoctownContainerOpenResponse,
-        NoctownContainerOpenPlacedRequest,
-        NoctownContainerOpenPlacedResponse,
-        NoctownContainerSetItemsRequest,
-        NoctownContainerSetItemsResponse,
-        NoctownCowCollectMilkRequest,
-        NoctownCowCollectMilkResponse,
-        NoctownCowFeedRequest,
-        NoctownCowFeedResponse,
-        NoctownCowListResponse,
-        NoctownCowPlaceRequest,
-        NoctownCowPlaceResponse,
-        NoctownCraftExecuteRequest,
-        NoctownCraftExecuteResponse,
-        NoctownCraftRecipesRequest,
-        NoctownCraftRecipesResponse,
-        NoctownEventClaimRewardRequest,
-        NoctownEventClaimRewardResponse,
-        NoctownEventJoinRequest,
-        NoctownEventListRequest,
-        NoctownEventListResponse,
-        NoctownEventProgressRequest,
-        NoctownEventProgressResponse,
-        NoctownFarmCreateRequest,
-        NoctownFarmCreateResponse,
-        NoctownFarmHarvestRequest,
-        NoctownFarmHarvestResponse,
-        NoctownFarmListResponse,
-        NoctownFarmPlantRequest,
-        NoctownFarmPlantResponse,
-        NoctownFarmWaterRequest,
-        NoctownFarmWaterResponse,
-        NoctownFishingCastRequest,
-        NoctownFishingCastResponse,
-        NoctownFishingCatchResponse,
-        NoctownGachaListResponse,
-        NoctownGachaPullRequest,
-        NoctownGachaPullResponse,
-        NoctownHarvestWoodRequest,
-        NoctownHarvestWoodResponse,
-        NoctownHouseEnterRequest,
-        NoctownHouseEnterResponse,
-        NoctownHouseExitRequest,
-        NoctownHouseExitResponse,
-        NoctownHouseFurnitureListRequest,
-        NoctownHouseFurnitureListResponse,
-        NoctownHouseFurnitureMoveRequest,
-        NoctownHouseFurnitureMoveResponse,
-        NoctownHouseFurniturePlaceRequest,
-        NoctownHouseFurniturePlaceResponse,
-        NoctownHouseFurnitureRemoveRequest,
-        NoctownHouseFurnitureRemoveResponse,
-        NoctownHouseGetResponse,
-        NoctownHouseNearbyRequest,
-        NoctownHouseNearbyResponse,
-        NoctownHousePlaceRequest,
-        NoctownHousePlaceResponse,
-        NoctownHouseRemoveRequest,
-        NoctownHouseRemoveResponse,
-        NoctownHouseRenameRequest,
-        NoctownHouseRenameResponse,
-        NoctownHouseWallAttachRequest,
-        NoctownHouseWallAttachResponse,
-        NoctownHouseWallListRequest,
-        NoctownHouseWallListResponse,
-        NoctownHouseWallRemoveRequest,
-        NoctownHouseWallRemoveResponse,
-        NoctownHouseWallSetRequest,
-        NoctownHouseWallSetResponse,
-        NoctownItemCreateRequest,
-        NoctownItemCreateResponse,
-        NoctownItemDetailRequest,
-        NoctownItemDetailResponse,
-        NoctownItemDropRequest,
-        NoctownItemDropResponse,
-        NoctownItemDropCurrencyRequest,
-        NoctownItemDropCurrencyResponse,
-        NoctownItemDroppedRequest,
-        NoctownItemDroppedResponse,
-        NoctownItemInventoryResponse,
-        NoctownItemMyCreationsRequest,
-        NoctownItemMyCreationsResponse,
-        NoctownItemPickupRequest,
-        NoctownItemPickupResponse,
-        NoctownItemPickupPlacedRequest,
-        NoctownItemPickupPlacedResponse,
-        NoctownItemPlaceRequest,
-        NoctownItemPlaceResponse,
-        NoctownItemPlacedRequest,
-        NoctownItemPlacedResponse,
-        NoctownItemRetrieveRequest,
-        NoctownItemRetrieveResponse,
-        NoctownItemUpdateCreationRequest,
-        NoctownMapChunkRequest,
-        NoctownMapChunkResponse,
-        NoctownNpcNearbyRequest,
-        NoctownNpcNearbyResponse,
-        NoctownPetsCreateRequest,
-        NoctownPetsCreateResponse,
-        NoctownPetsDeleteRequest,
-        NoctownPetsDeleteResponse,
-        NoctownPetsListResponse,
-        NoctownPetsNearbyRequest,
-        NoctownPetsNearbyResponse,
-        NoctownPetsRenameRequest,
-        NoctownPetsRenameResponse,
-        NoctownPetsShowRequest,
-        NoctownPetsShowResponse,
-        NoctownPlayerResponse,
-        NoctownPlayerEquipSkinRequest,
-        NoctownPlayerEquipSkinResponse,
-        NoctownPlayerPositionRequest,
-        NoctownPlayerPositionResponse,
-        NoctownPlayerUnequipSkinResponse,
-        NoctownPlayersNearbyRequest,
-        NoctownPlayersNearbyResponse,
-        NoctownQuestAbandonRequest,
-        NoctownQuestAbandonResponse,
-        NoctownQuestCompleteRequest,
-        NoctownQuestCompleteResponse,
-        NoctownQuestListResponse,
-        NoctownQuestStartRequest,
-        NoctownQuestStartResponse,
-        NoctownRankingCategoryRequest,
-        NoctownRankingCategoryResponse,
-        NoctownRankingTotalRequest,
-        NoctownRankingTotalResponse,
-        NoctownSaisenHistoryRequest,
-        NoctownSaisenHistoryResponse,
-        NoctownSaisenOfferRequest,
-        NoctownSaisenOfferResponse,
-        NoctownShopBuyRequest,
-        NoctownShopBuyResponse,
-        NoctownShopSellRequest,
-        NoctownShopSellResponse,
-        NoctownTradeAddItemsRequest,
-        NoctownTradeAddItemsResponse,
-        NoctownTradeBarterRequest,
-        NoctownTradeBarterResponse,
-        NoctownTradeCancelRequest,
-        NoctownTradeCancelResponse,
-        NoctownTradeConfirmRequest,
-        NoctownTradeConfirmResponse,
-        NoctownTradeDetailRequest,
-        NoctownTradeDetailResponse,
-        NoctownTradeExecuteRequest,
-        NoctownTradeExecuteResponse,
-        NoctownTradeListResponse,
-        NoctownTradeRequestRequest,
-        NoctownTradeRequestResponse,
-        NoctownTradeRespondRequest,
-        NoctownTradeRespondResponse,
-        NoctownTradeUnconfirmRequest,
-        NoctownTradeUnconfirmResponse,
-        NoqAnnounceRequest,
-        NoqAnnounceResponse,
-        NoqMuteCreateRequest,
-        NoqMuteDeleteRequest,
-        NoqMuteListResponse,
-        NoqQuestionsAnswerRequest,
-        NoqQuestionsAnswerResponse,
-        NoqQuestionsAnsweredRequest,
-        NoqQuestionsAnsweredResponse,
-        NoqQuestionsDeleteRequest,
-        NoqQuestionsReceivedRequest,
-        NoqQuestionsReceivedResponse,
-        NoqQuestionsReportRequest,
-        NoqQuestionsReportResponse,
-        NoqQuestionsSendRequest,
-        NoqQuestionsSendResponse,
-        NoqQuestionsSentRequest,
-        NoqQuestionsSentResponse,
-        NoqSettingsGenerateKeyRequest,
-        NoqSettingsGenerateKeyResponse,
-        NoqSettingsGetResponse,
-        NoqSettingsShowRequest,
-        NoqSettingsShowResponse,
-        NoqSettingsUpdateRequest,
-        NoqSettingsUpdateResponse,
         NotesRequest,
         NotesResponse,
         NotesChildrenRequest,
@@ -2715,18 +2052,8 @@ declare namespace entities {
         NotesFeaturedResponse,
         NotesGlobalTimelineRequest,
         NotesGlobalTimelineResponse,
-        NotesHighlightIllustrationsRequest,
-        NotesHighlightIllustrationsResponse,
         NotesHybridTimelineRequest,
         NotesHybridTimelineResponse,
-        NotesIllustrationRequest,
-        NotesIllustrationResponse,
-        NotesIllustrationRankingRequest,
-        NotesIllustrationRankingResponse,
-        NotesIllustrationsByTagRequest,
-        NotesIllustrationsByTagResponse,
-        NotesIllustrationsByTagRankingRequest,
-        NotesIllustrationsByTagRankingResponse,
         NotesLocalTimelineRequest,
         NotesLocalTimelineResponse,
         NotesMentionsRequest,
@@ -2759,7 +2086,6 @@ declare namespace entities {
         NotesTranslateRequest,
         NotesTranslateResponse,
         NotesUnrenoteRequest,
-        NotesUpdateVisibilityRequest,
         NotesUserListTimelineRequest,
         NotesUserListTimelineResponse,
         NotificationsCreateRequest,
@@ -2773,35 +2099,6 @@ declare namespace entities {
         PagesShowResponse,
         PagesUnlikeRequest,
         PagesUpdateRequest,
-        PaintChatCanvasRequest,
-        PaintChatCanvasResponse,
-        PaintChatDiceRequest,
-        PaintChatDiceResponse,
-        PaintChatJoinResponse,
-        PaintChatLeaveRequest,
-        PaintChatLeaveResponse,
-        PaintChatLeaveQueueResponse,
-        PaintChatMessageRequest,
-        PaintChatMessageResponse,
-        PaintChatMessagesRequest,
-        PaintChatMessagesResponse,
-        PaintChatPublishAgreeRequest,
-        PaintChatPublishAgreeResponse,
-        PaintChatPublishMessageRequest,
-        PaintChatPublishMessageResponse,
-        PaintChatPublishMyArtRequest,
-        PaintChatPublishMyArtResponse,
-        PaintChatPublishRejectRequest,
-        PaintChatPublishRejectResponse,
-        PaintChatReportRequest,
-        PaintChatReportResponse,
-        PaintChatRoomRequest,
-        PaintChatRoomResponse,
-        PaintChatSaveColorsRequest,
-        PaintChatSettingsResponse,
-        PaintChatSoloResponse,
-        PaintChatTopicRequest,
-        PaintChatTopicResponse,
         PingResponse,
         PinnedUsersResponse,
         PromoReadRequest,
@@ -2823,7 +2120,6 @@ declare namespace entities {
         ReversiSurrenderRequest,
         ReversiVerifyRequest,
         ReversiVerifyResponse,
-        RolesListRequest,
         RolesListResponse,
         RolesNotesRequest,
         RolesNotesResponse,
@@ -3124,6 +2420,12 @@ type FollowingInvalidateRequest = operations['following___invalidate']['requestB
 type FollowingInvalidateResponse = operations['following___invalidate']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
+type FollowingListRequest = operations['following___list']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type FollowingListResponse = operations['following___list']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
 type FollowingRequestsAcceptRequest = operations['following___requests___accept']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
@@ -3214,12 +2516,6 @@ type GetOnlineUsersCountResponse = operations['get-online-users-count']['respons
 type Hashtag = components['schemas']['Hashtag'];
 
 // @public (undocumented)
-type HashtagsIllustrationRequest = operations['hashtags___illustration']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type HashtagsIllustrationResponse = operations['hashtags___illustration']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
 type HashtagsListRequest = operations['hashtags___list']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
@@ -3253,7 +2549,12 @@ type I2faDoneRequest = operations['i___2fa___done']['requestBody']['content']['a
 type I2faDoneResponse = operations['i___2fa___done']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
-type I2faKeyDoneRequest = operations['i___2fa___key-done']['requestBody']['content']['application/json'];
+type I2faKeyDoneRequest_2 = {
+    password: string;
+    token?: string | null;
+    name: string;
+    credential: RegistrationResponseJSON;
+};
 
 // @public (undocumented)
 type I2faKeyDoneResponse = operations['i___2fa___key-done']['responses']['200']['content']['application/json'];
@@ -3265,7 +2566,7 @@ type I2faPasswordLessRequest = operations['i___2fa___password-less']['requestBod
 type I2faRegisterKeyRequest = operations['i___2fa___register-key']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
-type I2faRegisterKeyResponse = operations['i___2fa___register-key']['responses']['200']['content']['application/json'];
+type I2faRegisterKeyResponse_2 = PublicKeyCredentialCreationOptionsJSON_2;
 
 // @public (undocumented)
 type I2faRegisterRequest = operations['i___2fa___register']['requestBody']['content']['application/json'];
@@ -3583,6 +2884,8 @@ type MiauthGenTokenRequest = operations['miauth___gen-token']['requestBody']['co
 // @public (undocumented)
 type MiauthGenTokenResponse = operations['miauth___gen-token']['responses']['200']['content']['application/json'];
 
+// Warning: (ae-forgotten-export) The symbol "ModerationLogPayloads" needs to be exported by the entry point index.d.ts
+//
 // @public (undocumented)
 type ModerationLog = {
     id: ID;
@@ -3590,165 +2893,14 @@ type ModerationLog = {
     userId: User['id'];
     user: UserDetailedNotMe;
 } & ({
-    type: 'updateServerSettings';
-    info: ModerationLogPayloads['updateServerSettings'];
-} | {
-    type: 'suspend';
-    info: ModerationLogPayloads['suspend'];
-} | {
-    type: 'unsuspend';
-    info: ModerationLogPayloads['unsuspend'];
-} | {
-    type: 'updateUserNote';
-    info: ModerationLogPayloads['updateUserNote'];
-} | {
-    type: 'addCustomEmoji';
-    info: ModerationLogPayloads['addCustomEmoji'];
-} | {
-    type: 'updateCustomEmoji';
-    info: ModerationLogPayloads['updateCustomEmoji'];
-} | {
-    type: 'deleteCustomEmoji';
-    info: ModerationLogPayloads['deleteCustomEmoji'];
-} | {
-    type: 'assignRole';
-    info: ModerationLogPayloads['assignRole'];
-} | {
-    type: 'unassignRole';
-    info: ModerationLogPayloads['unassignRole'];
-} | {
-    type: 'createRole';
-    info: ModerationLogPayloads['createRole'];
-} | {
-    type: 'updateRole';
-    info: ModerationLogPayloads['updateRole'];
-} | {
-    type: 'deleteRole';
-    info: ModerationLogPayloads['deleteRole'];
-} | {
-    type: 'clearQueue';
-    info: ModerationLogPayloads['clearQueue'];
-} | {
-    type: 'promoteQueue';
-    info: ModerationLogPayloads['promoteQueue'];
-} | {
-    type: 'deleteDriveFile';
-    info: ModerationLogPayloads['deleteDriveFile'];
-} | {
-    type: 'deleteNote';
-    info: ModerationLogPayloads['deleteNote'];
-} | {
-    type: 'createGlobalAnnouncement';
-    info: ModerationLogPayloads['createGlobalAnnouncement'];
-} | {
-    type: 'createUserAnnouncement';
-    info: ModerationLogPayloads['createUserAnnouncement'];
-} | {
-    type: 'updateGlobalAnnouncement';
-    info: ModerationLogPayloads['updateGlobalAnnouncement'];
-} | {
-    type: 'updateUserAnnouncement';
-    info: ModerationLogPayloads['updateUserAnnouncement'];
-} | {
-    type: 'deleteGlobalAnnouncement';
-    info: ModerationLogPayloads['deleteGlobalAnnouncement'];
-} | {
-    type: 'deleteUserAnnouncement';
-    info: ModerationLogPayloads['deleteUserAnnouncement'];
-} | {
-    type: 'resetPassword';
-    info: ModerationLogPayloads['resetPassword'];
-} | {
-    type: 'suspendRemoteInstance';
-    info: ModerationLogPayloads['suspendRemoteInstance'];
-} | {
-    type: 'unsuspendRemoteInstance';
-    info: ModerationLogPayloads['unsuspendRemoteInstance'];
-} | {
-    type: 'updateRemoteInstanceNote';
-    info: ModerationLogPayloads['updateRemoteInstanceNote'];
-} | {
-    type: 'markSensitiveDriveFile';
-    info: ModerationLogPayloads['markSensitiveDriveFile'];
-} | {
-    type: 'unmarkSensitiveDriveFile';
-    info: ModerationLogPayloads['unmarkSensitiveDriveFile'];
-} | {
-    type: 'createInvitation';
-    info: ModerationLogPayloads['createInvitation'];
-} | {
-    type: 'createAd';
-    info: ModerationLogPayloads['createAd'];
-} | {
-    type: 'updateAd';
-    info: ModerationLogPayloads['updateAd'];
-} | {
-    type: 'deleteAd';
-    info: ModerationLogPayloads['deleteAd'];
-} | {
-    type: 'createAvatarDecoration';
-    info: ModerationLogPayloads['createAvatarDecoration'];
-} | {
-    type: 'updateAvatarDecoration';
-    info: ModerationLogPayloads['updateAvatarDecoration'];
-} | {
-    type: 'deleteAvatarDecoration';
-    info: ModerationLogPayloads['deleteAvatarDecoration'];
-} | {
-    type: 'resolveAbuseReport';
-    info: ModerationLogPayloads['resolveAbuseReport'];
-} | {
-    type: 'forwardAbuseReport';
-    info: ModerationLogPayloads['forwardAbuseReport'];
-} | {
-    type: 'updateAbuseReportNote';
-    info: ModerationLogPayloads['updateAbuseReportNote'];
-} | {
-    type: 'unsetUserAvatar';
-    info: ModerationLogPayloads['unsetUserAvatar'];
-} | {
-    type: 'unsetUserBanner';
-    info: ModerationLogPayloads['unsetUserBanner'];
-} | {
-    type: 'createSystemWebhook';
-    info: ModerationLogPayloads['createSystemWebhook'];
-} | {
-    type: 'updateSystemWebhook';
-    info: ModerationLogPayloads['updateSystemWebhook'];
-} | {
-    type: 'deleteSystemWebhook';
-    info: ModerationLogPayloads['deleteSystemWebhook'];
-} | {
-    type: 'createAbuseReportNotificationRecipient';
-    info: ModerationLogPayloads['createAbuseReportNotificationRecipient'];
-} | {
-    type: 'updateAbuseReportNotificationRecipient';
-    info: ModerationLogPayloads['updateAbuseReportNotificationRecipient'];
-} | {
-    type: 'deleteAbuseReportNotificationRecipient';
-    info: ModerationLogPayloads['deleteAbuseReportNotificationRecipient'];
-} | {
-    type: 'deleteAccount';
-    info: ModerationLogPayloads['deleteAccount'];
-} | {
-    type: 'deletePage';
-    info: ModerationLogPayloads['deletePage'];
-} | {
-    type: 'deleteFlash';
-    info: ModerationLogPayloads['deleteFlash'];
-} | {
-    type: 'deleteGalleryPost';
-    info: ModerationLogPayloads['deleteGalleryPost'];
-} | {
-    type: 'deleteChatRoom';
-    info: ModerationLogPayloads['deleteChatRoom'];
-} | {
-    type: 'updateProxyAccountDescription';
-    info: ModerationLogPayloads['updateProxyAccountDescription'];
-});
+    [K in keyof ModerationLogPayloads]: {
+        type: K;
+        info: ModerationLogPayloads[K];
+    };
+}[keyof ModerationLogPayloads]);
 
 // @public (undocumented)
-export const moderationLogTypes: readonly ["updateServerSettings", "suspend", "unsuspend", "updateUserNote", "addCustomEmoji", "updateCustomEmoji", "deleteCustomEmoji", "assignRole", "unassignRole", "createRole", "updateRole", "deleteRole", "clearQueue", "promoteQueue", "deleteDriveFile", "deleteNote", "createGlobalAnnouncement", "createUserAnnouncement", "updateGlobalAnnouncement", "updateUserAnnouncement", "deleteGlobalAnnouncement", "deleteUserAnnouncement", "resetPassword", "suspendRemoteInstance", "unsuspendRemoteInstance", "updateRemoteInstanceNote", "markSensitiveDriveFile", "unmarkSensitiveDriveFile", "resolveAbuseReport", "forwardAbuseReport", "updateAbuseReportNote", "createInvitation", "createAd", "updateAd", "deleteAd", "createAvatarDecoration", "updateAvatarDecoration", "deleteAvatarDecoration", "unsetUserAvatar", "unsetUserBanner", "createSystemWebhook", "updateSystemWebhook", "deleteSystemWebhook", "createAbuseReportNotificationRecipient", "updateAbuseReportNotificationRecipient", "deleteAbuseReportNotificationRecipient", "deleteAccount", "deletePage", "deleteFlash", "deleteGalleryPost", "deleteChatRoom", "updateProxyAccountDescription"];
+export const moderationLogTypes: readonly ["updateServerSettings", "suspend", "unsuspend", "updateUserNote", "addCustomEmoji", "updateCustomEmoji", "deleteCustomEmoji", "assignRole", "unassignRole", "createRole", "updateRole", "deleteRole", "clearQueue", "promoteQueue", "deleteDriveFile", "deleteNote", "createGlobalAnnouncement", "createUserAnnouncement", "updateGlobalAnnouncement", "updateUserAnnouncement", "deleteGlobalAnnouncement", "deleteUserAnnouncement", "resetPassword", "suspendRemoteInstance", "unsuspendRemoteInstance", "updateRemoteInstanceNote", "markSensitiveDriveFile", "unmarkSensitiveDriveFile", "resolveAbuseReport", "forwardAbuseReport", "updateAbuseReportNote", "createInvitation", "createAd", "updateAd", "deleteAd", "createAvatarDecoration", "updateAvatarDecoration", "deleteAvatarDecoration", "unsetMfa", "unsetUserAvatar", "unsetUserBanner", "createSystemWebhook", "updateSystemWebhook", "deleteSystemWebhook", "createAbuseReportNotificationRecipient", "updateAbuseReportNotificationRecipient", "deleteAbuseReportNotificationRecipient", "deleteAccount", "deletePage", "deleteFlash", "deleteGalleryPost", "deleteChatRoom", "updateProxyAccountDescription"];
 
 // @public (undocumented)
 type MuteCreateRequest = operations['mute___create']['requestBody']['content']['application/json'];
@@ -3773,657 +2925,6 @@ type MyAppsRequest = operations['my___apps']['requestBody']['content']['applicat
 
 // @public (undocumented)
 type MyAppsResponse = operations['my___apps']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownAdminItemCreateRequest = operations['noctown___admin___item___create']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownAdminItemCreateResponse = operations['noctown___admin___item___create']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownAdminItemDistributeRequest = operations['noctown___admin___item___distribute']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownAdminItemDistributeResponse = operations['noctown___admin___item___distribute']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownAgentEquipRequest = operations['noctown___agent___equip']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownAgentEquipResponse = operations['noctown___agent___equip']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownAgentFeedRequest = operations['noctown___agent___feed']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownAgentFeedResponse = operations['noctown___agent___feed']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownAgentHintRequest = operations['noctown___agent___hint']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownAgentHintResponse = operations['noctown___agent___hint']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownAgentListResponse = operations['noctown___agent___list']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownBulletinAttachItemRequest = operations['noctown___bulletin___attach-item']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownBulletinAttachItemResponse = operations['noctown___bulletin___attach-item']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownBulletinBoardsRequest = operations['noctown___bulletin___boards']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownBulletinBoardsResponse = operations['noctown___bulletin___boards']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownBulletinCreatePostRequest = operations['noctown___bulletin___create-post']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownBulletinCreatePostResponse = operations['noctown___bulletin___create-post']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownBulletinDeletePostRequest = operations['noctown___bulletin___delete-post']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownBulletinLikeRequest = operations['noctown___bulletin___like']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownBulletinLikeResponse = operations['noctown___bulletin___like']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownBulletinPostsRequest = operations['noctown___bulletin___posts']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownBulletinPostsResponse = operations['noctown___bulletin___posts']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownBulletinUnlikeRequest = operations['noctown___bulletin___unlike']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownBulletinUnlikeResponse = operations['noctown___bulletin___unlike']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownChatHistoryRequest = operations['noctown___chat-history']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownChatHistoryResponse = operations['noctown___chat-history']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownChatLogReceiveRequest = operations['noctown___chat-log___receive']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownChatLogReceiveResponse = operations['noctown___chat-log___receive']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownChestOpenRequest = operations['noctown___chest___open']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownChestOpenResponse = operations['noctown___chest___open']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownChickenCollectEggsRequest = operations['noctown___chicken___collect-eggs']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownChickenCollectEggsResponse = operations['noctown___chicken___collect-eggs']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownChickenFeedRequest = operations['noctown___chicken___feed']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownChickenFeedResponse = operations['noctown___chicken___feed']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownChickenListResponse = operations['noctown___chicken___list']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownChickenPlaceRequest = operations['noctown___chicken___place']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownChickenPlaceResponse = operations['noctown___chicken___place']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownContainerOpenPlacedRequest = operations['noctown___container___open-placed']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownContainerOpenPlacedResponse = operations['noctown___container___open-placed']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownContainerOpenRequest = operations['noctown___container___open']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownContainerOpenResponse = operations['noctown___container___open']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownContainerSetItemsRequest = operations['noctown___container___set-items']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownContainerSetItemsResponse = operations['noctown___container___set-items']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownCowCollectMilkRequest = operations['noctown___cow___collect-milk']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownCowCollectMilkResponse = operations['noctown___cow___collect-milk']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownCowFeedRequest = operations['noctown___cow___feed']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownCowFeedResponse = operations['noctown___cow___feed']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownCowListResponse = operations['noctown___cow___list']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownCowPlaceRequest = operations['noctown___cow___place']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownCowPlaceResponse = operations['noctown___cow___place']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownCraftExecuteRequest = operations['noctown___craft___execute']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownCraftExecuteResponse = operations['noctown___craft___execute']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownCraftRecipesRequest = operations['noctown___craft___recipes']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownCraftRecipesResponse = operations['noctown___craft___recipes']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownEventClaimRewardRequest = operations['noctown___event___claim-reward']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownEventClaimRewardResponse = operations['noctown___event___claim-reward']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownEventJoinRequest = operations['noctown___event___join']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownEventListRequest = operations['noctown___event___list']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownEventListResponse = operations['noctown___event___list']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownEventProgressRequest = operations['noctown___event___progress']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownEventProgressResponse = operations['noctown___event___progress']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownFarmCreateRequest = operations['noctown___farm___create']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownFarmCreateResponse = operations['noctown___farm___create']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownFarmHarvestRequest = operations['noctown___farm___harvest']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownFarmHarvestResponse = operations['noctown___farm___harvest']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownFarmListResponse = operations['noctown___farm___list']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownFarmPlantRequest = operations['noctown___farm___plant']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownFarmPlantResponse = operations['noctown___farm___plant']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownFarmWaterRequest = operations['noctown___farm___water']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownFarmWaterResponse = operations['noctown___farm___water']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownFishingCastRequest = operations['noctown___fishing___cast']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownFishingCastResponse = operations['noctown___fishing___cast']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownFishingCatchResponse = operations['noctown___fishing___catch']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownGachaListResponse = operations['noctown___gacha___list']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownGachaPullRequest = operations['noctown___gacha___pull']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownGachaPullResponse = operations['noctown___gacha___pull']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHarvestWoodRequest = operations['noctown___harvest___wood']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHarvestWoodResponse = operations['noctown___harvest___wood']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseEnterRequest = operations['noctown___house___enter']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseEnterResponse = operations['noctown___house___enter']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseExitRequest = operations['noctown___house___exit']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseExitResponse = operations['noctown___house___exit']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseFurnitureListRequest = operations['noctown___house___furniture___list']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseFurnitureListResponse = operations['noctown___house___furniture___list']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseFurnitureMoveRequest = operations['noctown___house___furniture___move']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseFurnitureMoveResponse = operations['noctown___house___furniture___move']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseFurniturePlaceRequest = operations['noctown___house___furniture___place']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseFurniturePlaceResponse = operations['noctown___house___furniture___place']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseFurnitureRemoveRequest = operations['noctown___house___furniture___remove']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseFurnitureRemoveResponse = operations['noctown___house___furniture___remove']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseGetResponse = operations['noctown___house___get']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseNearbyRequest = operations['noctown___house___nearby']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseNearbyResponse = operations['noctown___house___nearby']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHousePlaceRequest = operations['noctown___house___place']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHousePlaceResponse = operations['noctown___house___place']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseRemoveRequest = operations['noctown___house___remove']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseRemoveResponse = operations['noctown___house___remove']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseRenameRequest = operations['noctown___house___rename']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseRenameResponse = operations['noctown___house___rename']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseWallAttachRequest = operations['noctown___house___wall___attach']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseWallAttachResponse = operations['noctown___house___wall___attach']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseWallListRequest = operations['noctown___house___wall___list']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseWallListResponse = operations['noctown___house___wall___list']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseWallRemoveRequest = operations['noctown___house___wall___remove']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseWallRemoveResponse = operations['noctown___house___wall___remove']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseWallSetRequest = operations['noctown___house___wall___set']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseWallSetResponse = operations['noctown___house___wall___set']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemCreateRequest = operations['noctown___item___create']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemCreateResponse = operations['noctown___item___create']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemDetailRequest = operations['noctown___item___detail']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemDetailResponse = operations['noctown___item___detail']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemDropCurrencyRequest = operations['noctown___item___drop-currency']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemDropCurrencyResponse = operations['noctown___item___drop-currency']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemDroppedRequest = operations['noctown___item___dropped']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemDroppedResponse = operations['noctown___item___dropped']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemDropRequest = operations['noctown___item___drop']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemDropResponse = operations['noctown___item___drop']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemInventoryResponse = operations['noctown___item___inventory']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemMyCreationsRequest = operations['noctown___item___my-creations']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemMyCreationsResponse = operations['noctown___item___my-creations']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemPickupPlacedRequest = operations['noctown___item___pickup-placed']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemPickupPlacedResponse = operations['noctown___item___pickup-placed']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemPickupRequest = operations['noctown___item___pickup']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemPickupResponse = operations['noctown___item___pickup']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemPlacedRequest = operations['noctown___item___placed']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemPlacedResponse = operations['noctown___item___placed']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemPlaceRequest = operations['noctown___item___place']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemPlaceResponse = operations['noctown___item___place']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemRetrieveRequest = operations['noctown___item___retrieve']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemRetrieveResponse = operations['noctown___item___retrieve']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemUpdateCreationRequest = operations['noctown___item___update-creation']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownMapChunkRequest = operations['noctown___map___chunk']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownMapChunkResponse = operations['noctown___map___chunk']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownNpcNearbyRequest = operations['noctown___npc___nearby']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownNpcNearbyResponse = operations['noctown___npc___nearby']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPetsCreateRequest = operations['noctown___pets___create']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPetsCreateResponse = operations['noctown___pets___create']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPetsDeleteRequest = operations['noctown___pets___delete']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPetsDeleteResponse = operations['noctown___pets___delete']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPetsListResponse = operations['noctown___pets___list']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPetsNearbyRequest = operations['noctown___pets___nearby']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPetsNearbyResponse = operations['noctown___pets___nearby']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPetsRenameRequest = operations['noctown___pets___rename']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPetsRenameResponse = operations['noctown___pets___rename']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPetsShowRequest = operations['noctown___pets___show']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPetsShowResponse = operations['noctown___pets___show']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPlayerEquipSkinRequest = operations['noctown___player___equip-skin']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPlayerEquipSkinResponse = operations['noctown___player___equip-skin']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPlayerPositionRequest = operations['noctown___player___position']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPlayerPositionResponse = operations['noctown___player___position']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPlayerResponse = operations['noctown___player']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPlayersNearbyRequest = operations['noctown___players___nearby']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPlayersNearbyResponse = operations['noctown___players___nearby']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPlayerUnequipSkinResponse = operations['noctown___player___unequip-skin']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownQuestAbandonRequest = operations['noctown___quest___abandon']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownQuestAbandonResponse = operations['noctown___quest___abandon']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownQuestCompleteRequest = operations['noctown___quest___complete']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownQuestCompleteResponse = operations['noctown___quest___complete']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownQuestListResponse = operations['noctown___quest___list']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownQuestStartRequest = operations['noctown___quest___start']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownQuestStartResponse = operations['noctown___quest___start']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownRankingCategoryRequest = operations['noctown___ranking___category']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownRankingCategoryResponse = operations['noctown___ranking___category']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownRankingTotalRequest = operations['noctown___ranking___total']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownRankingTotalResponse = operations['noctown___ranking___total']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownSaisenHistoryRequest = operations['noctown___saisen___history']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownSaisenHistoryResponse = operations['noctown___saisen___history']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownSaisenOfferRequest = operations['noctown___saisen___offer']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownSaisenOfferResponse = operations['noctown___saisen___offer']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownShopBuyRequest = operations['noctown___shop___buy']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownShopBuyResponse = operations['noctown___shop___buy']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownShopSellRequest = operations['noctown___shop___sell']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownShopSellResponse = operations['noctown___shop___sell']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeAddItemsRequest = operations['noctown___trade___add-items']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeAddItemsResponse = operations['noctown___trade___add-items']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeBarterRequest = operations['noctown___trade___barter']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeBarterResponse = operations['noctown___trade___barter']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeCancelRequest = operations['noctown___trade___cancel']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeCancelResponse = operations['noctown___trade___cancel']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeConfirmRequest = operations['noctown___trade___confirm']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeConfirmResponse = operations['noctown___trade___confirm']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeDetailRequest = operations['noctown___trade___detail']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeDetailResponse = operations['noctown___trade___detail']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeExecuteRequest = operations['noctown___trade___execute']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeExecuteResponse = operations['noctown___trade___execute']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeListResponse = operations['noctown___trade___list']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeRequestRequest = operations['noctown___trade___request']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeRequestResponse = operations['noctown___trade___request']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeRespondRequest = operations['noctown___trade___respond']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeRespondResponse = operations['noctown___trade___respond']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeUnconfirmRequest = operations['noctown___trade___unconfirm']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeUnconfirmResponse = operations['noctown___trade___unconfirm']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoqAnnounceRequest = operations['noq___announce']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoqAnnounceResponse = operations['noq___announce']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoqMuteCreateRequest = operations['noq___mute___create']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoqMuteDeleteRequest = operations['noq___mute___delete']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoqMuteListResponse = operations['noq___mute___list']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoqQuestionsAnsweredRequest = operations['noq___questions___answered']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoqQuestionsAnsweredResponse = operations['noq___questions___answered']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoqQuestionsAnswerRequest = operations['noq___questions___answer']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoqQuestionsAnswerResponse = operations['noq___questions___answer']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoqQuestionsDeleteRequest = operations['noq___questions___delete']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoqQuestionsReceivedRequest = operations['noq___questions___received']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoqQuestionsReceivedResponse = operations['noq___questions___received']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoqQuestionsReportRequest = operations['noq___questions___report']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoqQuestionsReportResponse = operations['noq___questions___report']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoqQuestionsSendRequest = operations['noq___questions___send']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoqQuestionsSendResponse = operations['noq___questions___send']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoqQuestionsSentRequest = operations['noq___questions___sent']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoqQuestionsSentResponse = operations['noq___questions___sent']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoqSettingsGenerateKeyRequest = operations['noq___settings___generate-key']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoqSettingsGenerateKeyResponse = operations['noq___settings___generate-key']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoqSettingsGetResponse = operations['noq___settings___get']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoqSettingsShowRequest = operations['noq___settings___show']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoqSettingsShowResponse = operations['noq___settings___show']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoqSettingsUpdateRequest = operations['noq___settings___update']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoqSettingsUpdateResponse = operations['noq___settings___update']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
 type Note = components['schemas']['Note'];
@@ -4517,40 +3018,10 @@ type NotesGlobalTimelineRequest = operations['notes___global-timeline']['request
 type NotesGlobalTimelineResponse = operations['notes___global-timeline']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
-type NotesHighlightIllustrationsRequest = operations['notes___highlight-illustrations']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NotesHighlightIllustrationsResponse = operations['notes___highlight-illustrations']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
 type NotesHybridTimelineRequest = operations['notes___hybrid-timeline']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
 type NotesHybridTimelineResponse = operations['notes___hybrid-timeline']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NotesIllustrationRankingRequest = operations['notes___illustration-ranking']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NotesIllustrationRankingResponse = operations['notes___illustration-ranking']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NotesIllustrationRequest = operations['notes___illustration']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NotesIllustrationResponse = operations['notes___illustration']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NotesIllustrationsByTagRankingRequest = operations['notes___illustrations-by-tag-ranking']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NotesIllustrationsByTagRankingResponse = operations['notes___illustrations-by-tag-ranking']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NotesIllustrationsByTagRequest = operations['notes___illustrations-by-tag']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NotesIllustrationsByTagResponse = operations['notes___illustrations-by-tag']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
 type NotesLocalTimelineRequest = operations['notes___local-timeline']['requestBody']['content']['application/json'];
@@ -4655,9 +3126,6 @@ type NotesTranslateResponse = operations['notes___translate']['responses']['200'
 type NotesUnrenoteRequest = operations['notes___unrenote']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
-type NotesUpdateVisibilityRequest = operations['notes___update-visibility']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
 type NotesUserListTimelineRequest = operations['notes___user-list-timeline']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
@@ -4673,7 +3141,7 @@ type Notification_2 = components['schemas']['Notification'];
 type NotificationsCreateRequest = operations['notifications___create']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
-export const notificationTypes: readonly ["note", "follow", "mention", "reply", "renote", "quote", "reaction", "pollEnded", "scheduledNotePosted", "scheduledNotePostFailed", "receiveFollowRequest", "followRequestAccepted", "app", "roleAssigned", "chatRoomInvitationReceived", "achievementEarned", "exportCompleted", "test", "login", "createToken", "noqQuestion"];
+export const notificationTypes: readonly ["note", "follow", "mention", "reply", "renote", "quote", "reaction", "pollEnded", "scheduledNotePosted", "scheduledNotePostFailed", "receiveFollowRequest", "followRequestAccepted", "app", "roleAssigned", "chatRoomInvitationReceived", "achievementEarned", "exportCompleted", "test", "login", "createToken"];
 
 // @public (undocumented)
 export function nyaize(text: string): string;
@@ -4724,93 +3192,6 @@ type PagesUnlikeRequest = operations['pages___unlike']['requestBody']['content']
 type PagesUpdateRequest = operations['pages___update']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
-type PaintChatCanvasRequest = operations['paint-chat___canvas']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type PaintChatCanvasResponse = operations['paint-chat___canvas']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type PaintChatDiceRequest = operations['paint-chat___dice']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type PaintChatDiceResponse = operations['paint-chat___dice']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type PaintChatJoinResponse = operations['paint-chat___join']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type PaintChatLeaveQueueResponse = operations['paint-chat___leave-queue']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type PaintChatLeaveRequest = operations['paint-chat___leave']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type PaintChatLeaveResponse = operations['paint-chat___leave']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type PaintChatMessageRequest = operations['paint-chat___message']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type PaintChatMessageResponse = operations['paint-chat___message']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type PaintChatMessagesRequest = operations['paint-chat___messages']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type PaintChatMessagesResponse = operations['paint-chat___messages']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type PaintChatPublishAgreeRequest = operations['paint-chat___publish___agree']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type PaintChatPublishAgreeResponse = operations['paint-chat___publish___agree']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type PaintChatPublishMessageRequest = operations['paint-chat___publish___message']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type PaintChatPublishMessageResponse = operations['paint-chat___publish___message']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type PaintChatPublishMyArtRequest = operations['paint-chat___publish___my-art']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type PaintChatPublishMyArtResponse = operations['paint-chat___publish___my-art']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type PaintChatPublishRejectRequest = operations['paint-chat___publish___reject']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type PaintChatPublishRejectResponse = operations['paint-chat___publish___reject']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type PaintChatReportRequest = operations['paint-chat___report']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type PaintChatReportResponse = operations['paint-chat___report']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type PaintChatRoomRequest = operations['paint-chat___room']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type PaintChatRoomResponse = operations['paint-chat___room']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type PaintChatSaveColorsRequest = operations['paint-chat___save-colors']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type PaintChatSettingsResponse = operations['paint-chat___settings']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type PaintChatSoloResponse = operations['paint-chat___solo']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type PaintChatTopicRequest = operations['paint-chat___topic']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type PaintChatTopicResponse = operations['paint-chat___topic']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
 function parse(_acct: string): Acct;
 
 // Warning: (ae-forgotten-export) The symbol "Values" needs to be exported by the entry point index.d.ts
@@ -4823,7 +3204,7 @@ type PartialRolePolicyOverride = Partial<{
 }>;
 
 // @public (undocumented)
-export const permissions: readonly ["read:account", "write:account", "read:blocks", "write:blocks", "read:drive", "write:drive", "read:favorites", "write:favorites", "read:following", "write:following", "read:messaging", "write:messaging", "read:mutes", "write:mutes", "write:notes", "read:notifications", "write:notifications", "read:reactions", "write:reactions", "write:votes", "read:pages", "write:pages", "write:page-likes", "read:page-likes", "read:user-groups", "write:user-groups", "read:channels", "write:channels", "read:gallery", "write:gallery", "read:gallery-likes", "write:gallery-likes", "read:flash", "write:flash", "read:flash-likes", "write:flash-likes", "read:admin:abuse-user-reports", "write:admin:delete-account", "write:admin:delete-all-files-of-a-user", "read:admin:index-stats", "read:admin:table-stats", "read:admin:user-ips", "read:admin:meta", "write:admin:reset-password", "write:admin:resolve-abuse-user-report", "write:admin:send-email", "read:admin:server-info", "read:admin:show-moderation-log", "read:admin:show-user", "write:admin:suspend-user", "write:admin:unset-user-avatar", "write:admin:unset-user-banner", "write:admin:unsuspend-user", "write:admin:meta", "write:admin:user-note", "write:admin:roles", "read:admin:roles", "write:admin:relays", "read:admin:relays", "write:admin:invite-codes", "read:admin:invite-codes", "write:admin:announcements", "read:admin:announcements", "write:admin:avatar-decorations", "read:admin:avatar-decorations", "write:admin:federation", "write:admin:account", "read:admin:account", "write:admin:emoji", "read:admin:emoji", "write:admin:queue", "read:admin:queue", "write:admin:promo", "write:admin:drive", "read:admin:drive", "write:admin:ad", "read:admin:ad", "write:admin:noctown", "read:admin:noctown", "write:invite-codes", "read:invite-codes", "write:clip-favorite", "read:clip-favorite", "read:federation", "write:report-abuse", "write:chat", "read:chat", "write:noq", "read:noq"];
+export const permissions: readonly ["read:account", "write:account", "read:blocks", "write:blocks", "read:drive", "write:drive", "read:favorites", "write:favorites", "read:following", "write:following", "read:messaging", "write:messaging", "read:mutes", "write:mutes", "write:notes", "read:notifications", "write:notifications", "read:reactions", "write:reactions", "write:votes", "read:pages", "write:pages", "write:page-likes", "read:page-likes", "read:user-groups", "write:user-groups", "read:channels", "write:channels", "read:gallery", "write:gallery", "read:gallery-likes", "write:gallery-likes", "read:flash", "write:flash", "read:flash-likes", "write:flash-likes", "read:admin:abuse-user-reports", "write:admin:delete-account", "write:admin:delete-all-files-of-a-user", "read:admin:index-stats", "read:admin:table-stats", "read:admin:user-ips", "read:admin:meta", "write:admin:reset-password", "write:admin:resolve-abuse-user-report", "write:admin:send-email", "read:admin:server-info", "read:admin:show-moderation-log", "read:admin:show-user", "write:admin:suspend-user", "write:admin:unset-mfa", "write:admin:unset-user-avatar", "write:admin:unset-user-banner", "write:admin:unsuspend-user", "write:admin:meta", "write:admin:user-note", "write:admin:roles", "read:admin:roles", "write:admin:relays", "read:admin:relays", "write:admin:invite-codes", "read:admin:invite-codes", "write:admin:announcements", "read:admin:announcements", "write:admin:avatar-decorations", "read:admin:avatar-decorations", "write:admin:federation", "write:admin:account", "read:admin:account", "write:admin:emoji", "read:admin:emoji", "write:admin:queue", "read:admin:queue", "write:admin:promo", "write:admin:drive", "read:admin:drive", "write:admin:ad", "read:admin:ad", "write:invite-codes", "read:invite-codes", "write:clip-favorite", "read:clip-favorite", "read:federation", "write:report-abuse", "write:chat", "read:chat"];
 
 // @public (undocumented)
 type PingResponse = operations['ping']['responses']['200']['content']['application/json'];
@@ -4975,10 +3356,7 @@ type RoleLite = components['schemas']['RoleLite'];
 type RolePolicies = components['schemas']['RolePolicies'];
 
 // @public (undocumented)
-export const rolePolicies: readonly ["gtlAvailable", "ltlAvailable", "canPublicNote", "mentionLimit", "canInvite", "inviteLimit", "inviteLimitCycle", "inviteExpirationTime", "canManageCustomEmojis", "canManageAvatarDecorations", "canSearchNotes", "canSearchUsers", "canUseTranslator", "canHideAds", "driveCapacityMb", "maxFileSizeMb", "alwaysMarkNsfw", "canUpdateBioMedia", "pinLimit", "antennaLimit", "wordMuteLimit", "webhookLimit", "clipLimit", "noteEachClipsLimit", "userListLimit", "userEachUserListsLimit", "rateLimitFactor", "avatarDecorationLimit", "canImportAntennas", "canImportBlocking", "canImportFollowing", "canImportMuting", "canImportUserLists", "chatAvailability", "uploadableFileTypes", "noteDraftLimit", "scheduledNoteLimit", "watermarkAvailable"];
-
-// @public (undocumented)
-type RolesListRequest = operations['roles___list']['requestBody']['content']['application/json'];
+export const rolePolicies: readonly ["gtlAvailable", "ltlAvailable", "canPublicNote", "mentionLimit", "canInvite", "inviteLimit", "inviteLimitCycle", "inviteExpirationTime", "canManageCustomEmojis", "canManageAvatarDecorations", "canSearchNotes", "canSearchUsers", "canUseTranslator", "canHideAds", "canCreateChannel", "driveCapacityMb", "maxFileSizeMb", "alwaysMarkNsfw", "canUpdateBioMedia", "pinLimit", "antennaLimit", "wordMuteLimit", "webhookLimit", "clipLimit", "noteEachClipsLimit", "userListLimit", "userEachUserListsLimit", "rateLimitFactor", "avatarDecorationLimit", "canImportAntennas", "canImportBlocking", "canImportFollowing", "canImportMuting", "canImportUserLists", "chatAvailability", "uploadableFileTypes", "noteDraftLimit", "scheduledNoteLimit", "watermarkAvailable"];
 
 // @public (undocumented)
 type RolesListResponse = operations['roles___list']['responses']['200']['content']['application/json'];
@@ -5112,7 +3490,7 @@ export class Stream extends EventEmitter<StreamEvents> implements IStream {
         token: string;
     } | null, options?: {
         WebSocket?: Options['WebSocket'];
-        binaryType?: ReconnectingWebSocketInstance['binaryType'];
+        binaryType?: ReconnectingWebSocket['binaryType'];
     });
     // (undocumented)
     close(): void;
@@ -5392,8 +3770,7 @@ type VerifyEmailRequest = operations['verify-email']['requestBody']['content']['
 
 // Warnings were encountered during analysis:
 //
-// src/entities.ts:55:2 - (ae-forgotten-export) The symbol "ModerationLogPayloads" needs to be exported by the entry point index.d.ts
-// src/streaming.ts:57:3 - (ae-forgotten-export) The symbol "ReconnectingWebSocketInstance" needs to be exported by the entry point index.d.ts
+// src/streaming.ts:57:3 - (ae-forgotten-export) The symbol "ReconnectingWebSocket" needs to be exported by the entry point index.d.ts
 // src/streaming.types.ts:226:4 - (ae-forgotten-export) The symbol "ReversiUpdateKey" needs to be exported by the entry point index.d.ts
 // src/streaming.types.ts:241:4 - (ae-forgotten-export) The symbol "ReversiUpdateSettings" needs to be exported by the entry point index.d.ts
 

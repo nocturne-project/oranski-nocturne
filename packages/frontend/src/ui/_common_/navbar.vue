@@ -61,7 +61,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<i v-if="store.r.realtimeMode.value" class="ti ti-bolt ti-fw"></i>
 				<i v-else class="ti ti-bolt-off ti-fw"></i>
 			</button>
-			<button v-tooltip.noDelay.right="shouldShowChatIcon ? i18n.ts.directMessage : i18n.ts.note" class="_button" :class="[$style.post]" data-cy-open-post-form @click="handlePostButtonClick" @mousedown="() => console.log('🖱️ mousedown on post button')" @mouseup="() => console.log('🖱️ mouseup on post button')">
+			<button v-tooltip.noDelay.right="shouldShowChatIcon ? i18n.ts.directMessage : i18n.ts.note" class="_button" :class="[$style.post]" data-testid="open-post-form" @click="handlePostButtonClick" @mousedown="() => console.log('🖱️ mousedown on post button')" @mouseup="() => console.log('🖱️ mouseup on post button')">
 				<i :class="[shouldShowChatIcon ? 'ti ti-send' : 'ti ti-pencil', 'ti-fw', $style.postIcon]"></i><span :class="$style.postText">{{ shouldShowChatIcon ? i18n.ts.directMessage_short : i18n.ts.note }}</span>
 			</button>
 			<button v-if="$i != null" v-tooltip.noDelay.right="`${i18n.ts.account}: @${$i.username}`" class="_button" :class="[$style.account]" @click="openAccountMenu">
