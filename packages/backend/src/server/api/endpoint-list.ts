@@ -395,6 +395,7 @@ export * as 'reversi/verify' from './endpoints/reversi/verify.js';
 export * as 'noctown/player' from './endpoints/noctown/player.js';
 export * as 'noctown/player/position' from './endpoints/noctown/player/position.js';
 export * as 'noctown/players/nearby' from './endpoints/noctown/players/nearby.js';
+export * as 'noctown/online-count' from './endpoints/noctown/online-count.js';
 export * as 'noctown/map/chunk' from './endpoints/noctown/map/chunk.js';
 export * as 'noctown/item/inventory' from './endpoints/noctown/item/inventory.js';
 export * as 'noctown/item/pickup' from './endpoints/noctown/item/pickup.js';
