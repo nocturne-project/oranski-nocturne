@@ -49,7 +49,6 @@ import { ChatUserChannel } from './api/stream/channels/chat-user.js';
 import { ChatRoomChannel } from './api/stream/channels/chat-room.js';
 import { ReversiChannel } from './api/stream/channels/reversi.js';
 import { ReversiGameChannel } from './api/stream/channels/reversi-game.js';
-import { NoctownChannel } from './api/stream/channels/noctown.js';
 import { NoteStreamingHidingService } from './api/stream/NoteStreamingHidingService.js';
 import { SigninWithPasskeyApiService } from './api/SigninWithPasskeyApiService.js';
 import { SlackNotificationService } from '@/core/SlackNotificationService.js';
@@ -96,7 +95,6 @@ import { SlackNotificationService } from '@/core/SlackNotificationService.js';
 		ChatRoomChannel,
 		ReversiChannel,
 		ReversiGameChannel,
-		NoctownChannel,
 		HomeTimelineChannel,
 		HybridTimelineChannel,
 		LocalTimelineChannel,

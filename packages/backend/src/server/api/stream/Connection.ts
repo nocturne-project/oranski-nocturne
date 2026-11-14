@@ -39,7 +39,6 @@ import { ChatRoomChannel } from '@/server/api/stream/channels/chat-room.js';
 import { ReversiChannel } from '@/server/api/stream/channels/reversi.js';
 import { ReversiGameChannel } from '@/server/api/stream/channels/reversi-game.js';
 import { PaintChatChannel } from '@/server/api/stream/channels/paint-chat.js';
-import { NoctownChannel } from '@/server/api/stream/channels/noctown.js';
 import type { ChannelRequest } from './channel.js';
 import type { ChannelConstructor } from './channel.js';
 import type Channel from './channel.js';
@@ -368,7 +367,6 @@ export default class Connection {
 			case 'reversi': return ReversiChannel;
 			case 'reversiGame': return ReversiGameChannel;
 			case 'paintChat': return PaintChatChannel;
-			case 'noctown': return NoctownChannel;
 
 			default:
 				throw new Error(`no such channel: ${name}`);

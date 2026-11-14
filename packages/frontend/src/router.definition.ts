@@ -627,10 +627,6 @@ export const ROUTE_DEF = [{
 	component: page(() => import('@/pages/qr.vue')),
 	loginRequired: true,
 }, {
-	path: '/noctown',
-	component: page(() => import('@/pages/noctown/index.vue')),
-	loginRequired: true,
-}, {
 	path: '/debug',
 	component: page(() => import('@/pages/debug.vue')),
 	loginRequired: false,
