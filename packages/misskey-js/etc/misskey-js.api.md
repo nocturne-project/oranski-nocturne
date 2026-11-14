@@ -314,19 +314,14 @@ type AdminNoqSettingsUpdateRequest = operations['admin___noq___settings___update
 type AdminNoqSettingsUpdateResponse = operations['admin___noq___settings___update']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
-type AdminPaintChatSettingsResponse = operations['admin___paint-chat___settings']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
-type AdminPaintChatSettingsUpdateRequest = operations['admin___paint-chat___settings___update']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
-type AdminPaintChatSettingsUpdateResponse = operations['admin___paint-chat___settings___update']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
-type AdminPaintChatStegoExtractRequest = operations['admin___paint-chat___stego___extract']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
-type AdminPaintChatStegoExtractResponse = operations['admin___paint-chat___stego___extract']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
 type AdminPromoCreateRequest = operations['admin___promo___create']['requestBody']['content']['application/json'];
@@ -1049,65 +1044,6 @@ export type Channels = {
             typingStop: (payload: {
                 userId: User['id'];
             }) => void;
-            drawingStroke: (payload: {
-                id: string;
-                userId: User['id'];
-                userName: string;
-                points: Array<{
-                    x: number;
-                    y: number;
-                    pressure?: number;
-                }>;
-                tool: 'pen' | 'eraser' | 'eyedropper';
-                color: string;
-                strokeWidth: number;
-                opacity: number;
-                timestamp: number;
-                layer?: number;
-            }) => void;
-            drawingProgress: (payload: {
-                id?: string;
-                userId?: User['id'];
-                points: Array<{
-                    x: number;
-                    y: number;
-                    pressure?: number;
-                }>;
-                tool: 'pen' | 'eraser' | 'eyedropper';
-                color: string;
-                strokeWidth?: number;
-                opacity?: number;
-                isComplete?: boolean;
-                layer?: number;
-                timestamp?: number;
-            }) => void;
-            cursorMove: (payload: {
-                userId: User['id'];
-                userName: string;
-                x: number;
-                y: number;
-                timestamp: number;
-            }) => void;
-            clearCanvas: (payload: {
-                userId: User['id'];
-                userName?: string;
-                timestamp: number;
-                layer?: number;
-            }) => void;
-            undoStroke: (payload: {
-                userId: User['id'];
-                userName?: string;
-                strokeId?: string;
-                timestamp: number;
-                layer?: number;
-            }) => void;
-            redoStroke: (payload: {
-                userId: User['id'];
-                userName?: string;
-                strokeId?: string;
-                timestamp: number;
-                layer?: number;
-            }) => void;
         };
         receives: {
             read: {
@@ -1118,46 +1054,6 @@ export type Channels = {
             };
             typingStop: {
                 roomId?: string;
-            };
-            drawingStroke: {
-                points: Array<{
-                    x: number;
-                    y: number;
-                    pressure?: number;
-                }>;
-                tool: 'pen' | 'eraser' | 'eyedropper';
-                color: string;
-                strokeWidth?: number;
-                opacity?: number;
-                layer?: number;
-            };
-            drawingProgress: {
-                points: Array<{
-                    x: number;
-                    y: number;
-                    pressure?: number;
-                }>;
-                tool: 'pen' | 'eraser' | 'eyedropper';
-                color: string;
-                strokeWidth?: number;
-                opacity?: number;
-                isComplete?: boolean;
-                layer?: number;
-            };
-            cursorMove: {
-                x: number;
-                y: number;
-            };
-            clearCanvas: {
-                layer?: number;
-            } | null;
-            undoStroke: {
-                layer?: number;
-                strokeId?: string;
-            };
-            redoStroke: {
-                layer?: number;
-                strokeId?: string;
             };
             canvasRasterized: {
                 imageData: string;
@@ -1193,65 +1089,6 @@ export type Channels = {
             typingStop: (payload: {
                 userId: User['id'];
             }) => void;
-            drawingStroke: (payload: {
-                id: string;
-                userId: User['id'];
-                userName: string;
-                points: Array<{
-                    x: number;
-                    y: number;
-                    pressure?: number;
-                }>;
-                tool: 'pen' | 'eraser' | 'eyedropper';
-                color: string;
-                strokeWidth: number;
-                opacity: number;
-                timestamp: number;
-                layer?: number;
-            }) => void;
-            drawingProgress: (payload: {
-                id?: string;
-                userId?: User['id'];
-                points: Array<{
-                    x: number;
-                    y: number;
-                    pressure?: number;
-                }>;
-                tool: 'pen' | 'eraser' | 'eyedropper';
-                color: string;
-                strokeWidth?: number;
-                opacity?: number;
-                isComplete?: boolean;
-                layer?: number;
-                timestamp?: number;
-            }) => void;
-            cursorMove: (payload: {
-                userId: User['id'];
-                userName: string;
-                x: number;
-                y: number;
-                timestamp: number;
-            }) => void;
-            clearCanvas: (payload: {
-                userId: User['id'];
-                userName?: string;
-                timestamp: number;
-                layer?: number;
-            }) => void;
-            undoStroke: (payload: {
-                userId: User['id'];
-                userName: string;
-                strokeId?: string;
-                timestamp: number;
-                layer?: number;
-            }) => void;
-            redoStroke: (payload: {
-                userId: User['id'];
-                userName: string;
-                strokeId?: string;
-                timestamp: number;
-                layer?: number;
-            }) => void;
         };
         receives: {
             read: {
@@ -1262,50 +1099,6 @@ export type Channels = {
             };
             typingStop: {
                 roomId?: string;
-            };
-            drawingStroke: {
-                points: Array<{
-                    x: number;
-                    y: number;
-                    pressure?: number;
-                }>;
-                tool: 'pen' | 'eraser' | 'eyedropper';
-                color: string;
-                strokeWidth?: number;
-                opacity?: number;
-                layer?: number;
-            };
-            drawingProgress: {
-                points: Array<{
-                    x: number;
-                    y: number;
-                    pressure?: number;
-                }>;
-                tool: 'pen' | 'eraser' | 'eyedropper';
-                color: string;
-                strokeWidth?: number;
-                opacity?: number;
-                isComplete?: boolean;
-                layer?: number;
-            };
-            cursorMove: {
-                x: number;
-                y: number;
-            };
-            clearCanvas: null | {
-                layer?: number;
-            };
-            undoStroke: {
-                userId?: User['id'];
-                timestamp: number;
-                layer?: number;
-                strokeId?: string;
-            };
-            redoStroke: {
-                userId?: User['id'];
-                timestamp: number;
-                layer?: number;
-                strokeId?: string;
             };
             canvasRasterized: {
                 imageData: string;
@@ -1676,31 +1469,22 @@ type ClipsUpdateResponse = operations['clips___update']['responses']['200']['con
 type DateString = string;
 
 // @public (undocumented)
-type DrawingCanvasRequest = operations['drawing___canvas']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
-type DrawingCanvasResponse = operations['drawing___canvas']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
-type DrawingSaveRequest = operations['drawing___save']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
-type DrawingSettingsRoomGetRequest = operations['drawing___settings___room___get']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
-type DrawingSettingsRoomGetResponse = operations['drawing___settings___room___get']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
-type DrawingSettingsRoomUpdateRequest = operations['drawing___settings___room___update']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
-type DrawingSettingsUserGetRequest = operations['drawing___settings___user___get']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
-type DrawingSettingsUserGetResponse = operations['drawing___settings___user___get']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
-type DrawingSettingsUserUpdateRequest = operations['drawing___settings___user___update']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
 type DriveFile = components['schemas']['DriveFile'];
@@ -4614,91 +4398,62 @@ type PagesUnlikeRequest = operations['pages___unlike']['requestBody']['content']
 type PagesUpdateRequest = operations['pages___update']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
-type PaintChatCanvasRequest = operations['paint-chat___canvas']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
-type PaintChatCanvasResponse = operations['paint-chat___canvas']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
-type PaintChatDiceRequest = operations['paint-chat___dice']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
-type PaintChatDiceResponse = operations['paint-chat___dice']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
-type PaintChatJoinResponse = operations['paint-chat___join']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
-type PaintChatLeaveQueueResponse = operations['paint-chat___leave-queue']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
-type PaintChatLeaveRequest = operations['paint-chat___leave']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
-type PaintChatLeaveResponse = operations['paint-chat___leave']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
-type PaintChatMessageRequest = operations['paint-chat___message']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
-type PaintChatMessageResponse = operations['paint-chat___message']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
-type PaintChatMessagesRequest = operations['paint-chat___messages']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
-type PaintChatMessagesResponse = operations['paint-chat___messages']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
-type PaintChatPublishAgreeRequest = operations['paint-chat___publish___agree']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
-type PaintChatPublishAgreeResponse = operations['paint-chat___publish___agree']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
-type PaintChatPublishMessageRequest = operations['paint-chat___publish___message']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
-type PaintChatPublishMessageResponse = operations['paint-chat___publish___message']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
-type PaintChatPublishMyArtRequest = operations['paint-chat___publish___my-art']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
-type PaintChatPublishMyArtResponse = operations['paint-chat___publish___my-art']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
-type PaintChatPublishRejectRequest = operations['paint-chat___publish___reject']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
-type PaintChatPublishRejectResponse = operations['paint-chat___publish___reject']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
-type PaintChatReportRequest = operations['paint-chat___report']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
-type PaintChatReportResponse = operations['paint-chat___report']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
-type PaintChatRoomRequest = operations['paint-chat___room']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
-type PaintChatRoomResponse = operations['paint-chat___room']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
-type PaintChatSaveColorsRequest = operations['paint-chat___save-colors']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
-type PaintChatSettingsResponse = operations['paint-chat___settings']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
-type PaintChatSoloResponse = operations['paint-chat___solo']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
-type PaintChatTopicRequest = operations['paint-chat___topic']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
-type PaintChatTopicResponse = operations['paint-chat___topic']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
 function parse(_acct: string): Acct;

@@ -44,7 +44,6 @@ import { AggregateRetentionProcessorService } from './processors/AggregateRetent
 import { ExportFavoritesProcessorService } from './processors/ExportFavoritesProcessorService.js';
 import { RelationshipProcessorService } from './processors/RelationshipProcessorService.js';
 import { CleanExpiredChatMessagesProcessorService } from './processors/CleanExpiredChatMessagesProcessorService.js';
-import { CleanIdlePaintChatRoomsProcessorService } from './processors/CleanIdlePaintChatRoomsProcessorService.js';
 
 @Module({
 	imports: [
@@ -89,7 +88,6 @@ import { CleanIdlePaintChatRoomsProcessorService } from './processors/CleanIdleP
 		CheckModeratorsActivityProcessorService,
 		CleanRemoteNotesProcessorService,
 		CleanExpiredChatMessagesProcessorService,
-		CleanIdlePaintChatRoomsProcessorService,
 		QueueProcessorService,
 	],
 	exports: [

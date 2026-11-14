@@ -190,58 +190,6 @@ export interface ChatEventTypes {
 	typingStop: {
 		userId: MiUser['id'];
 	};
-	drawingStroke: {
-		id: string;
-		userId: MiUser['id'];
-		userName: string;
-		points: Array<{ x: number; y: number }>;
-		tool: 'pen' | 'eraser' | 'eyedropper';
-		color: string;
-		strokeWidth: number;
-		opacity: number;
-		timestamp: number;
-	};
-	cursorMove: {
-		userId: MiUser['id'];
-		userName: string;
-		x: number;
-		y: number;
-		timestamp: number;
-	};
-	clearCanvas: {
-		userId: MiUser['id'];
-		userName: string;
-		timestamp: number;
-	};
-	undoStroke: {
-		userId: MiUser['id'];
-		userName: string;
-		strokeId: string;
-		timestamp: number;
-	};
-	drawingProgress: {
-		userId: MiUser['id'];
-		userName: string;
-		points: Array<{ x: number; y: number }>;
-		tool: 'pen' | 'eraser' | 'eyedropper';
-		color: string;
-		strokeWidth: number;
-		opacity: number;
-		timestamp: number;
-	};
-	redoStroke: {
-		userId: MiUser['id'];
-		userName: string;
-		strokeId: string;
-		timestamp: number;
-	};
-	canvasSizeChange: {
-		userId: MiUser['id'];
-		userName: string;
-		width: number;
-		height: number;
-		timestamp: number;
-	};
 }
 
 export interface ReversiEventTypes {
@@ -394,10 +342,6 @@ export type GlobalEvents = {
 		name: `reversiGameStream:${MiReversiGame['id']}`;
 		payload: EventTypesToEventPayload<ReversiGameEventTypes>;
 	};
-	paintChat: {
-		name: `paintChatStream:${string}`;
-		payload: { type: string; body: Record<string, unknown> | null };
-	};
 };
 
 // API event definitions
@@ -515,7 +459,4 @@ export class GlobalEventService {
 
 	// ランダム絵チャットのルームストリームにイベントを配信する
 	@bindThis
-	public publishPaintChatStream(roomId: string, type: string, value?: Record<string, unknown>): void {
-		this.publish(`paintChatStream:${roomId}`, type, typeof value === 'undefined' ? null : value);
-	}
 }

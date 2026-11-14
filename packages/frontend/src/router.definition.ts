@@ -53,14 +53,6 @@ export const ROUTE_DEF = [{
 	path: '/clips/:clipId',
 	component: page(() => import('@/pages/clip.vue')),
 }, {
-	path: '/paintchat',
-	component: page(() => import('@/pages/paintchat/index.vue')),
-	loginRequired: true,
-}, {
-	path: '/paintchat/:roomId',
-	component: page(() => import('@/pages/paintchat/room.vue')),
-	loginRequired: true,
-}, {
 	path: '/chat',
 	component: chatPage(() => import('@/pages/chat/home.vue')),
 	loginRequired: true,
@@ -526,10 +518,6 @@ export const ROUTE_DEF = [{
 		path: '/noq',
 		name: 'noq',
 		component: page(() => import('@/pages/admin/noq.vue')),
-	}, {
-		path: '/paint-chat',
-		name: 'paint-chat',
-		component: page(() => import('@/pages/admin/paint-chat.vue')),
 	}, {
 		path: '/',
 		component: page(() => import('@/pages/_empty_.vue')),

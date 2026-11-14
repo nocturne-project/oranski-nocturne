@@ -59,11 +59,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</div>
 	</div>
 
-	<div v-else-if="tab === 'drawing'" class="_spacer" style="--MI_SPACER-w: 100%; max-width: 100vw;">
-		<XDrawing v-if="room != null" :roomId="roomId"/>
-		<XDrawing v-else-if="user != null && userId" :userId="userId"/>
-	</div>
-
 	<div v-else-if="tab === 'search'" class="_spacer" style="--MI_SPACER-w: 700px;">
 		<XSearch :userId="userId" :roomId="roomId"/>
 	</div>
@@ -118,7 +113,6 @@ import XForm from './room.form.vue';
 import XSearch from './room.search.vue';
 import XMembers from './room.members.vue';
 import XInfo from './room.info.vue';
-import XDrawing from './room.drawing.vue';
 import type { MenuItem } from '@/types/menu.js';
 import type { PageHeaderItem } from '@/types/page-header.js';
 import * as os from '@/os.js';
@@ -162,7 +156,6 @@ export type NormalizedChatMessage = Omit<Misskey.entities.ChatMessageLite, 'from
 const initializing = ref(false);
 const initialized = ref(false);
 // お絵描きタブ表示中のメッセージ未読フラグ
-const hasUnreadWhileDrawing = ref(false);
 const initializeId = ref(0); // 初期化IDで重複防止
 const moreFetching = ref(false);
 const messages = ref<NormalizedChatMessage[]>([]);
@@ -608,12 +601,6 @@ function onMessage(message: Misskey.entities.ChatMessageLite) {
 	}
 
 	sound.playMisskeySfx('chatMessage');
-
-	// お絵描きタブ内チャットオーバーレイでメッセージが連動するため、タブハイライトは無効化
-	// highlight機能自体はMkTabsに残っており、必要時に再有効化可能
-	// if (tab.value !== 'chat' && message.fromUserId !== $i.id) {
-	// 	hasUnreadWhileDrawing.value = true;
-	// }
 
 	console.debug('New message:', message);
 
@@ -1069,7 +1056,7 @@ function showMenu(ev: PointerEvent) {
 // URLハッシュからタブを初期化
 function getInitialTab(): string {
 	const hash = window.location.hash.slice(1); // '#' を除去
-	const validTabs = ['chat', 'drawing', 'search', 'members', 'info'];
+	const validTabs = ['chat', 'search', 'members', 'info'];
 	return validTabs.includes(hash) ? hash : 'chat';
 }
 
@@ -1081,7 +1068,6 @@ watch(tab, (newTab) => {
 		window.location.hash = newTab;
 	} else {
 		// chatタブに戻ったら未読フラグをクリア
-		hasUnreadWhileDrawing.value = false;
 		window.history.pushState('', window.document.title, window.location.pathname + window.location.search);
 	}
 });
@@ -1090,7 +1076,7 @@ watch(tab, (newTab) => {
 onMounted(() => {
 	const handleHashChange = () => {
 		const hash = window.location.hash.slice(1);
-		const validTabs = ['chat', 'drawing', 'search', 'members', 'info'];
+		const validTabs = ['chat', 'search', 'members', 'info'];
 		if (validTabs.includes(hash)) {
 			tab.value = hash;
 		} else if (hash === '') {
@@ -1105,16 +1091,10 @@ onMounted(() => {
 	});
 });
 
-// Messagesタブの未読表示（お絵描き中にメッセージが来たら点滅マーク付加）
 const headerTabs = computed(() => room.value ? [{
 	key: 'chat',
 	title: i18n.ts._chat.messages,
 	icon: 'ti ti-messages',
-	highlight: hasUnreadWhileDrawing.value,
-}, {
-	key: 'drawing',
-	title: 'お絵かき',
-	icon: 'ti ti-brush',
 }, {
 	key: 'members',
 	title: i18n.ts._chat.members,
@@ -1131,11 +1111,6 @@ const headerTabs = computed(() => room.value ? [{
 	key: 'chat',
 	title: i18n.ts._chat.messages,
 	icon: 'ti ti-messages',
-	highlight: hasUnreadWhileDrawing.value,
-}, {
-	key: 'drawing',
-	title: 'お絵かき',
-	icon: 'ti ti-brush',
 }, {
 	key: 'search',
 	title: i18n.ts.search,
@@ -1164,33 +1139,26 @@ const headerActions = computed<PageHeaderItem[]>(() => {
 });
 
 definePage(computed(() => {
-	// お絵描きタブの場合はウィジェットペインを非表示にしてキャンバス領域を最大化
-	const isDrawingTab = tab.value === 'drawing';
-
 	if (initialized.value) {
 		if (user.value) {
 			return {
 				userName: user.value,
 				title: user.value.name ?? user.value.username,
 				avatar: user.value,
-				needWideArea: isDrawingTab,
 			};
 		} else if (room.value) {
 			return {
 				title: room.value.name,
 				icon: 'ti ti-users',
-				needWideArea: isDrawingTab,
 			};
 		} else {
 			return {
 				title: i18n.ts.directMessage,
-				needWideArea: isDrawingTab,
 			};
 		}
 	} else {
 		return {
 			title: i18n.ts.directMessage,
-			needWideArea: isDrawingTab,
 		};
 	}
 }));

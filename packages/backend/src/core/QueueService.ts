@@ -87,10 +87,6 @@ const REPEATABLE_SYSTEM_JOB_DEF = [{
 	name: 'cleanExpiredChatMessages',
 	// 10分ごとに期限切れチャットメッセージを削除
 	pattern: '*/10 * * * *',
-}, {
-	name: 'cleanIdlePaintChatRooms',
-	// 10分ごとに1時間以上アイドルのお絵描きチャットルームを自動終了
-	pattern: '*/10 * * * *',
 }];
 
 function parseRedisInfo(infoText: string): Record<string, string> {

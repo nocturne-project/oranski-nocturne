@@ -9,7 +9,6 @@ import { bindThis } from '@/decorators.js';
 import type { GlobalEvents } from '@/core/GlobalEventService.js';
 import type { JsonObject } from '@/misc/json-value.js';
 import { ChatService } from '@/core/ChatService.js';
-import { DrawingCanvasService } from '@/core/DrawingCanvasService.js';
 import Channel, { type ChannelRequest } from '../channel.js';
 import { REQUEST } from '@nestjs/core';
 import type { ChatRoomsRepository } from '@/models/_.js';
@@ -24,8 +23,6 @@ export class ChatRoomChannel extends Channel {
 	private typers: Record<string, Date> = {};
 	private emitTypersIntervalId: ReturnType<typeof setInterval>;
 
-	// レート制限用（カーソル移動のみ）
-	private lastCursorMove: number = 0;
 
 	constructor(
 		@Inject(REQUEST)
@@ -35,7 +32,6 @@ export class ChatRoomChannel extends Channel {
 		private chatRoomsRepository: ChatRoomsRepository,
 
 		private chatService: ChatService,
-		private drawingCanvasService: DrawingCanvasService,
 	) {
 		super(request);
 	}
@@ -61,11 +57,6 @@ export class ChatRoomChannel extends Channel {
 
 	@bindThis
 	private async onEvent(data: GlobalEvents['chatRoom']['payload']) {
-		// デバッグ: cursorMoveイベントの配信を確認
-		if (data.type === 'cursorMove') {
-			console.log(`🔍 [DEBUG] onEvent called for user ${this.user!.id}, event from user ${data.body.userId}`);
-		}
-
 		if (data.type === 'typing') {
 			const userId = data.body.userId;
 			const begin = this.typers[userId] == null;
@@ -131,153 +122,6 @@ export class ChatRoomChannel extends Channel {
 				if (this.roomId) {
 					this.chatService.notifyRoomTypingStop(this.user.id, this.roomId);
 				}
-				break;
-			case 'drawingStroke': {
-				console.log(`🔍 [DEBUG] Processing drawing stroke for room ${this.roomId} from user ${this.user.id}`);
-
-				// drawingStrokeは完了したストロークなので、レート制限を設けずすべて保存する
-				const strokeData = this.drawingCanvasService.normalizeStrokeData(this.roomId, this.user, body);
-				if (!strokeData) {
-					console.warn(`🔍 [SECURITY] Invalid drawing stroke payload rejected for room ${this.roomId}`);
-					return;
-				}
-
-				await this.drawingCanvasService.addStroke(this.roomId, strokeData);
-
-				await this.chatService.broadcastDrawingStroke(this.roomId, this.user.id, strokeData);
-				break;
-			}
-			case 'drawingProgress': {
-				console.log(`🔍 [DEBUG] Processing drawing progress for room ${this.roomId} from user ${this.user.id}`);
-
-				// セキュリティ: 描画データの詳細検証
-				if (!body || typeof body !== 'object') return;
-				if (!Array.isArray(body.points) || body.points.length === 0 || body.points.length > 500) return; // 進行中は点数制限緩和
-				if (!['pen', 'eraser', 'eyedropper'].includes(body.tool)) return;
-				if (typeof body.color !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(body.color)) return;
-				// strokeWidth上限を200に拡大（グループチャット描画アップグレード対応）
-				if (typeof body.strokeWidth !== 'number' || body.strokeWidth < 1 || body.strokeWidth > 200) return;
-				if (typeof body.opacity !== 'number' || body.opacity < 0.1 || body.opacity > 1) return;
-
-				// 進行状況データ作成
-				const maxLayer = this.drawingCanvasService.getMaxLayerIndex();
-				const layerIndex = Math.min(Math.max(Math.floor(typeof body.layer === 'number' ? body.layer : 0), 0), maxLayer);
-				const progressData = {
-					userId: this.user.id,
-					userName: this.user.name || this.user.username,
-					points: body.points.map((p: any) => ({
-						// 座標範囲をキャンバスサイズ1600x1200に合わせて制限（マージン100px含む）
-						x: Math.min(Math.max(Math.round(p.x), -100), 1700),
-						y: Math.min(Math.max(Math.round(p.y), -100), 1300),
-						pressure: p.pressure !== undefined ? p.pressure : 1.0,
-					})),
-					tool: body.tool,
-					color: body.color,
-					strokeWidth: body.strokeWidth,
-					opacity: body.opacity,
-					layer: layerIndex,
-					timestamp: Date.now(),
-				};
-
-				// 描画進行状況をルーム内の他のユーザーに配信
-				await this.chatService.broadcastDrawingProgress(this.roomId, this.user.id, progressData);
-				break;
-			}
-			case 'cursorMove': {
-				// レート制限: 50ms間隔制限（カーソルは高頻度）
-				const cursorNow = Date.now();
-				if (cursorNow - this.lastCursorMove < 50) return; // 無言で制限（ログなし）
-				this.lastCursorMove = cursorNow;
-
-				// セキュリティ: カーソル位置の検証（可変キャンバスサイズに対応）
-				if (!body || typeof body.x !== 'number' || typeof body.y !== 'number') return;
-				// 座標範囲をキャンバスサイズ1600x1200に合わせて更新（マージン100px含む）
-				if (body.x < -100 || body.x > 1700 || body.y < -100 || body.y > 1300) return;
-
-				// カーソル位置をルーム内の他のユーザーに配信
-				await this.chatService.broadcastCursorMove(this.roomId, this.user.id, {
-					userName: this.user.name || this.user.username,
-					x: Math.round(body.x * 10) / 10,
-					y: Math.round(body.y * 10) / 10,
-					timestamp: cursorNow,
-				});
-				break;
-			}
-			case 'clearCanvas':
-				console.log(`🔍 [DEBUG] Processing canvas clear for room ${this.roomId} from user ${this.user.id}`);
-
-				// Redisからキャンバスデータをクリア
-				await this.drawingCanvasService.clearCanvas(this.roomId, this.user.id);
-
-				// キャンバスクリアをルーム内の他のユーザーに配信
-			await this.chatService.broadcastClearCanvas(this.roomId, this.user.id, {
-				userId: this.user.id,
-				userName: this.user.name || this.user.username,
-				timestamp: Date.now(),
-			});
-				break;
-			case 'undoStroke':
-				console.log(`🔍 [DEBUG] Processing undo stroke for room ${this.roomId} from user ${this.user.id}`);
-
-				// セキュリティ: レイヤー情報の検証
-				if (!body || typeof body.layer !== 'number') {
-					console.warn(`🔍 [SECURITY] Invalid undo stroke payload from user ${this.user.id}`);
-					return;
-				}
-
-				// アンドゥイベントをルーム内の他のユーザーに配信
-				await this.chatService.broadcastUndoStroke(this.roomId, this.user.id, {
-					userId: this.user.id,
-					userName: this.user.name || this.user.username,
-					layer: body.layer,
-					strokeId: body.strokeId,
-					timestamp: Date.now(),
-				});
-				console.log(`🎨 [DEBUG] Broadcasted undo event for layer ${body.layer} from user ${this.user.id}`);
-				break;
-			case 'redoStroke':
-				console.log(`🔍 [DEBUG] Processing redo stroke for room ${this.roomId} from user ${this.user.id}`);
-
-				// セキュリティ: レイヤー情報とストロークデータの検証
-				if (!body || typeof body.layer !== 'number' || !body.stroke) {
-					console.warn(`🔍 [SECURITY] Invalid redo stroke payload from user ${this.user.id}`);
-					return;
-				}
-
-				// リドゥイベントをルーム内の他のユーザーに配信
-				await this.chatService.broadcastRedoStroke(this.roomId, this.user.id, {
-					userId: this.user.id,
-					userName: this.user.name || this.user.username,
-					layer: body.layer,
-					stroke: body.stroke,
-					timestamp: Date.now(),
-				});
-				console.log(`🎨 [DEBUG] Broadcasted redo event for layer ${body.layer} from user ${this.user.id}`);
-				break;
-			case 'canvasSizeChange':
-				console.log(`🔍 [DEBUG] Processing canvas size change for room ${this.roomId} from user ${this.user.id}`);
-
-				// セキュリティ: キャンバスサイズの検証
-				if (!body || typeof body.width !== 'number' || typeof body.height !== 'number') {
-					console.warn(`🔍 [SECURITY] Invalid canvas size change payload from user ${this.user.id}`);
-					return;
-				}
-
-				// サイズの範囲検証
-				if (body.width < 100 || body.width > 4000 || body.height < 100 || body.height > 4000) {
-					console.warn(`🔍 [SECURITY] Canvas size out of range from user ${this.user.id}: ${body.width}x${body.height}`);
-					return;
-				}
-
-				// キャンバスサイズ変更イベントをルーム内の他のユーザーに配信
-				await this.chatService.broadcastCanvasSizeChange(this.roomId, this.user.id, {
-					userId: this.user.id,
-					userName: this.user.name || this.user.username,
-					width: body.width,
-					height: body.height,
-					timestamp: Date.now(),
-				});
-				console.log(`🎨 [DEBUG] Broadcasted canvas size change to ${body.width}x${body.height} from user ${this.user.id}`);
 				break;
 		}
 	}

@@ -77,15 +77,9 @@ import { FeaturedService } from './FeaturedService.js';
 import { FanoutTimelineService } from './FanoutTimelineService.js';
 import { ChannelFollowingService } from './ChannelFollowingService.js';
 import { ChatService } from './ChatService.js';
-import { DrawingCanvasService } from './DrawingCanvasService.js';
-import { DrawingSettingsService } from './DrawingSettingsService.js';
 import { RegistryApiService } from './RegistryApiService.js';
 import { ReversiService } from './ReversiService.js';
 import { NoqestionService } from './NoqestionService.js';
-import { PaintChatService } from './PaintChatService.js';
-import { PaintChatCanvasService } from './PaintChatCanvasService.js';
-import { PaintChatMatchingService } from './PaintChatMatchingService.js';
-import { PaintChatPublishService } from './PaintChatPublishService.js';
 import { PageService } from './PageService.js';
 
 
@@ -238,8 +232,6 @@ const $FanoutTimelineEndpointService: Provider = { provide: 'FanoutTimelineEndpo
 const $ChannelFollowingService: Provider = { provide: 'ChannelFollowingService', useExisting: ChannelFollowingService };
 const $ChannelMutingService: Provider = { provide: 'ChannelMutingService', useExisting: ChannelMutingService };
 const $ChatService: Provider = { provide: 'ChatService', useExisting: ChatService };
-const $DrawingCanvasService: Provider = { provide: 'DrawingCanvasService', useExisting: DrawingCanvasService };
-const $DrawingSettingsService: Provider = { provide: 'DrawingSettingsService', useExisting: DrawingSettingsService };
 const $RegistryApiService: Provider = { provide: 'RegistryApiService', useExisting: RegistryApiService };
 const $ReversiService: Provider = { provide: 'ReversiService', useExisting: ReversiService };
 const $NoqestionService: Provider = { provide: 'NoqestionService', useExisting: NoqestionService };
@@ -396,16 +388,10 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		ChannelFollowingService,
 		ChannelMutingService,
 		ChatService,
-		DrawingCanvasService,
-		DrawingSettingsService,
 		RegistryApiService,
 		ReversiService,
 		PageService,
 		NoqestionService,
-		PaintChatService,
-		PaintChatCanvasService,
-		PaintChatMatchingService,
-		PaintChatPublishService,
 
 
 		ChartLoggerService,
@@ -556,8 +542,6 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		$ChannelFollowingService,
 		$ChannelMutingService,
 		$ChatService,
-		$DrawingCanvasService,
-		$DrawingSettingsService,
 		$RegistryApiService,
 		$ReversiService,
 		$PageService,
@@ -712,16 +696,10 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		ChannelFollowingService,
 		ChannelMutingService,
 		ChatService,
-		DrawingCanvasService,
-		DrawingSettingsService,
 		RegistryApiService,
 		ReversiService,
 		PageService,
 		NoqestionService,
-		PaintChatService,
-		PaintChatCanvasService,
-		PaintChatMatchingService,
-		PaintChatPublishService,
 
 
 		FederationChart,
@@ -870,8 +848,6 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		$ChannelFollowingService,
 		$ChannelMutingService,
 		$ChatService,
-		$DrawingCanvasService,
-		$DrawingSettingsService,
 		$RegistryApiService,
 		$ReversiService,
 		$PageService,
