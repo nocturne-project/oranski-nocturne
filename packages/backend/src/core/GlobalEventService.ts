@@ -456,7 +456,4 @@ export class GlobalEventService {
 	public publishReversiGameStream<K extends keyof ReversiGameEventTypes>(gameId: MiReversiGame['id'], type: K, value?: ReversiGameEventTypes[K]): void {
 		this.publish(`reversiGameStream:${gameId}`, type, typeof value === 'undefined' ? null : value);
 	}
-
-	// ランダム絵チャットのルームストリームにイベントを配信する
-	@bindThis
 }
