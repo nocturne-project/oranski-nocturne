@@ -13,14 +13,19 @@ import { prefer } from '@/preferences.js';
  * 印を残すので、利用者がナビの設定で消した場合は、そのあと再び足し直さない（消せる）。
  */
 export function addNoctuneGamesToNavbarOnce(): void {
-	if (prefer.s.noctuneGamesNavAdded) return;
+	// 失敗しても通常の起動を止めない。印も立てないので、次回の起動でもう一度試す。
+	try {
+		if (prefer.s.noctuneGamesNavAdded) return;
 
-	const menu = prefer.s.menu;
-	if (!menu.includes('noctuneGames')) {
-		const chatIndex = menu.indexOf('chat');
-		const next = [...menu];
-		next.splice(chatIndex >= 0 ? chatIndex + 1 : next.length, 0, 'noctuneGames');
-		prefer.commit('menu', next);
+		const menu = prefer.s.menu;
+		if (!menu.includes('noctuneGames')) {
+			const chatIndex = menu.indexOf('chat');
+			const next = [...menu];
+			next.splice(chatIndex >= 0 ? chatIndex + 1 : next.length, 0, 'noctuneGames');
+			prefer.commit('menu', next);
+		}
+		prefer.commit('noctuneGamesNavAdded', true);
+	} catch (err) {
+		console.warn('failed to add noctuneGames to the navbar', err);
 	}
-	prefer.commit('noctuneGamesNavAdded', true);
 }
