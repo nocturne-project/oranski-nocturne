@@ -49,7 +49,7 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 import { ensureSignin } from '@/i.js';
 import { useRouter } from '@/router.js';
 import * as os from '@/os.js';
-import { updateCurrentAccountPartial } from '@/accounts.js';
+import { updateCurrentAccount } from '@/accounts.js';
 import MkInput from '@/components/MkInput.vue';
 import MkFoldableSection from '@/components/MkFoldableSection.vue';
 import MkInfo from '@/components/MkInfo.vue';
@@ -125,12 +125,11 @@ onMounted(async () => {
 	// フロントエンドの状態だけでなく、バックエンドのRedisキーもクリアする必要がある
 	try {
 		await misskeyApi('chat/read-all', {});
-		updateCurrentAccountPartial({ hasUnreadChatMessages: false });
 	} catch (error) {
 		console.error('Failed to mark chat messages as read:', error);
 		// エラーが発生してもフロントエンドの状態は更新する（UX考慮）
-		updateCurrentAccountPartial({ hasUnreadChatMessages: false });
 	}
+	updateCurrentAccount({ hasUnreadChatMessages: false });
 });
 </script>
 

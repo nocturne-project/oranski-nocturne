@@ -4,13 +4,13 @@
 
 ```ts
 
-import type { AuthenticationResponseJSON } from '@simplewebauthn/browser';
+import type { AuthenticationResponseJSON as AuthenticationResponseJSON_2 } from '@simplewebauthn/browser';
 import { EventEmitter } from 'eventemitter3';
 import { Options } from 'reconnecting-websocket';
 import type { PublicKeyCredentialCreationOptionsJSON as PublicKeyCredentialCreationOptionsJSON_2 } from '@simplewebauthn/browser';
 import type { PublicKeyCredentialRequestOptionsJSON as PublicKeyCredentialRequestOptionsJSON_2 } from '@simplewebauthn/browser';
 import { reconnectingWebsocket } from 'reconnecting-websocket';
-import type { RegistrationResponseJSON } from '@simplewebauthn/browser';
+import type { RegistrationResponseJSON as RegistrationResponseJSON_2 } from '@simplewebauthn/browser';
 
 // Warning: (ae-forgotten-export) The symbol "components" needs to be exported by the entry point index.d.ts
 //
@@ -266,39 +266,6 @@ type AdminInviteListResponse = operations['admin___invite___list']['responses'][
 type AdminMetaResponse = operations['admin___meta']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
-type AdminNoctownGachaAddItemRequest = operations['admin___noctown___gacha___add-item']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type AdminNoctownGachaAddItemResponse = operations['admin___noctown___gacha___add-item']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type AdminNoctownGachaCreateRequest = operations['admin___noctown___gacha___create']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type AdminNoctownGachaCreateResponse = operations['admin___noctown___gacha___create']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type AdminNoctownGachaDeleteRequest = operations['admin___noctown___gacha___delete']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type AdminNoctownGachaItemsRequest = operations['admin___noctown___gacha___items']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type AdminNoctownGachaItemsResponse = operations['admin___noctown___gacha___items']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type AdminNoctownGachaListRequest = operations['admin___noctown___gacha___list']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type AdminNoctownGachaListResponse = operations['admin___noctown___gacha___list']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type AdminNoctownGachaRemoveItemRequest = operations['admin___noctown___gacha___remove-item']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type AdminNoctownGachaUpdateRequest = operations['admin___noctown___gacha___update']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
 type AdminNoqDiscloseRequest = operations['admin___noq___disclose']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
@@ -312,16 +279,6 @@ type AdminNoqSettingsUpdateRequest = operations['admin___noq___settings___update
 
 // @public (undocumented)
 type AdminNoqSettingsUpdateResponse = operations['admin___noq___settings___update']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
 
 // @public (undocumented)
 type AdminPromoCreateRequest = operations['admin___promo___create']['requestBody']['content']['application/json'];
@@ -843,6 +800,16 @@ export type Channels = {
         };
         events: {
             note: (payload: Note) => void;
+        };
+        receives: null;
+    };
+    clip: {
+        params: {
+            clipId: string;
+        };
+        events: {
+            updated: () => void;
+            deleted: () => void;
         };
         receives: null;
     };
@@ -1469,24 +1436,6 @@ type ClipsUpdateResponse = operations['clips___update']['responses']['200']['con
 type DateString = string;
 
 // @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
 type DriveFile = components['schemas']['DriveFile'];
 
 // @public (undocumented)
@@ -1826,27 +1775,11 @@ declare namespace entities {
         AdminInviteListRequest,
         AdminInviteListResponse,
         AdminMetaResponse,
-        AdminNoctownGachaAddItemRequest,
-        AdminNoctownGachaAddItemResponse,
-        AdminNoctownGachaCreateRequest,
-        AdminNoctownGachaCreateResponse,
-        AdminNoctownGachaDeleteRequest,
-        AdminNoctownGachaItemsRequest,
-        AdminNoctownGachaItemsResponse,
-        AdminNoctownGachaListRequest,
-        AdminNoctownGachaListResponse,
-        AdminNoctownGachaRemoveItemRequest,
-        AdminNoctownGachaUpdateRequest,
         AdminNoqDiscloseRequest,
         AdminNoqDiscloseResponse,
         AdminNoqSettingsResponse,
         AdminNoqSettingsUpdateRequest,
         AdminNoqSettingsUpdateResponse,
-        AdminPaintChatSettingsResponse,
-        AdminPaintChatSettingsUpdateRequest,
-        AdminPaintChatSettingsUpdateResponse,
-        AdminPaintChatStegoExtractRequest,
-        AdminPaintChatStegoExtractResponse,
         AdminPromoCreateRequest,
         AdminQueueClearRequest,
         AdminQueueDeliverDelayedResponse,
@@ -2064,15 +1997,6 @@ declare namespace entities {
         ClipsUnfavoriteRequest,
         ClipsUpdateRequest,
         ClipsUpdateResponse,
-        DrawingCanvasRequest,
-        DrawingCanvasResponse,
-        DrawingSaveRequest,
-        DrawingSettingsRoomGetRequest,
-        DrawingSettingsRoomGetResponse,
-        DrawingSettingsRoomUpdateRequest,
-        DrawingSettingsUserGetRequest,
-        DrawingSettingsUserGetResponse,
-        DrawingSettingsUserUpdateRequest,
         DriveResponse,
         DriveFilesRequest,
         DriveFilesResponse,
@@ -2285,198 +2209,6 @@ declare namespace entities {
         MuteListResponse,
         MyAppsRequest,
         MyAppsResponse,
-        NoctownAdminItemCreateRequest,
-        NoctownAdminItemCreateResponse,
-        NoctownAdminItemDistributeRequest,
-        NoctownAdminItemDistributeResponse,
-        NoctownAgentEquipRequest,
-        NoctownAgentEquipResponse,
-        NoctownAgentFeedRequest,
-        NoctownAgentFeedResponse,
-        NoctownAgentHintRequest,
-        NoctownAgentHintResponse,
-        NoctownAgentListResponse,
-        NoctownBulletinAttachItemRequest,
-        NoctownBulletinAttachItemResponse,
-        NoctownBulletinBoardsRequest,
-        NoctownBulletinBoardsResponse,
-        NoctownBulletinCreatePostRequest,
-        NoctownBulletinCreatePostResponse,
-        NoctownBulletinDeletePostRequest,
-        NoctownBulletinLikeRequest,
-        NoctownBulletinLikeResponse,
-        NoctownBulletinPostsRequest,
-        NoctownBulletinPostsResponse,
-        NoctownBulletinUnlikeRequest,
-        NoctownBulletinUnlikeResponse,
-        NoctownChatHistoryRequest,
-        NoctownChatHistoryResponse,
-        NoctownChatLogReceiveRequest,
-        NoctownChatLogReceiveResponse,
-        NoctownChestOpenRequest,
-        NoctownChestOpenResponse,
-        NoctownChickenCollectEggsRequest,
-        NoctownChickenCollectEggsResponse,
-        NoctownChickenFeedRequest,
-        NoctownChickenFeedResponse,
-        NoctownChickenListResponse,
-        NoctownChickenPlaceRequest,
-        NoctownChickenPlaceResponse,
-        NoctownContainerOpenRequest,
-        NoctownContainerOpenResponse,
-        NoctownContainerOpenPlacedRequest,
-        NoctownContainerOpenPlacedResponse,
-        NoctownContainerSetItemsRequest,
-        NoctownContainerSetItemsResponse,
-        NoctownCowCollectMilkRequest,
-        NoctownCowCollectMilkResponse,
-        NoctownCowFeedRequest,
-        NoctownCowFeedResponse,
-        NoctownCowListResponse,
-        NoctownCowPlaceRequest,
-        NoctownCowPlaceResponse,
-        NoctownCraftExecuteRequest,
-        NoctownCraftExecuteResponse,
-        NoctownCraftRecipesRequest,
-        NoctownCraftRecipesResponse,
-        NoctownEventClaimRewardRequest,
-        NoctownEventClaimRewardResponse,
-        NoctownEventJoinRequest,
-        NoctownEventListRequest,
-        NoctownEventListResponse,
-        NoctownEventProgressRequest,
-        NoctownEventProgressResponse,
-        NoctownFarmCreateRequest,
-        NoctownFarmCreateResponse,
-        NoctownFarmHarvestRequest,
-        NoctownFarmHarvestResponse,
-        NoctownFarmListResponse,
-        NoctownFarmPlantRequest,
-        NoctownFarmPlantResponse,
-        NoctownFarmWaterRequest,
-        NoctownFarmWaterResponse,
-        NoctownFishingCastRequest,
-        NoctownFishingCastResponse,
-        NoctownFishingCatchResponse,
-        NoctownGachaListResponse,
-        NoctownGachaPullRequest,
-        NoctownGachaPullResponse,
-        NoctownHarvestWoodRequest,
-        NoctownHarvestWoodResponse,
-        NoctownHouseEnterRequest,
-        NoctownHouseEnterResponse,
-        NoctownHouseExitRequest,
-        NoctownHouseExitResponse,
-        NoctownHouseFurnitureListRequest,
-        NoctownHouseFurnitureListResponse,
-        NoctownHouseFurnitureMoveRequest,
-        NoctownHouseFurnitureMoveResponse,
-        NoctownHouseFurniturePlaceRequest,
-        NoctownHouseFurniturePlaceResponse,
-        NoctownHouseFurnitureRemoveRequest,
-        NoctownHouseFurnitureRemoveResponse,
-        NoctownHouseGetResponse,
-        NoctownHouseNearbyRequest,
-        NoctownHouseNearbyResponse,
-        NoctownHousePlaceRequest,
-        NoctownHousePlaceResponse,
-        NoctownHouseRemoveRequest,
-        NoctownHouseRemoveResponse,
-        NoctownHouseRenameRequest,
-        NoctownHouseRenameResponse,
-        NoctownHouseWallAttachRequest,
-        NoctownHouseWallAttachResponse,
-        NoctownHouseWallListRequest,
-        NoctownHouseWallListResponse,
-        NoctownHouseWallRemoveRequest,
-        NoctownHouseWallRemoveResponse,
-        NoctownHouseWallSetRequest,
-        NoctownHouseWallSetResponse,
-        NoctownItemCreateRequest,
-        NoctownItemCreateResponse,
-        NoctownItemDetailRequest,
-        NoctownItemDetailResponse,
-        NoctownItemDropRequest,
-        NoctownItemDropResponse,
-        NoctownItemDropCurrencyRequest,
-        NoctownItemDropCurrencyResponse,
-        NoctownItemDroppedRequest,
-        NoctownItemDroppedResponse,
-        NoctownItemInventoryResponse,
-        NoctownItemMyCreationsRequest,
-        NoctownItemMyCreationsResponse,
-        NoctownItemPickupRequest,
-        NoctownItemPickupResponse,
-        NoctownItemPickupPlacedRequest,
-        NoctownItemPickupPlacedResponse,
-        NoctownItemPlaceRequest,
-        NoctownItemPlaceResponse,
-        NoctownItemPlacedRequest,
-        NoctownItemPlacedResponse,
-        NoctownItemRetrieveRequest,
-        NoctownItemRetrieveResponse,
-        NoctownItemUpdateCreationRequest,
-        NoctownMapChunkRequest,
-        NoctownMapChunkResponse,
-        NoctownNpcNearbyRequest,
-        NoctownNpcNearbyResponse,
-        NoctownPetsCreateRequest,
-        NoctownPetsCreateResponse,
-        NoctownPetsDeleteRequest,
-        NoctownPetsDeleteResponse,
-        NoctownPetsListResponse,
-        NoctownPetsNearbyRequest,
-        NoctownPetsNearbyResponse,
-        NoctownPetsRenameRequest,
-        NoctownPetsRenameResponse,
-        NoctownPetsShowRequest,
-        NoctownPetsShowResponse,
-        NoctownPlayerResponse,
-        NoctownPlayerEquipSkinRequest,
-        NoctownPlayerEquipSkinResponse,
-        NoctownPlayerPositionRequest,
-        NoctownPlayerPositionResponse,
-        NoctownPlayerUnequipSkinResponse,
-        NoctownPlayersNearbyRequest,
-        NoctownPlayersNearbyResponse,
-        NoctownQuestAbandonRequest,
-        NoctownQuestAbandonResponse,
-        NoctownQuestCompleteRequest,
-        NoctownQuestCompleteResponse,
-        NoctownQuestListResponse,
-        NoctownQuestStartRequest,
-        NoctownQuestStartResponse,
-        NoctownRankingCategoryRequest,
-        NoctownRankingCategoryResponse,
-        NoctownRankingTotalRequest,
-        NoctownRankingTotalResponse,
-        NoctownSaisenHistoryRequest,
-        NoctownSaisenHistoryResponse,
-        NoctownSaisenOfferRequest,
-        NoctownSaisenOfferResponse,
-        NoctownShopBuyRequest,
-        NoctownShopBuyResponse,
-        NoctownShopSellRequest,
-        NoctownShopSellResponse,
-        NoctownTradeAddItemsRequest,
-        NoctownTradeAddItemsResponse,
-        NoctownTradeBarterRequest,
-        NoctownTradeBarterResponse,
-        NoctownTradeCancelRequest,
-        NoctownTradeCancelResponse,
-        NoctownTradeConfirmRequest,
-        NoctownTradeConfirmResponse,
-        NoctownTradeDetailRequest,
-        NoctownTradeDetailResponse,
-        NoctownTradeExecuteRequest,
-        NoctownTradeExecuteResponse,
-        NoctownTradeListResponse,
-        NoctownTradeRequestRequest,
-        NoctownTradeRequestResponse,
-        NoctownTradeRespondRequest,
-        NoctownTradeRespondResponse,
-        NoctownTradeUnconfirmRequest,
-        NoctownTradeUnconfirmResponse,
         NoqAnnounceRequest,
         NoqAnnounceResponse,
         NoqMuteCreateRequest,
@@ -2585,35 +2317,6 @@ declare namespace entities {
         PagesShowResponse,
         PagesUnlikeRequest,
         PagesUpdateRequest,
-        PaintChatCanvasRequest,
-        PaintChatCanvasResponse,
-        PaintChatDiceRequest,
-        PaintChatDiceResponse,
-        PaintChatJoinResponse,
-        PaintChatLeaveRequest,
-        PaintChatLeaveResponse,
-        PaintChatLeaveQueueResponse,
-        PaintChatMessageRequest,
-        PaintChatMessageResponse,
-        PaintChatMessagesRequest,
-        PaintChatMessagesResponse,
-        PaintChatPublishAgreeRequest,
-        PaintChatPublishAgreeResponse,
-        PaintChatPublishMessageRequest,
-        PaintChatPublishMessageResponse,
-        PaintChatPublishMyArtRequest,
-        PaintChatPublishMyArtResponse,
-        PaintChatPublishRejectRequest,
-        PaintChatPublishRejectResponse,
-        PaintChatReportRequest,
-        PaintChatReportResponse,
-        PaintChatRoomRequest,
-        PaintChatRoomResponse,
-        PaintChatSaveColorsRequest,
-        PaintChatSettingsResponse,
-        PaintChatSoloResponse,
-        PaintChatTopicRequest,
-        PaintChatTopicResponse,
         PingResponse,
         PinnedUsersResponse,
         PromoReadRequest,
@@ -3075,7 +2778,7 @@ type I2faKeyDoneRequest_2 = {
     password: string;
     token?: string | null;
     name: string;
-    credential: RegistrationResponseJSON;
+    credential: RegistrationResponseJSON_2;
 };
 
 // @public (undocumented)
@@ -3447,582 +3150,6 @@ type MyAppsRequest = operations['my___apps']['requestBody']['content']['applicat
 
 // @public (undocumented)
 type MyAppsResponse = operations['my___apps']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownAdminItemCreateRequest = operations['noctown___admin___item___create']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownAdminItemCreateResponse = operations['noctown___admin___item___create']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownAdminItemDistributeRequest = operations['noctown___admin___item___distribute']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownAdminItemDistributeResponse = operations['noctown___admin___item___distribute']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownAgentEquipRequest = operations['noctown___agent___equip']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownAgentEquipResponse = operations['noctown___agent___equip']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownAgentFeedRequest = operations['noctown___agent___feed']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownAgentFeedResponse = operations['noctown___agent___feed']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownAgentHintRequest = operations['noctown___agent___hint']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownAgentHintResponse = operations['noctown___agent___hint']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownAgentListResponse = operations['noctown___agent___list']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownBulletinAttachItemRequest = operations['noctown___bulletin___attach-item']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownBulletinAttachItemResponse = operations['noctown___bulletin___attach-item']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownBulletinBoardsRequest = operations['noctown___bulletin___boards']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownBulletinBoardsResponse = operations['noctown___bulletin___boards']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownBulletinCreatePostRequest = operations['noctown___bulletin___create-post']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownBulletinCreatePostResponse = operations['noctown___bulletin___create-post']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownBulletinDeletePostRequest = operations['noctown___bulletin___delete-post']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownBulletinLikeRequest = operations['noctown___bulletin___like']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownBulletinLikeResponse = operations['noctown___bulletin___like']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownBulletinPostsRequest = operations['noctown___bulletin___posts']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownBulletinPostsResponse = operations['noctown___bulletin___posts']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownBulletinUnlikeRequest = operations['noctown___bulletin___unlike']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownBulletinUnlikeResponse = operations['noctown___bulletin___unlike']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownChatHistoryRequest = operations['noctown___chat-history']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownChatHistoryResponse = operations['noctown___chat-history']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownChatLogReceiveRequest = operations['noctown___chat-log___receive']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownChatLogReceiveResponse = operations['noctown___chat-log___receive']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownChestOpenRequest = operations['noctown___chest___open']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownChestOpenResponse = operations['noctown___chest___open']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownChickenCollectEggsRequest = operations['noctown___chicken___collect-eggs']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownChickenCollectEggsResponse = operations['noctown___chicken___collect-eggs']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownChickenFeedRequest = operations['noctown___chicken___feed']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownChickenFeedResponse = operations['noctown___chicken___feed']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownChickenListResponse = operations['noctown___chicken___list']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownChickenPlaceRequest = operations['noctown___chicken___place']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownChickenPlaceResponse = operations['noctown___chicken___place']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownContainerOpenPlacedRequest = operations['noctown___container___open-placed']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownContainerOpenPlacedResponse = operations['noctown___container___open-placed']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownContainerOpenRequest = operations['noctown___container___open']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownContainerOpenResponse = operations['noctown___container___open']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownContainerSetItemsRequest = operations['noctown___container___set-items']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownContainerSetItemsResponse = operations['noctown___container___set-items']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownCowCollectMilkRequest = operations['noctown___cow___collect-milk']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownCowCollectMilkResponse = operations['noctown___cow___collect-milk']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownCowFeedRequest = operations['noctown___cow___feed']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownCowFeedResponse = operations['noctown___cow___feed']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownCowListResponse = operations['noctown___cow___list']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownCowPlaceRequest = operations['noctown___cow___place']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownCowPlaceResponse = operations['noctown___cow___place']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownCraftExecuteRequest = operations['noctown___craft___execute']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownCraftExecuteResponse = operations['noctown___craft___execute']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownCraftRecipesRequest = operations['noctown___craft___recipes']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownCraftRecipesResponse = operations['noctown___craft___recipes']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownEventClaimRewardRequest = operations['noctown___event___claim-reward']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownEventClaimRewardResponse = operations['noctown___event___claim-reward']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownEventJoinRequest = operations['noctown___event___join']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownEventListRequest = operations['noctown___event___list']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownEventListResponse = operations['noctown___event___list']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownEventProgressRequest = operations['noctown___event___progress']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownEventProgressResponse = operations['noctown___event___progress']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownFarmCreateRequest = operations['noctown___farm___create']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownFarmCreateResponse = operations['noctown___farm___create']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownFarmHarvestRequest = operations['noctown___farm___harvest']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownFarmHarvestResponse = operations['noctown___farm___harvest']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownFarmListResponse = operations['noctown___farm___list']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownFarmPlantRequest = operations['noctown___farm___plant']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownFarmPlantResponse = operations['noctown___farm___plant']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownFarmWaterRequest = operations['noctown___farm___water']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownFarmWaterResponse = operations['noctown___farm___water']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownFishingCastRequest = operations['noctown___fishing___cast']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownFishingCastResponse = operations['noctown___fishing___cast']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownFishingCatchResponse = operations['noctown___fishing___catch']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownGachaListResponse = operations['noctown___gacha___list']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownGachaPullRequest = operations['noctown___gacha___pull']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownGachaPullResponse = operations['noctown___gacha___pull']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHarvestWoodRequest = operations['noctown___harvest___wood']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHarvestWoodResponse = operations['noctown___harvest___wood']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseEnterRequest = operations['noctown___house___enter']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseEnterResponse = operations['noctown___house___enter']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseExitRequest = operations['noctown___house___exit']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseExitResponse = operations['noctown___house___exit']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseFurnitureListRequest = operations['noctown___house___furniture___list']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseFurnitureListResponse = operations['noctown___house___furniture___list']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseFurnitureMoveRequest = operations['noctown___house___furniture___move']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseFurnitureMoveResponse = operations['noctown___house___furniture___move']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseFurniturePlaceRequest = operations['noctown___house___furniture___place']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseFurniturePlaceResponse = operations['noctown___house___furniture___place']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseFurnitureRemoveRequest = operations['noctown___house___furniture___remove']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseFurnitureRemoveResponse = operations['noctown___house___furniture___remove']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseGetResponse = operations['noctown___house___get']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseNearbyRequest = operations['noctown___house___nearby']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseNearbyResponse = operations['noctown___house___nearby']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHousePlaceRequest = operations['noctown___house___place']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHousePlaceResponse = operations['noctown___house___place']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseRemoveRequest = operations['noctown___house___remove']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseRemoveResponse = operations['noctown___house___remove']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseRenameRequest = operations['noctown___house___rename']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseRenameResponse = operations['noctown___house___rename']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseWallAttachRequest = operations['noctown___house___wall___attach']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseWallAttachResponse = operations['noctown___house___wall___attach']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseWallListRequest = operations['noctown___house___wall___list']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseWallListResponse = operations['noctown___house___wall___list']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseWallRemoveRequest = operations['noctown___house___wall___remove']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseWallRemoveResponse = operations['noctown___house___wall___remove']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseWallSetRequest = operations['noctown___house___wall___set']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownHouseWallSetResponse = operations['noctown___house___wall___set']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemCreateRequest = operations['noctown___item___create']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemCreateResponse = operations['noctown___item___create']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemDetailRequest = operations['noctown___item___detail']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemDetailResponse = operations['noctown___item___detail']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemDropCurrencyRequest = operations['noctown___item___drop-currency']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemDropCurrencyResponse = operations['noctown___item___drop-currency']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemDroppedRequest = operations['noctown___item___dropped']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemDroppedResponse = operations['noctown___item___dropped']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemDropRequest = operations['noctown___item___drop']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemDropResponse = operations['noctown___item___drop']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemInventoryResponse = operations['noctown___item___inventory']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemMyCreationsRequest = operations['noctown___item___my-creations']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemMyCreationsResponse = operations['noctown___item___my-creations']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemPickupPlacedRequest = operations['noctown___item___pickup-placed']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemPickupPlacedResponse = operations['noctown___item___pickup-placed']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemPickupRequest = operations['noctown___item___pickup']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemPickupResponse = operations['noctown___item___pickup']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemPlacedRequest = operations['noctown___item___placed']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemPlacedResponse = operations['noctown___item___placed']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemPlaceRequest = operations['noctown___item___place']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemPlaceResponse = operations['noctown___item___place']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemRetrieveRequest = operations['noctown___item___retrieve']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemRetrieveResponse = operations['noctown___item___retrieve']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownItemUpdateCreationRequest = operations['noctown___item___update-creation']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownMapChunkRequest = operations['noctown___map___chunk']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownMapChunkResponse = operations['noctown___map___chunk']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownNpcNearbyRequest = operations['noctown___npc___nearby']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownNpcNearbyResponse = operations['noctown___npc___nearby']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPetsCreateRequest = operations['noctown___pets___create']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPetsCreateResponse = operations['noctown___pets___create']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPetsDeleteRequest = operations['noctown___pets___delete']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPetsDeleteResponse = operations['noctown___pets___delete']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPetsListResponse = operations['noctown___pets___list']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPetsNearbyRequest = operations['noctown___pets___nearby']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPetsNearbyResponse = operations['noctown___pets___nearby']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPetsRenameRequest = operations['noctown___pets___rename']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPetsRenameResponse = operations['noctown___pets___rename']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPetsShowRequest = operations['noctown___pets___show']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPetsShowResponse = operations['noctown___pets___show']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPlayerEquipSkinRequest = operations['noctown___player___equip-skin']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPlayerEquipSkinResponse = operations['noctown___player___equip-skin']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPlayerPositionRequest = operations['noctown___player___position']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPlayerPositionResponse = operations['noctown___player___position']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPlayerResponse = operations['noctown___player']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPlayersNearbyRequest = operations['noctown___players___nearby']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPlayersNearbyResponse = operations['noctown___players___nearby']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownPlayerUnequipSkinResponse = operations['noctown___player___unequip-skin']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownQuestAbandonRequest = operations['noctown___quest___abandon']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownQuestAbandonResponse = operations['noctown___quest___abandon']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownQuestCompleteRequest = operations['noctown___quest___complete']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownQuestCompleteResponse = operations['noctown___quest___complete']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownQuestListResponse = operations['noctown___quest___list']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownQuestStartRequest = operations['noctown___quest___start']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownQuestStartResponse = operations['noctown___quest___start']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownRankingCategoryRequest = operations['noctown___ranking___category']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownRankingCategoryResponse = operations['noctown___ranking___category']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownRankingTotalRequest = operations['noctown___ranking___total']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownRankingTotalResponse = operations['noctown___ranking___total']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownSaisenHistoryRequest = operations['noctown___saisen___history']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownSaisenHistoryResponse = operations['noctown___saisen___history']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownSaisenOfferRequest = operations['noctown___saisen___offer']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownSaisenOfferResponse = operations['noctown___saisen___offer']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownShopBuyRequest = operations['noctown___shop___buy']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownShopBuyResponse = operations['noctown___shop___buy']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownShopSellRequest = operations['noctown___shop___sell']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownShopSellResponse = operations['noctown___shop___sell']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeAddItemsRequest = operations['noctown___trade___add-items']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeAddItemsResponse = operations['noctown___trade___add-items']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeBarterRequest = operations['noctown___trade___barter']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeBarterResponse = operations['noctown___trade___barter']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeCancelRequest = operations['noctown___trade___cancel']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeCancelResponse = operations['noctown___trade___cancel']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeConfirmRequest = operations['noctown___trade___confirm']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeConfirmResponse = operations['noctown___trade___confirm']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeDetailRequest = operations['noctown___trade___detail']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeDetailResponse = operations['noctown___trade___detail']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeExecuteRequest = operations['noctown___trade___execute']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeExecuteResponse = operations['noctown___trade___execute']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeListResponse = operations['noctown___trade___list']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeRequestRequest = operations['noctown___trade___request']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeRequestResponse = operations['noctown___trade___request']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeRespondRequest = operations['noctown___trade___respond']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeRespondResponse = operations['noctown___trade___respond']['responses']['200']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeUnconfirmRequest = operations['noctown___trade___unconfirm']['requestBody']['content']['application/json'];
-
-// @public (undocumented)
-type NoctownTradeUnconfirmResponse = operations['noctown___trade___unconfirm']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
 type NoqAnnounceRequest = operations['noq___announce']['requestBody']['content']['application/json'];
@@ -4398,64 +3525,6 @@ type PagesUnlikeRequest = operations['pages___unlike']['requestBody']['content']
 type PagesUpdateRequest = operations['pages___update']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
-
-// @public (undocumented)
 function parse(_acct: string): Acct;
 
 // Warning: (ae-forgotten-export) The symbol "Values" needs to be exported by the entry point index.d.ts
@@ -4677,7 +3746,7 @@ type SigninFlowRequest = {
     username: string;
     password?: string;
     token?: string;
-    credential?: AuthenticationResponseJSON;
+    credential?: AuthenticationResponseJSON_2;
     'hcaptcha-response'?: string | null;
     'g-recaptcha-response'?: string | null;
     'turnstile-response'?: string | null;
@@ -4707,7 +3776,7 @@ type SigninWithPasskeyInitResponse = {
 
 // @public (undocumented)
 type SigninWithPasskeyRequest = {
-    credential?: AuthenticationResponseJSON;
+    credential?: AuthenticationResponseJSON_2;
     context?: string;
 };
 
@@ -5038,8 +4107,8 @@ type VerifyEmailRequest = operations['verify-email']['requestBody']['content']['
 // Warnings were encountered during analysis:
 //
 // src/streaming.ts:57:3 - (ae-forgotten-export) The symbol "ReconnectingWebSocketInstance" needs to be exported by the entry point index.d.ts
-// src/streaming.types.ts:226:4 - (ae-forgotten-export) The symbol "ReversiUpdateKey" needs to be exported by the entry point index.d.ts
-// src/streaming.types.ts:241:4 - (ae-forgotten-export) The symbol "ReversiUpdateSettings" needs to be exported by the entry point index.d.ts
+// src/streaming.types.ts:236:4 - (ae-forgotten-export) The symbol "ReversiUpdateKey" needs to be exported by the entry point index.d.ts
+// src/streaming.types.ts:251:4 - (ae-forgotten-export) The symbol "ReversiUpdateSettings" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

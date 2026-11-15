@@ -36,9 +36,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed } from 'vue';
 import { instanceName } from '@@/js/config.js';
-import XSigninDialog from '@/components/MkSigninDialog.vue';
-import XSignupDialog from '@/components/MkSignupDialog.vue';
-import XSignupDialogMobile from '@/components/MkSignupDialog.mobile.vue';
 import MkButton from '@/components/MkButton.vue';
 import MkInfo from '@/components/MkInfo.vue';
 import * as os from '@/os.js';
@@ -46,25 +43,27 @@ import { i18n } from '@/i18n.js';
 import { instance } from '@/instance.js';
 import { openInstanceMenu } from '@/ui/_common_/common.js';
 
-// Mobile detection
+// Mobile detection（フォーク独自）
 const isMobile = computed(() => {
 	if (typeof window === 'undefined') return false;
 	return window.innerWidth < 768;
 });
 
-function signin() {
-	const { dispose } = os.popup(XSigninDialog, {
+async function signin() {
+	const { dispose } = await os.popupAsyncWithDialog(import('@/components/MkSigninDialog.vue').then((x) => x.default), {
 		autoSet: true,
 	}, {
 		closed: () => dispose(),
 	});
 }
 
-function signup() {
-	// Use mobile dialog for mobile devices
-	const dialogComponent = isMobile.value ? XSignupDialogMobile : XSignupDialog;
+async function signup() {
+	// モバイルでは専用のサインアップダイアログを使う（フォーク独自）
+	const dialogComponent = isMobile.value
+		? import('@/components/MkSignupDialog.mobile.vue').then((x) => x.default)
+		: import('@/components/MkSignupDialog.vue').then((x) => x.default);
 
-	const { dispose } = os.popup(dialogComponent, {
+	const { dispose } = await os.popupAsyncWithDialog(dialogComponent, {
 		autoSet: true,
 	}, {
 		closed: () => dispose(),
