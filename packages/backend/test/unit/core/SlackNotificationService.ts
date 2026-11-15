@@ -4,14 +4,14 @@
  */
 
 import { Test, TestingModule } from '@nestjs/testing';
-import { jest } from '@jest/globals';
+import { vi, describe, it, expect, beforeEach, afterEach, type Mocked } from 'vitest';
 import { SlackNotificationService } from '@/core/SlackNotificationService.js';
 import { HttpRequestService } from '@/core/HttpRequestService.js';
 import { DI } from '@/di-symbols.js';
 
 describe('SlackNotificationService', () => {
 	let service: SlackNotificationService;
-	let httpRequestService: jest.Mocked<HttpRequestService>;
+	let httpRequestService: Mocked<HttpRequestService>;
 
 	// 実際のサービスはbotToken + channelId (Slack Bot API) を使用する
 	const mockConfig = {
@@ -25,7 +25,7 @@ describe('SlackNotificationService', () => {
 
 	beforeEach(async () => {
 		const mockHttpRequestService = {
-			send: jest.fn(),
+			send: vi.fn(),
 		};
 
 		const module: TestingModule = await Test.createTestingModule({
@@ -47,7 +47,7 @@ describe('SlackNotificationService', () => {
 	});
 
 	afterEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 	});
 
 	describe('sendSignupErrorNotification', () => {
@@ -172,7 +172,7 @@ describe('SlackNotificationService', () => {
 				timestamp: new Date(),
 			};
 
-			const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+			const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 			httpRequestService.send.mockRejectedValue(new Error('Network error'));
 
 			await expect(service.sendSignupErrorNotification(errorData)).resolves.not.toThrow();

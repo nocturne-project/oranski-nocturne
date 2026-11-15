@@ -36,6 +36,7 @@ function createService() {
 		{} as never,
 		{} as never,
 		{} as never,
+		{} as never, // userProfilesRepository（フォークで停止理由のために追加）
 		authenticateService as never,
 		{} as never,
 		{} as never,
