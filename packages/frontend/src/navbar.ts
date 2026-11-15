@@ -134,6 +134,14 @@ export const navbarItemDef = reactive<{
 		show: computed(() => $i != null && $i.policies.chatAvailability !== 'unavailable'),
 		indicated: computed(() => $i != null && $i.hasUnreadChatMessages),
 	},
+	noctuneGames: {
+		title: i18n.ts.noctuneGames,
+		icon: 'ti ti-device-gamepad-2',
+		action: () => {
+			// まだ URL は公開しない。クリックしても遷移せず、Coming soon を出すだけ。
+			os.alert({ type: 'info', title: i18n.ts.noctuneGames, text: 'Coming soon' });
+		},
+	},
 	achievements: {
 		title: i18n.ts.achievements,
 		icon: 'ti ti-medal',
