@@ -28,6 +28,7 @@ import { analytics, initAnalytics } from '@/analytics.js';
 import { miLocalStorage } from '@/local-storage.js';
 import { fetchCustomEmojis } from '@/custom-emojis.js';
 import { prefer } from '@/preferences.js';
+import { addNoctuneGamesToNavbarOnce } from '@/utility/noctune-games-nav.js';
 import { $i } from '@/i.js';
 import { launchPlugins } from '@/plugin.js';
 import { initTelemetry } from '@/telemetry.js';
@@ -153,6 +154,8 @@ export async function common(createVue: () => Promise<App<Element>>) {
 		}
 	});
 	//#endregion
+
+	addNoctuneGamesToNavbarOnce();
 
 	if (!isSafeMode) {
 		// TODO: instance.defaultLightTheme/instance.defaultDarkThemeが不正な形式だった場合のケア

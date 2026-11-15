@@ -202,6 +202,10 @@ export const PREF_DEF = definePreferences({
 			'ui',
 		],
 	},
+	// 左ナビへ「ノクターンゲームズ」を足す移行を済ませたか（utility/noctune-games-nav.ts）
+	noctuneGamesNavAdded: {
+		default: false,
+	},
 	statusbars: {
 		default: [] as StatusbarStore[],
 	},
